@@ -1,0 +1,3 @@
+configure: cmake .
+compile: make
+run: ./main
