@@ -1,35 +1,12 @@
-cmake_minimum_required(VERSION 2.6)
-project(libbarrett_examples)
+# The name of our project is "WAM95Ctrl". CMakeLists files in this project can 
+# refer to the root source directory of the project as ${WAM95Ctrl_SOURCE_DIR} and 
+# to the root binary directory of the project as ${WAM95Ctrl_BINARY_DIR}. 
+cmake_minimum_required (VERSION 2.6)
+project (WAM95Ctrl)
 
-
-# By default, build programs with compiler optimizations and debugging symbols
-if (NOT CMAKE_BUILD_TYPE)
-   set(CMAKE_BUILD_TYPE "RelWithDebInfo")
-endif()
-
-
-## libbarrett
-find_package(Barrett REQUIRED)
-include_directories(${BARRETT_INCLUDE_DIRS})
-link_directories(${BARRETT_LIBRARY_DIRS})
-add_definitions(${BARRETT_DEFINITIONS})
-
-## curses
-find_package(Curses REQUIRED)
-include_directories(${CURSES_INCLUDE_DIR})
-
-
-function(add_programs)
-        foreach (prog ${ARGV})
-                add_executable(${prog} ${prog}.cpp)
-                target_link_libraries(${prog} ${BARRETT_LIBRARIES})
-        endforeach()
-endfunction()
-
-add_programs(
-	main
-)
-
-# ex04 uses the ncurses library
-target_link_libraries(main ${CURSES_LIBRARIES})
-
+# Recurse into the "lib" and "demo" subdirectories. This does not actually 
+# cause another cmake executable to run. The same process will walk through 
+# the project's entire directory structure. 
+add_subdirectory (lib)
+add_subdirectory (exp)
+add_subdirectory (demo)

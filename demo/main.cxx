@@ -5,58 +5,29 @@
  *      Author: Daniel Troniak
  */
 
-#include <iostream>
-#include <fstream>
-#include <string>
-#include <vector>
-#include <cstdlib>  // For strtod()
-#include <algorithm>	//for min/max
-#include <unistd.h> // For usleep()
-#include <math.h>	//for sin/cos
-
-#include <boost/thread/thread.hpp>
-#include <boost/thread.hpp>
-
-#include <boost/tuple/tuple.hpp>
-#include <barrett/log.h>
-
-#include <barrett/detail/ca_macro.h>
-#include <barrett/detail/stl_utils.h>
-#include <barrett/units.h>
-#include <barrett/systems.h>
-#include <barrett/products/product_manager.h>
-#include <barrett/products/hand.h>
-
 #define BARRETT_SMF_VALIDATE_ARGS
 #include <barrett/standard_main_function.h>
-
-//#include "main.h"
-//#include "../lib/io.h"
-//#include "../lib/utils.h"
+#include "stdheader.h"
 #include "utils.h"
-#include <stdexcept>
+#include "senses.h"
+#include "control.h"
+#include "experiment.h"
+    #include "action.h"
 
-#include <syslog.h>
-#include <unistd.h> /* for close() */
-#include <sys/socket.h> /* For sockets */
-#include <fcntl.h>      /* To change socket to nonblocking mode */
-#include <arpa/inet.h>  /* For inet_pton() */
 
-#include <barrett/detail/ca_macro.h>
-#include <barrett/thread/abstract/mutex.h>
-#include <barrett/thread/disable_secondary_mode_warning.h>
-#include <barrett/units.h>
-#include <barrett/systems/abstract/single_io.h>
 // The ncurses library allows us to write text to any location on the screen
 #include <curses.h>
 #include <barrett/math.h>  // For barrett::math::saturate()
 
+#ifndef DIMENSION
 #define DIMENSION 7u
-#define STRAIN2TORQUE_RATIO 118.0	//convert hand strain to N-m
-#define FINGER_JOINT_LIMIT 2.4435	//=140 degrees
-#define ZERO_STRAIN_THRESHOLD 2000	//required threshold to be considered non-noise reading
-#define ZERO_TACTILE_THRESHOLD 0.5	//required threshold to be considered non-noise reading
+#define FINGERTIP_TORQUE2TORQUE_RATIO 118.0     //convert hand fingertip_torque to N-m
+#define FINGER_JOINT_LIMIT 2.4435       //=140 degrees
+#define ZERO_FINGERTIP_TORQUE_THRESHOLD 2000    //required threshold to be considered non-noise reading
+#define ZERO_TACTILE_THRESHOLD 0.5      //required threshold to be considered non-noise reading
+#endif
 
+/*
 enum EXPERIMENT_KEYS{
 	ACTIONPHASE,
 	ACTIVESENSING,
@@ -88,13 +59,13 @@ enum ACTION_PHASES{
 	REPLACEMENT,
 	UNLOADING,
 	NUM_ACTION_PHASES
-} ActionPhase;
+} ActionPhase;*/
 
 using namespace barrett;
 using systems::connect;
 using detail::waitForEnter;
 
-typedef math::Vector<24>::type v_type;
+//typedef math::Vector<24>::type TactilePuck::v_type;
 
 //thread management
 bool expsemastop = true;
@@ -132,7 +103,7 @@ void runExperiment(	Hand* hand, ForceTorqueSensor* fts, void* wamin, ProductMana
 void backDriveHand(Hand* hand, ForceTorqueSensor* fts, void* wamin, ProductManager* pm);
 void graspObject(Hand* hand);
 void stop_thread(bool* semaphore);
-
+/*
 //experiment variables
 bool realtime = true;
 int prev_state = -1;
@@ -156,68 +127,40 @@ std::string experiment_shapes[NUM_SHAPES] = {
 	"circle",
 	"square",
 	"triangle"
-};
-systems::Wam<DIMENSION>::jp_type wamBottom;
-systems::Wam<DIMENSION>::jp_type wamTop;
-systems::Wam<DIMENSION>::cp_type wamBottomC;
-systems::Wam<DIMENSION>::cp_type wamBottomC_ip;	//intermediate point
-systems::Wam<DIMENSION>::cp_type wamTopC;
-Hand::jp_type wamBottomO;
-Hand::jp_type wamTopO;
-Eigen::Quaterniond wamTopQ;
-Eigen::Quaterniond wamBottomQ;
-Hand::jv_type handPregrasp;
-Hand::jv_type handGrasp;
-Hand::jv_type handUnGrasp;
-Hand::jv_type tact_base_val;
-Hand::jv_type strain_base_val;
-Hand::ct_type torque_epsilon;
-systems::Wam<DIMENSION>::jp_type joint_tolerance;
-systems::Wam<DIMENSION>::jp_type temp;
-systems::Wam<DIMENSION>::jp_type misc_parms;	//miscellaneous parameters
-Hand::jp_type finger_contacts;	//entries are 0 if no contact, 1 if contact
-enum EXPERIMENT_SHAPES expshape;
+};*/
+//systems::Wam<DIMENSION>::jp_type wamBottom;
+//systems::Wam<DIMENSION>::jp_type wamTop;
+//systems::Wam<DIMENSION>::cp_type wamBottomC;
+//systems::Wam<DIMENSION>::cp_type wamBottomC_ip;	//intermediate point
+//systems::Wam<DIMENSION>::cp_type wamTopC;
+//Hand::jp_type wamBottomO;
+//Hand::jp_type wamTopO;
+//Eigen::Quaterniond wamTopQ;
+//Eigen::Quaterniond wamBottomQ;
+//Hand::jv_type handPregrasp;
+//Hand::jv_type handGrasp;
+//Hand::jv_type handUnGrasp;
+//Hand::jv_type tact_base_val;
+//Hand::jv_type fingertip_torque_base_val;
+//Hand::ct_type torque_epsilon;
+//systems::Wam<DIMENSION>::jp_type joint_tolerance;
+//systems::Wam<DIMENSION>::jp_type temp;
+//systems::Wam<DIMENSION>::jp_type misc_parms;	//miscellaneous parameters
+//Hand::jp_type finger_contacts;	//entries are 0 if no contact, 1 if contact
+//enum EXPERIMENT_SHAPES expshape;
 
 //experiment-specific flags
-bool move_and_lift;
-bool land_and_stroke;
+//bool move_and_lift;
+//bool land_and_stroke;
 
 //data collection vectors
-std::vector< std::vector<int> > hstrain;	//hand strain measure
-std::vector<double> min_hstrain(4,9999999);//running minimum values
-std::vector<Hand::ct_type> ct;	//cartesian torque
-Hand::ct_type min_ct;	//running minimum values
-bool collectData = false;
+//std::vector< std::vector<int> > hfingertip_torque;	//hand fingertip_torque measure
+//std::vector<double> min_hfingertip_torque(4,9999999);//running minimum values
+//std::vector<Hand::ct_type> ct;	//cartesian torque
+//Hand::ct_type min_ct;	//running minimum values
+//bool collectData = false;
 
 
-//returns a random float between a and b
-/*float randomFloat(float a, float b) {
-    float random = ((float) rand()) / (float) RAND_MAX;
-    float diff = b - a;
-    float r = random * diff;
-    return a + r;
-}
-std::string num2str(int number){
-   std::stringstream ss;//create a stringstream
-   ss << number;//add number to the stream
-   return ss.str();//return a string with the contents of the stream
-}
-std::string num2str(float number){
-   std::stringstream ss;//create a stringstream
-   ss << number;//add number to the stream
-   return ss.str();//return a string with the contents of the stream
-}
-std::string num2str(double number){
-   std::stringstream ss;//create a stringstream
-   ss << number;//add number to the stream
-   return ss.str();//return a string with the contents of the stream
-}
-Eigen::Quaterniond hjp2quaternion(Hand::jp_type* p){
-	return Eigen::Quaterniond((*p)[0], (*p)[1], (*p)[2], (*p)[3]);
-}
-Hand::jp_type quaternion2hjp(Eigen::Quaterniond* q){
-	return Hand::jp_type(q->w(), q->x(), q->y(), q->z());
-}*/
 bool validate_args(int argc, char** argv) {
 	/*if (argc != 2  &&  argc != 3) {
 		printf("Usage: %s <remoteHost> [--auto]\n", argv[0]);
@@ -227,1276 +170,71 @@ bool validate_args(int argc, char** argv) {
 	}*/
 	return true;
 }
-bool check_tactile_contact(Hand* hand, int finger_num){
-	//std::cout << "check_tactile_contact!" << std::endl;
-	hand->update(Hand::S_TACT_FULL, true);
-	std::vector<TactilePuck*> tps;
-	tps = hand->getTactilePucks();
-	v_type finger_tact = tps[finger_num]->getFullData();
-	for(int i = 0; i < finger_tact.size(); i++){
-		//std::cout << finger_tact[i] << " > " << tact_base_val(finger_num) << "?" << std::endl;
-		if(finger_tact[i] > tact_base_val[finger_num]){
-			return true;
-		}
-	}
-	return false;
-}
-bool check_tactile_contact(Hand* hand, int finger_num, float threshold){
-	//std::cout << "check_tactile_contact!" << std::endl;
-	hand->update(Hand::S_TACT_FULL, true);
-	std::vector<TactilePuck*> tps;
-	tps = hand->getTactilePucks();
-	v_type finger_tact = tps[finger_num]->getFullData();
-	for(int i = 0; i < finger_tact.size(); i++){
-		if(finger_tact[i] > threshold){
-			std::cout << finger_tact[i] << " > " << threshold << std::endl;
-			return true;
-		}
-	}
-	return false;
-}
-bool check_tactile_contact(Hand* hand){
-	return (check_tactile_contact(hand, 0) || check_tactile_contact(hand, 1) || check_tactile_contact(hand, 2));
-}
-bool check_strain_contact(Hand* hand, int finger_num, int strain_thresh){
-	hand->update(Hand::S_FINGERTIP_TORQUE,true);
-	std::vector<int> strain = hand->getFingertipTorque();
-	if(strain[finger_num] > strain_thresh){
-		std::cout << strain[finger_num] << ">" << strain_thresh << std::endl;
-		return true;
-	}
-	else{
-		//std::cout << strain[finger_num] << ">" << strain_thresh << std::endl;
-		return false;
-	}
-}
-int get_strain_value(Hand* hand, int finger_num){
-	hand->update(Hand::S_FINGERTIP_TORQUE,true);
-	std::vector<int> strain = hand->getFingertipTorque();
-	return strain[finger_num];
-}
-bool check_strain_contact(Hand* hand, int strain_thresh){
-	return check_strain_contact(hand, 0, strain_thresh) 
-		|| check_strain_contact(hand, 1, strain_thresh) 
-		|| check_strain_contact(hand, 2, strain_thresh);
-}
-bool check_strain_contact(Hand* hand){
-	return check_strain_contact(hand, 0, strain_base_val[0]) 
-		|| check_strain_contact(hand, 1, strain_base_val[1]) 
-		|| check_strain_contact(hand, 2, strain_base_val[2]);
-}
-void tare_tactile(Hand* hand){
-	//std::cout << "check_tactile_contact!" << std::endl;
-	hand->update(Hand::S_TACT_FULL, true);
-	std::vector<TactilePuck*> tps;
-	tps = hand->getTactilePucks();
-	std::cout << "tare-value for tactile pad on: " << std::endl;
-	for(unsigned int finger_num = 0; finger_num < tps.size(); finger_num++){
-		v_type finger_tact = tps[finger_num]->getFullData();
-		float max = -1;
-		for(int i = 0; i < finger_tact.size(); i++){
-			if(finger_tact[i] > max){
-				max = finger_tact[i];
-			}
-		}
-		std::cout << "    F" << finger_num+1 << ": " << max << std::endl;
-		tact_base_val[finger_num] = max;
-	}
-}
-void tare_strain(Hand* hand){
-	hand->update(Hand::S_FINGERTIP_TORQUE,true);
-	std::vector<int> strain = hand->getFingertipTorque();
-	std::cout << "tare-value for strain gage: " << std::endl;
-	for(unsigned int finger_num = 0; finger_num < strain.size(); finger_num++){
-		strain_base_val[finger_num] = strain[finger_num];
-		 std::cout << "    F" << finger_num+1 << ": " << strain[finger_num] << std::endl;
-	}
-}
-/*
-// This function template will accept a math::Matrix with any number of rows,
-// any number of columns, and any units. In other words: it will accept any
-// barrett::units type.
-template<int R, int C, typename Units>
-bool parseDoubles(math::Matrix<R,C, Units>* dest, const std::string& str) {
-	const char* cur = str.c_str();
-	const char* next = cur;
 
-	for (int i = 0; i < dest->size(); ++i) {
-		(*dest)[i] = strtod(cur, (char**) &next);
-		if (cur == next) {
-			return false;
-		} else {
-			cur = next;
-		}
-	}
-
-	// Make sure there are no extra numbers in the string.
-	double ignore = strtod(cur, (char**) &next);
-	(void)ignore;  // Prevent unused variable warnings
-
-	if (cur != next) {
-		return false;
-	}
-
-	return true;
-}
-
-// This function template will accept a math::Matrix with any number of rows,
-// any number of columns, and any units. In other words: it will accept any
-// barrett::units type.
-template<int R, int C, typename Units>
-std::string toString(math::Matrix<R,C, Units>* src) {
-	std::string str;
-	int i;
-	for (i = 0; i < src->size(); ++i) {
-		char buff[50];
-		sprintf(buff, "%f",(*src)[i]);
-		str.append(buff);
-		if(i < src->size()-1)
-			str.append(" ");
-		else
-			str.append("\n");
-	}
-	return str;
-}
-//first converts quaternion to hand joint position vector (same size = 4)
-std::string toString(Eigen::Quaterniond* src) {
-	Hand::jp_type temp = quaternion2hjp(src); 
-	return toString(&temp);
-}
-//copy the value v to up to n (0 for all) element s of vector dest
-//negative values for n indicate all except last n elements
-template<int R, int C, typename Units>
-void setVectorValues(math::Matrix<R,C, Units>* dest, float v, int n){
-	if(n <= 0)
-		n = dest->size()+n;
-	for(int i = 0; i < n; i++){
-		(*dest)[i] = v;
-	}
-}
-//add the value v to up to n (0 for all) elements of vector dest
-//negative values for n indicate all except last n elements
-template<int R, int C, typename Units>
-void addVectorValues(math::Matrix<R,C, Units>* dest, float v, int n){
-	if(n <= 0)
-		n = dest->size()+n;
-	for(int i = 0; i < n; i++){
-		(*dest)[i] += v;
-	}
-}
-//add two vectors dest and v and store result in dest
-template<int R, int C, typename Units>
-void addVectorValues(math::Matrix<R,C, Units>* dest, math::Matrix<R,C, Units>* v){
-	for(int i = 0; i < v->size(); i++){
-		(*dest)[i] += (*v)[i];
-	}
-}
-//multiply elements of two vectors dest and v and store result in dest
-template<int R, int C, typename Units>
-void multVectorValues(math::Matrix<R,C, Units>* dest, math::Matrix<R,C, Units>* v){
-	for(int i = 0; i < v->size(); i++){
-		(*dest)[i] *= (*v)[i];
-	}
-}
-//obtain magnitude of each element-wise step from one vector to another
-template<int R, int C, typename Units>
-void getInterpolatingSteps(	math::Matrix<R,C, Units>* step, 
-							math::Matrix<R,C, Units>* from, 
-							math::Matrix<R,C, Units>* to,
-							float num_steps){
-	for(int i = 0; i < step->size(); i++){
-		(*step)[i] = ((*to)[i] - (*from)[i]) / num_steps;
-	}
-}*/
-//Close all fingers
-void closeHand(Hand* hand){
-	Hand::jv_type velocities;
-	setVectorValues(&velocities, 3.0, -1);
-	hand->velocityMove(velocities);
-}
-//Open all fingers
-void openHand(Hand* hand){
-	Hand::jv_type velocities;
-	setVectorValues(&velocities, -3.0, 0);
-	hand->velocityMove(velocities);
-}
-//Close all fingers until contacts detected
-void graspObject(Hand* hand){
-	if(backdrivesemastop){
-		std::cout << "WARNING: Requires hand backdrivability to be set" << std::endl;
-		return;
-	}
-	Hand::jv_type velocities;
-	graspsemastop = false;
-	bool done = false;
-	while(!done && !graspsemastop){
-		boost::this_thread::sleep(boost::posix_time::milliseconds(5));
-		done = true;
-		for(int i = 0; i < finger_contacts.size()-1; i++){
-			//std::cout << finger_contacts[i] << std::endl;
-			if(!finger_contacts[i]){
-				velocities[i] = 3.0;
-				done = false;
-			}
-		}
-		hand->velocityMove(velocities);
-	}
-}
-//open all fingers and reset finger contact flags
-void ungraspObject(Hand* hand){
-	graspsemastop = true;
-	setVectorValues(&finger_contacts, 0, 0);
-	openHand(hand);
-}
-void loadExpVariables(){
-	std::string wamBottomStr;
-	std::string wamTopStr;
-	std::string wamBottomCStr;
-	std::string wamTopCStr;
-	std::string wamBottomOStr;
-	std::string wamTopOStr;
-	std::string handPregraspStr;
-	std::string handGraspStr;
-	std::string handUnGraspStr;
-	std::string tact_base_valStr;
-	std::string torque_epsilonStr;
-	std::string joint_toleranceStr;
-	std::string misc_parmsStr;
-	
-	//read parameters from file
-	std::ifstream myfile ("in.txt");
-	if (!myfile.is_open()){
-		std::cout << "Unable to open file"; 
-		exit(1);
-	}
-	std::getline (myfile,wamBottomStr);
-	std::getline (myfile,wamTopStr);
-	std::getline (myfile,wamBottomCStr);
-	std::getline (myfile,wamTopCStr);
-	std::getline (myfile,wamBottomOStr);
-	std::getline (myfile,wamTopOStr);
-	std::getline (myfile,handPregraspStr);
-	std::getline (myfile,handGraspStr);
-	std::getline (myfile,handUnGraspStr);
-	std::getline (myfile,tact_base_valStr);
-	std::getline (myfile,torque_epsilonStr);
-	std::getline (myfile,joint_toleranceStr);
-	std::getline (myfile,misc_parmsStr);
-	
-	//parse paramater vectors
-	parseDoubles(&wamBottom, wamBottomStr);
-	parseDoubles(&wamTop, wamTopStr);
-	parseDoubles(&wamBottomC, wamBottomCStr);
-	parseDoubles(&wamTopC, wamTopCStr);
-	parseDoubles(&wamBottomO, wamBottomOStr); wamBottomQ = hjp2quaternion(&wamBottomO);
-	parseDoubles(&wamTopO, wamTopOStr); wamTopQ = hjp2quaternion(&wamTopO);
-	parseDoubles(&handPregrasp, handPregraspStr);
-	parseDoubles(&handGrasp, handGraspStr);
-	parseDoubles(&handUnGrasp, handUnGraspStr);
-	parseDoubles(&tact_base_val, tact_base_valStr);
-	parseDoubles(&torque_epsilon, torque_epsilonStr);
-	parseDoubles(&joint_tolerance, joint_toleranceStr);
-	parseDoubles(&misc_parms, misc_parmsStr);
-}
-void saveExpVariables(){	
-	//read parameters from file
-	std::ofstream myfile ("in.txt");
-	if (!myfile.is_open()){
-		std::cout << "Unable to open file" << std::endl; 
-		exit(1);
-	}
-
-	//save paramater vectors
-	myfile << toString(&wamBottom);
-	myfile << toString(&wamTop);
-	myfile << toString(&wamBottomC);
-	myfile << toString(&wamTopC);
-	wamBottomO = quaternion2hjp(&wamBottomQ);
-	myfile << toString(&wamBottomO);
-	wamTopO = quaternion2hjp(&wamTopQ);
-	myfile << toString(&wamTopO);
-	myfile << toString(&handPregrasp);
-	myfile << toString(&handGrasp);
-	myfile << toString(&handUnGrasp);
-	myfile << toString(&tact_base_val);
-	myfile << toString(&torque_epsilon);
-	myfile << toString(&joint_tolerance);
-	myfile << toString(&misc_parms);
-
-#if 0
-	std::cout << "saving wamBottom      as " << toString(&wamBottom) 	  << std::endl;
-	std::cout << "saving wamTop         as " << toString(&wamTop) 		  << std::endl;
-	std::cout << "saving wamBottomC     as " << toString(&wamBottomC) 	  << std::endl;
-	std::cout << "saving wamTopC        as " << toString(&wamTopC) 		  << std::endl;
-	std::cout << "saving wamBottomO     as " << toString(&wamBottomO) 	  << std::endl;
-	std::cout << "saving wamTopO        as " << toString(&wamTopO) 		  << std::endl;
-	std::cout << "saving handPregrasp   as " << toString(&handPregrasp)   << std::endl;
-	std::cout << "saving handGrasp      as " << toString(&handGrasp) 	  << std::endl;
-	std::cout << "saving handUnGrasp    as " << toString(&handUnGrasp) 	  << std::endl;
-	std::cout << "saving tact_base_val  as " << toString(&tact_base_val)  << std::endl;
-	std::cout << "saving torque_epsilon as " << toString(&torque_epsilon) << std::endl;
-	std::cout << "saving joint_toleranceas " << toString(&joint_tolerance)<< std::endl;
-#endif
-}
-/*ActionPhase0*/
-template<size_t DOF>
-void runActionPhaseExperiment(systems::Wam<DOF>& wam, Hand* hand, ForceTorqueSensor* fts, ProductManager* pm){
-	BARRETT_UNITS_TEMPLATE_TYPEDEFS(DOF);
-	
-	loadExpVariables();
-	
-	//start experiment: move WAM to first goal (no blocking)
-	(*((systems::Wam<DIMENSION>*)(&wam))).moveTo(wamBottom, false, 3.0);
-	std::cout << "start!" << std::endl;
-	long timer = 0;
-	while(prev_state < NUM_ACTION_PHASES && !expsemastop){
-		timer++;
-		int curr_state = prev_state;
-		bool transition = false;
-/*
-		//transition from prev_state according to sensorimotor event
-		switch(prev_state){
-			//first contact detected via palm tactile sensor
-			case APPROACH:{
-				transition = check_tactile_contact(hand, 3);
-				break;
-			}
-			//contact with finger detected
-			case PRELOAD:{
-				transition = check_tactile_contact(hand, 2);
-				break;
-			}
-			//load force peaked
-			case LOADING:{
-				fts->update(true);
-				Hand::ct_type torques = fts->getTorque();
-				if(ct.size() >= 100){ //more than torque_epsilon different than 1 second ago
-					//std::cout << "prev_torque: " << ct[ct.size()-100][1] << std::endl;
-					//std::cout << "torque: " << torques[1] << std::endl;
-					//std::cout << "prev_torque-torque: " << ct[ct.size()-100][1]-torques[1] << std::endl;
-					transition = 
-						ct[ct.size()-100][1]-torques[1] > torque_epsilon[1] || 
-						ct[ct.size()-100][1]-torques[1] < -1*torque_epsilon[1];
-				}
-				break;
-			}
-			//WAM reached wamTop
-			case TRANSITIONAL:{
-				//std::cout << "Wam done? " << wam.moveIsDone() << std::endl;
-				transition = wam.moveIsDone();
-				break;
-			}
-			//lift timer expired
-			case STATIC:{
-				transition = timer > 100;
-				break;
-			}
-			//object contact with table (grip/load ratio event)
-			case REPLACEMENT:{
-				hand->update(Hand::S_ALL, true);
-				Hand::ct_type torques = fts->getTorque();
-				std::vector<int> istrain = hand->getFingertipTorque();
-				std::vector<double> strain(4,-1);
-				//standardize strain measurement and convert to N-m
-				//std::cout << "strain (" << STRAIN2TORQUE_RATIO << "): ";
-				for(size_t i = 0; i < istrain.size(); ++i){
-					//std::cout << (double)istrain[i] << "->";
-					strain[i] = ((double)istrain[i]) / STRAIN2TORQUE_RATIO;
-					//std::cout << strain[i] << "->";
-					//strain[i] -= min_hstrain[i];
-					//std::cout << strain[i] << ", ";
-				}
-				
-				
-				//std::cout << std::endl;
-				//standardize torque measurement
-				//std::cout << "torques: ";
-				for(int i = 0; i < (int)torques.size(); i++){
-					//std::cout << torques[i] << "->";
-					//torques[i] -= min_ct[i];
-					//std::cout << torques[i] << ", ";
-				}
-				//std::cout << std::endl;
-				
-				//detect an interesting event in the grip ratio
-				if(ct.size() >= 100 && hstrain.size() >= 100){
-					double prev_strain = hstrain[hstrain.size()-100][2] 
-						/ STRAIN2TORQUE_RATIO - min_hstrain[2];
-					double prev_torque = ct[ct.size()-100][1] 
-						- min_ct[1];
-					//calculate grip ratio
-					double grip_ratio;
-					double prev_grip_ratio;
-					prev_grip_ratio = prev_strain / prev_torque;
-					grip_ratio = strain[2] / torques[1];
-					//std::cout << "prev_grip_ratio: " << prev_grip_ratio << std::endl;
-					//std::cout << "grip_ratio: " << grip_ratio << std::endl;
-					
-					//more than torque_epsilon different than previously
-					transition = 
-						prev_grip_ratio - grip_ratio > torque_epsilon[1] ||
-						prev_grip_ratio - grip_ratio < -1*torque_epsilon[1];
-				}
-				break;
-			}
-			//zero lifting force
-			case UNLOADING:{
-				transition = true;
-				break;
-			}
-			//done!
-			default: {break;}
-		}*/
-		
-		boost::this_thread::sleep(boost::posix_time::milliseconds(100)); 
-		
-		if(transition){
-			++curr_state;
-		}
-		else //nothing to do
-			continue;
-		
-		//action
-		switch(curr_state){
-		
-			//stop approach & start finger close
-			case PRELOAD:{
-				std::cout << "Performing PRELOAD action-phase!" << std::endl;
-				hand->velocityMove(handGrasp);
-				break;
-			}
-			
-			//slowly lift WAM to wamTop
-			case LOADING:{
-				std::cout << "Performing LOADING action-phase!" << std::endl;
-				(*((systems::Wam<DIMENSION>*)(&wam))).moveTo(wamTop, false, 3.0);
-				break;
-			}
-			
-			//none
-			case TRANSITIONAL:{
-				std::cout << "Performing TRANSITIONAL action-phase!" << std::endl;
-				break;
-			}
-			
-			//start timer
-			case STATIC:{
-				std::cout << "Performing STATIC action-phase!" << std::endl;
-				timer = 0;
-				break;
-			}
-			
-			//slowly lower WAM to wamBottom
-			case REPLACEMENT:{
-				std::cout << "Performing REPLACEMENT action-phase!" << std::endl;
-				(*((systems::Wam<DIMENSION>*)(&wam))).moveTo(wamBottom, false, 3.0);
-				break;
-			}
-			
-			//slowly open finger
-			case UNLOADING:{
-				std::cout << "Performing UNLOADING action-phase!" << std::endl;
-				hand->velocityMove(handUnGrasp);
-				break;
-			}
-			
-			//done!
-			default: {
-				std::cout << "Action COMPLETE!" << std::endl;
-				break;
-			}
-		}
-		
-		//hand->velocityMove(handPregrasp);	
-		//while(!hand->doneMoving(true));		
-		prev_state = curr_state;
-	}
-}
-/*ActiveSensing1*/
-template<size_t DOF>
-void runActiveSensingExperiment(systems::Wam<DOF>& wam, Hand* hand, ForceTorqueSensor* fts, ProductManager* pm){
-	BARRETT_UNITS_TEMPLATE_TYPEDEFS(DOF);
-	
-	loadExpVariables();
-	
-	//start experiment: move WAM to first goal (no blocking)
-	(*((systems::Wam<DIMENSION>*)(&wam))).moveTo(wamBottom, false, 3.0, 3.0);
-	std::cout << "start!" << std::endl;
-	int curr_state = 0;
-	//num_runs = 2;
-	 
-	while(curr_state < num_runs*2 && !expsemastop){
-		boost::this_thread::sleep(boost::posix_time::milliseconds(10));
-		
-		if(wam.moveIsDone()){++curr_state;}else{continue;}
-		
-		if(curr_state % 2){ //odd
-			if(num_runs % 2){	//odd
-				(*((systems::Wam<DIMENSION>*)(&wam))).moveTo(wamTop, false, 3.0, 0.5);
-			}
-			else{	//even
-				(*((systems::Wam<DIMENSION>*)(&wam))).moveTo(wamTopC, false, 3.0, 0.5);
-			}
-		}
-		else{ //even
-			if(num_runs % 2){	//odd
-				(*((systems::Wam<DIMENSION>*)(&wam))).moveTo(wamBottom, false, 3.0, 0.5);
-			}
-			else{	//even
-				(*((systems::Wam<DIMENSION>*)(&wam))).moveTo(wamBottomC, false, 3.0, 0.5);
-			}
-		}
-	}
-}
-/*WAMVelocity2*/
-template<size_t DOF>
-void runWAMVelocityExperiment(systems::Wam<DOF>& wam, Hand* hand, ForceTorqueSensor* fts, ProductManager* pm){
-	BARRETT_UNITS_TEMPLATE_TYPEDEFS(DOF);
-	
-	loadExpVariables();
-	
-	//start experiment: move WAM to first goal (no blocking)
-	(*((systems::Wam<DIMENSION>*)(&wam))).moveTo(wamBottom, false, 3.0);
-	std::cout << "start!" << std::endl;
-	int curr_state = 0;
-	//int num_runs = 30;
-	float velocity = 0.25;
-	float accel = 0.25;
-	
-	printf("/%02d   vel   accel\n",num_runs);
-	fflush(stdout);
-	 
-	while(curr_state < num_runs && !expsemastop){
-		boost::this_thread::sleep(boost::posix_time::milliseconds(10));
-		
-		if(wam.moveIsDone()){++curr_state;}else{continue;}
-		
-		printf(" %02d  %-1.3f  %-1.3f\n",curr_state,velocity,accel);
-		fflush(stdout);
-		
-		if(curr_state % 2){ //odd
-			(*((systems::Wam<DIMENSION>*)(&wam))).moveTo(wamTop, false, velocity, accel);
-		}
-		else{ //even
-			(*((systems::Wam<DIMENSION>*)(&wam))).moveTo(wamBottom, false, velocity, accel);
-		}
-		velocity+= 0.25;
-		accel	+= 0.25;
-		
-		//hand->velocityMove(handPregrasp);	
-		//while(!hand->doneMoving(true));
-		
-	}
-}
-/*WAMJointPos3*/
-template<size_t DOF>
-void runWAMJointPosExperiment(systems::Wam<DOF>& wam, Hand* hand, ForceTorqueSensor* fts, ProductManager* pm){
-	BARRETT_UNITS_TEMPLATE_TYPEDEFS(DOF);
-	
-	loadExpVariables();
-	
-	//start experiment: move WAM to first goal (no blocking)
-	(*((systems::Wam<DIMENSION>*)(&wam))).moveTo(wamBottom, false, 3.0);
-	std::cout << "start!" << std::endl;
-	int curr_state = 0;
-	//int num_runs = 5;
-	systems::Wam<DIMENSION>::jp_type steps;
-	getInterpolatingSteps(&steps, &wamBottom, &wamTop, num_runs);
-	
-	printf("/%02d   pos\n",num_runs);
-	fflush(stdout);
-	 
-	while(curr_state < num_runs && !expsemastop){
-		boost::this_thread::sleep(boost::posix_time::milliseconds(10));
-		
-		if(wam.moveIsDone()){++curr_state;}else{continue;}
-		
-		addVectorValues(&wamBottom,&steps);
-		printf(" %02d ",curr_state);
-		fflush(stdout);
-		std::cout << toString(&wamBottom) << std::endl;
-		(*((systems::Wam<DIMENSION>*)(&wam))).moveTo(wamBottom, false, 3.0);
-	}
-}
-/*WAMCartesianPos4*/
-template<size_t DOF>
-void runWAMCartesianPosExperiment(systems::Wam<DOF>& wam, Hand* hand, ForceTorqueSensor* fts, ProductManager* pm){
-	BARRETT_UNITS_TEMPLATE_TYPEDEFS(DOF);
-	
-	loadExpVariables();
-	
-	//Eigen::Quaterniond wamBottomQ = hjp2quaternion(&wamBottomO);
-	
-	//start experiment: move WAM to first goal (no blocking)
-	(*((systems::Wam<DIMENSION>*)(&wam))).moveTo(wamBottomC, false, 3.0);
-	(*((systems::Wam<DIMENSION>*)(&wam))).moveTo(wamBottomQ, true, 0.3, 0.25);
-	
-	//causes wam to hold its tool at the desiredOrientation
-	systems::ExposedOutput<Eigen::Quaterniond> toSetpoint(wamBottomQ);
-	{
-		//std::cout << "maintaining " << toString(&wamBottomO) << std::endl;
-		BARRETT_SCOPED_LOCK(pm->getExecutionManager()->getMutex());
-
-		wam.idle();
-		forceConnect(toSetpoint.output, wam.toController.referenceInput);
-		forceConnect(wam.tt2jt.output, wam.input);
-	}
-	std::cout << "start!" << std::endl;
-	int curr_state = 0;
-	//int num_runs = 5;
-	systems::Wam<DIMENSION>::cp_type steps;
-	getInterpolatingSteps(&steps, &wamBottomC, &wamTopC, num_runs);
-	
-	printf("/%02d   pos\n",num_runs);
-	fflush(stdout);
-	 
-	while(curr_state < num_runs && !expsemastop){
-		boost::this_thread::sleep(boost::posix_time::milliseconds(10));
-		
-		if(wam.moveIsDone()){++curr_state;}else{continue;}
-		
-		addVectorValues(&wamBottomC,&steps);
-		printf(" %02d ",curr_state);
-		fflush(stdout);
-		std::cout << toString(&wamBottomC) << std::endl;
-		(*((systems::Wam<DIMENSION>*)(&wam))).moveTo(wamBottomC, false, 3.0);
-	}
-}
-/*WAMJointTorque5*/
-template<size_t DOF>
-void runWAMJointTorqueExperiment(systems::Wam<DOF>& wam, Hand* hand, ForceTorqueSensor* fts, ProductManager* pm){
-	BARRETT_UNITS_TEMPLATE_TYPEDEFS(DOF);
-	
-	loadExpVariables();
-	
-	//start experiment: move WAM to first goal (no blocking)
-	(*((systems::Wam<DIMENSION>*)(&wam))).moveTo(wamBottom, false, 3.0);
-	std::cout << "start!" << std::endl;
-	int curr_state = 0;
-	//int num_runs = 15;
-	float step = 0.2;	//radians
-	float position = 0.0;	
-	Hand::jp_type joint_torques;
-	
-	printf("/%02d   pos\n",num_runs);
-	fflush(stdout);
-	 
-	while(curr_state < num_runs && !expsemastop){
-		boost::this_thread::sleep(boost::posix_time::milliseconds(10));
-		
-		if(wam.moveIsDone()){++curr_state;}else{continue;}
-		
-		printf(" %02d  %-1.3f\n",curr_state,position);
-		fflush(stdout);
-		
-		if(curr_state % 2){ //odd
-			setVectorValues(&joint_torques,position, -1);
-		}
-		else{ //even
-			setVectorValues(&joint_torques,FINGER_JOINT_LIMIT-position, -1);
-		}
-		hand->setPositionCommand(joint_torques);
-		position+= step;
-	}
-}
-/*BHVelocity6*/
-template<size_t DOF>
-void runBHVelocityExperiment(systems::Wam<DOF>& wam, Hand* hand, ForceTorqueSensor* fts, ProductManager* pm){
-	BARRETT_UNITS_TEMPLATE_TYPEDEFS(DOF);
-	
-	loadExpVariables();
-	
-	//start experiment: move WAM to first goal (no blocking)
-	(*((systems::Wam<DIMENSION>*)(&wam))).moveTo(wamBottom, false, 3.0);
-	std::cout << "start!" << std::endl;
-	int curr_state = 0;
-	//int num_runs = 15;
-	float velocity = 0.25;	//radians per second
-	Hand::jv_type finger_velocities;
-	
-	printf("/%02d   vel   finger_velocities\n",num_runs);
-	fflush(stdout);
-	 
-	while(curr_state < num_runs && !expsemastop){
-		boost::this_thread::sleep(boost::posix_time::milliseconds(10));
-		
-		if(hand->doneMoving(true)&&wam.moveIsDone()){++curr_state;}else{continue;}
-		
-		if(curr_state % 2){ //odd
-			setVectorValues(&finger_velocities,velocity, -1);
-		}
-		else{ //even
-			setVectorValues(&finger_velocities,-1*velocity, -1);
-		}
-		
-		printf(" %02d  %-1.3f: ",curr_state,velocity);
-		std::cout << toString(&finger_velocities) << std::endl;
-		fflush(stdout);
-		
-		hand->velocityMove(finger_velocities);
-		velocity+= 0.25;
-	}
-}
-/*BHPosition7*/
-template<size_t DOF>
-void runBHPositionExperiment(systems::Wam<DOF>& wam, Hand* hand, ForceTorqueSensor* fts, ProductManager* pm){
-	BARRETT_UNITS_TEMPLATE_TYPEDEFS(DOF);
-	
-	loadExpVariables();
-	
-	//start experiment: move WAM to first goal (no blocking)
-	(*((systems::Wam<DIMENSION>*)(&wam))).moveTo(wamBottom, false, 3.0);
-	std::cout << "start!" << std::endl;
-	int curr_state = 0;
-	//int num_runs = 15;
-	float step = 0.2;//floor(FINGER_JOINT_LIMIT/num_runs*10.0)/10.0;	//radians
-	float position = 0.0;	
-	Hand::jp_type finger_positions;
-	
-	printf("/%02d   pos   finger_positions\n",num_runs);
-	fflush(stdout);
-	 
-	while(curr_state < num_runs && !expsemastop){
-		boost::this_thread::sleep(boost::posix_time::milliseconds(10));
-		
-		if(hand->doneMoving(true)&&wam.moveIsDone()){++curr_state;}else{continue;}
-		/*
-		if(curr_state % 2){ //odd
-			setVectorValues(&finger_positions,position, -1);
-		}
-		else{ //even
-			setVectorValues(&finger_positions,FINGER_JOINT_LIMIT-position, -1);
-		}
-		*/
-		setVectorValues(&finger_positions,position, -1);
-		
-		printf(" %02d  %-1.3f: ",curr_state,position);
-		std::cout << toString(&finger_positions) << std::endl;
-		fflush(stdout);
-		
-		hand->setPositionMode();
-		hand->setPositionCommand(finger_positions);
-		position+= step;
-	}
-}
-/*BHTorque8*/
-template<size_t DOF>
-void runBHTorqueExperiment(systems::Wam<DOF>& wam, Hand* hand, ForceTorqueSensor* fts, ProductManager* pm){
-	BARRETT_UNITS_TEMPLATE_TYPEDEFS(DOF);
-	
-	loadExpVariables();
-	
-	//start experiment: move WAM to first goal (no blocking)
-	(*((systems::Wam<DIMENSION>*)(&wam))).moveTo(wamBottom, false, 3.0);
-	std::cout << "start!" << std::endl;
-	int curr_state = 0;
-	//int num_runs = 1;
-	float step = 0.1;	//N-m
-	float torque = 0.0;	
-	Hand::jt_type finger_torques;
-	
-	printf("/%02d   torque  finger_torques\n",num_runs);
-	fflush(stdout);
-	
-	hand->setTorqueMode();
-	 
-	while(curr_state < num_runs && !expsemastop){
-		boost::this_thread::sleep(boost::posix_time::milliseconds(10));
-		
-		if(hand->doneMoving(true)&&wam.moveIsDone()){++curr_state;}else{continue;}
-
-		setVectorValues(&finger_torques,torque,-1);
-		
-		printf(" %02d  %-1.3f: ",curr_state,torque);
-		std::cout << toString(&finger_torques) << std::endl;
-		fflush(stdout);
-		hand->setTorqueMode();
-		hand->setTorqueCommand(finger_torques);
-		torque+= step;	
-	}
-}
-/*BHTrapezoidal9*/
-template<size_t DOF>
-void runBHTrapezoidalExperiment(systems::Wam<DOF>& wam, Hand* hand, ForceTorqueSensor* fts, ProductManager* pm){
-	BARRETT_UNITS_TEMPLATE_TYPEDEFS(DOF);
-	
-	loadExpVariables();
-	
-	//start experiment: move WAM to first goal (no blocking)
-	(*((systems::Wam<DIMENSION>*)(&wam))).moveTo(wamBottom, false, 3.0);
-	std::cout << "start!" << std::endl;
-	int curr_state = 0;
-	float step = FINGER_JOINT_LIMIT/num_runs;	//radians
-	float position = 0.0;	
-	Hand::jp_type finger_positions;
-	
-	printf("/%02d   pos   finger_positions\n",num_runs);
-	fflush(stdout);
-	 
-	while(curr_state < num_runs && !expsemastop){
-		boost::this_thread::sleep(boost::posix_time::milliseconds(10));
-		
-		if(hand->doneMoving(true)&&wam.moveIsDone()){++curr_state;}else{continue;}
-		
-		if(curr_state % 2){ //odd
-			setVectorValues(&finger_positions,position, -1);
-		}
-		else{ //even
-			setVectorValues(&finger_positions,FINGER_JOINT_LIMIT-position, -1);
-		}
-		
-		printf(" %02d  %-1.3f: ",curr_state,position);
-		std::cout << toString(&finger_positions) << std::endl;
-		fflush(stdout);
-		
-		hand->trapezoidalMove(finger_positions, false);
-		position+= step;
-	}
-}
-/*SimpleShapes10*/
-template<size_t DOF>
-void runSimpleShapesExperiment(systems::Wam<DOF>& wam, Hand* hand, ForceTorqueSensor* fts, ProductManager* pm){
-	BARRETT_UNITS_TEMPLATE_TYPEDEFS(DOF);
-	
-	loadExpVariables();
-	
-	//start experiment: move WAM to first goal (no blocking)
-	(*((systems::Wam<DIMENSION>*)(&wam))).moveTo(wamBottom, false, 3.0, 5.0);
-	std::cout << "start!" << std::endl;
-	int curr_state = 0;
-	//num_runs = 3;
-	Hand::jp_type digits;
-	setVectorValues(&digits,0,0);	//init
-	setVectorValues(&digits,1,-1);	//activate all except spread
-	 
-	while(curr_state < num_runs*4 && !expsemastop){
-		boost::this_thread::sleep(boost::posix_time::milliseconds(10));
-		
-		if(hand->doneMoving(true)&&wam.moveIsDone()){++curr_state;}else{continue;}
-		
-		switch(curr_state%4){
-			case 1 : {
-				closeHand(hand);
-				break;
-			}
-			case 2 : {
-				(*((systems::Wam<DIMENSION>*)(&wam))).moveTo(wamTop, false, 3.0, 5.0);
-				break;
-			}
-			case 3 : {
-				(*((systems::Wam<DIMENSION>*)(&wam))).moveTo(wamBottom, false, 3.0, 5.0);
-				break;
-			}
-			case 0 : {
-				openHand(hand);
-				break;
-			}
-		}
-	}
-}
-/*ActiveProbing11*/
-/*
-	two phases of motion: (1) moving up and (0) moving down
-	switches phases upon completing its up-movement and down-movement
-	if contact occurs during phase 0, switch to phase 1 immediately
-*/
-template<size_t DOF>
-void runActiveProbingExperiment(systems::Wam<DOF>& wam, Hand* hand, ForceTorqueSensor* fts, ProductManager* pm){
-	BARRETT_UNITS_TEMPLATE_TYPEDEFS(DOF);
-	
-	loadExpVariables();
-	
-	//start experiment: move WAM to first goal (no blocking)
-	(*((systems::Wam<DIMENSION>*)(&wam))).moveTo(wamBottom, false, 0.3, 0.25);
-	std::cout << "start!" << std::endl;
-	int curr_state = 0;
-	int num_states = 2;
-	Hand::jp_type digits;
-	setVectorValues(&digits,0,0);	//init
-	setVectorValues(&digits,FINGER_JOINT_LIMIT/2,-1);	//activate all except spread
-	
-	bool strainContact = false;
-	bool tactileContact = false;
-	bool handAboveTable = false;
-	bool objectDetected = false;
-	
-	//wamBottomQ = hjp2quaternion(&wamBottomO);
-	//wamTopQ = hjp2quaternion(&wamTopO);
-	
-	float minX, maxX, minY, maxY, minZ, maxZ;
-	
-	minX = wamBottomC[0];
-	minY = wamBottomC[1];
-	minZ = wamBottomC[2];
-	maxX = wamTopC[0];
-	maxY = wamTopC[1];
-	maxZ = 0.25;
-	
-	wamTopC[0] = (maxX+minX)/2;
-	wamTopC[1] = (maxY+minY)/2;
-	wamTopC[2] = maxZ;
-	
-	wamBottomC_ip[2] = wamBottomC[2] + 0.1;
-	
-	//hand->trapezoidalMove(digits, false);
-	 
-	while(curr_state < num_runs*num_states && !expsemastop){
-		boost::this_thread::sleep(boost::posix_time::milliseconds(10));
-		
-		//record phase of motion
-		int phase = curr_state % num_states;
-		//std::cout << phase << std::endl;
-		
-		//check tactile reading and stop if object collision above the table
-		strainContact = check_strain_contact(hand, ZERO_STRAIN_THRESHOLD);
-		tactileContact = check_tactile_contact(hand);
-		bool contact = strainContact || tactileContact;
-		handAboveTable = true;//wam.getToolPosition()[2] > (minZ + 0.02);	//2 cm off the table
-		
-		if(contact && phase == 0 && !objectDetected){
-			//boost::this_thread::sleep(boost::posix_time::milliseconds(3000));
-			std::cout << "object detected!" << std::endl;
-			objectDetected = true;
-			++curr_state; //want to be in phase 0 in next timestep
-		}
-		
-		//move forward when wam and hand are finished (or preempted by object detection)
-		if((hand->doneMoving(true)&&wam.moveIsDone())||objectDetected){
-			++curr_state;
-			std::cout << "switching to phase " << curr_state%2 << std::endl;
-		}
-		else{
-			continue;
-		}
-		
-		//std::cout << "min/maxX: " << minX << "/" << maxX << std::endl;
-		//std::cout << "min/maxY: " << minY << "/" << maxY << std::endl;
-		
-		switch(phase){
-			case 0 : {
-				//std::cout << "moving to wtc @ " << toString(&wamTopC);
-				std::cout << "ActiveProbing take " << curr_state/num_states << std::endl;
-				std::cout << "Moving to " << toString(&wamTopC) << std::endl;
-				(*((systems::Wam<DIMENSION>*)(&wam))).moveTo(wamTopC, false, 0.3, 0.25);
-				break;
-			}
-			case 1 : {
-				objectDetected = false;
-				wamBottomC[0] = randomFloat(minX, maxX);
-				wamBottomC[1] = randomFloat(minY, maxY);
-				wamBottomC_ip[0] = wamBottomC[0];
-				wamBottomC_ip[1] = wamBottomC[1];
-				//std::cout << "wbc0: " << wamBottomC[0] << std::endl;
-				//std::cout << "wbc1: " << wamBottomC[1] << std::endl;
-				//std::cout << "moving to wbc @ " << toString(&wamBottomC);
-				(*((systems::Wam<DIMENSION>*)(&wam))).moveTo(wamBottomC_ip, true, 0.3, 0.25);
-				(*((systems::Wam<DIMENSION>*)(&wam))).moveTo(wamBottomQ, true, 0.3, 0.25);
-				(*((systems::Wam<DIMENSION>*)(&wam))).moveTo(wamBottomC, false, 0.3, 0.25);
-				break;
-			}
-		}
-	}
-}
-/*ActiveProbing12*/
-/*
-	see above + keep tool orientation stable through cartesian move
-*/
-template<size_t DOF>
-void runActiveProbing2Experiment(systems::Wam<DOF>& wam, Hand* hand, ForceTorqueSensor* fts, ProductManager* pm){
-	BARRETT_UNITS_TEMPLATE_TYPEDEFS(DOF);
-	
-	loadExpVariables();
-	
-	//start experiment: move WAM to first goal (no blocking)
-	(*((systems::Wam<DIMENSION>*)(&wam))).moveTo(wamBottom, false, 0.3, 0.25);
-	std::cout << "start!" << std::endl;
-	int curr_state = 0;
-	int num_states = 2;
-	Hand::jp_type digits;
-	setVectorValues(&digits,0,0);	//init
-	setVectorValues(&digits,FINGER_JOINT_LIMIT/2,-1);	//activate all except spread
-	
-	bool strainContact = false;
-	bool tactileContact = false;
-	bool handAboveTable = false;
-	bool objectDetected = false;
-	
-	//wamBottomQ = hjp2quaternion(&wamBottomO);
-	//wamTopQ = hjp2quaternion(&wamTopO);
-	
-	float minX, maxX, minY, maxY, minZ, maxZ;
-	
-	minX = wamBottomC[0];
-	minY = wamBottomC[1];
-	minZ = wamBottomC[2];
-	maxX = wamTopC[0];
-	maxY = wamTopC[1];
-	maxZ = 0.25;
-	
-	wamTopC[0] = (maxX+minX)/2;
-	wamTopC[1] = (maxY+minY)/2;
-	wamTopC[2] = maxZ;
-	
-	wamBottomC_ip[2] = wamBottomC[2] + 0.1;
-	
-	//hand->trapezoidalMove(digits, false);
-	
-	(*((systems::Wam<DIMENSION>*)(&wam))).moveTo(wamTopC, true, 0.3, 0.25);
-	(*((systems::Wam<DIMENSION>*)(&wam))).moveTo(wamBottomQ, true, 0.3, 0.25);
-	
-	//causes wam to hold its tool at the desiredOrientation
-	systems::ExposedOutput<Eigen::Quaterniond> toSetpoint(wamBottomQ);
-	//systems::disconnect(toSetpoint.output);
-	//systems::disconnect(wam.tt2jt.output);
-	
-	{
-		std::cout << "maintaining " << toString(&wamBottomQ) << std::endl;
-		BARRETT_SCOPED_LOCK(pm->getExecutionManager()->getMutex());
-
-		wam.idle();
-		forceConnect(toSetpoint.output, wam.toController.referenceInput);
-		forceConnect(wam.tt2jt.output, wam.input);
-		/*
-		input.output = &output;
-		output.inputs.push_back(input);
-
-		input.pushExecutionManager();*/
-	}
-	 
-	while(curr_state < num_runs*num_states && !expsemastop){
-		boost::this_thread::sleep(boost::posix_time::milliseconds(10));
-		
-		//record phase of motion
-		int phase = curr_state % num_states;
-		//std::cout << phase << std::endl;
-		
-		//check tactile reading and stop if object collision above the table
-		strainContact = check_strain_contact(hand);
-		tactileContact = check_tactile_contact(hand);
-		bool contact = strainContact || tactileContact;
-		handAboveTable = true;//wam.getToolPosition()[2] > (minZ + 0.02);	//2 cm off the table
-		
-		if(contact && phase == 0 && !objectDetected){
-			//boost::this_thread::sleep(boost::posix_time::milliseconds(3000));
-			std::cout << "object detected!" << std::endl;
-			objectDetected = true;
-			++curr_state; //want to be in phase 0 in next timestep
-		}
-		
-		//move forward when wam and hand are finished (or preempted by object detection)
-		if((hand->doneMoving(true)&&wam.moveIsDone())||objectDetected){
-			++curr_state;
-		}
-		else{
-			continue;
-		}
-		
-		//std::cout << "min/maxX: " << minX << "/" << maxX << std::endl;
-		//std::cout << "min/maxY: " << minY << "/" << maxY << std::endl;
-		
-		switch(phase){
-			case 0 : {
-				//std::cout << "moving to wtc @ " << toString(&wamTopC);
-				if(!objectDetected && move_and_lift){
-					++curr_state; //try moving randomly again until we hit something
-				}
-				else{
-					std::cout << "ActiveProbing take " << curr_state/num_states << std::endl;
-					std::cout << "Moving to " << toString(&wamTopC) << std::endl;
-					(*((systems::Wam<DIMENSION>*)(&wam))).moveTo(wamTopC, false, 0.3, 0.25);
-				}
-				break;
-			}
-			case 1 : {
-				objectDetected = false;
-				wamBottomC[0] = randomFloat(minX, maxX);
-				wamBottomC[1] = randomFloat(minY, maxY);
-				wamBottomC_ip[0] = wamBottomC[0];
-				wamBottomC_ip[1] = wamBottomC[1];
-				//std::cout << "wbc0: " << wamBottomC[0] << std::endl;
-				//std::cout << "wbc1: " << wamBottomC[1] << std::endl;
-				//std::cout << "moving to wbc @ " << toString(&wamBottomC);
-				//(*((systems::Wam<DIMENSION>*)(&wam))).moveTo(wamBottomC_ip, true, 0.3, 0.25);
-				//(*((systems::Wam<DIMENSION>*)(&wam))).moveTo(wamBottomQ, true, 0.3, 0.25);
-				(*((systems::Wam<DIMENSION>*)(&wam))).moveTo(wamBottomC, false, 0.3, 0.25);
-				break;
-			}
-		}
-	}
-}
-/*TactileTestExperiment*/
-/*
-	test tactile sensor by moving the finger in a repeatable raster motion
-	spherical objects (marbles/ball bearings) are then to be placed beneath
-	the tactile surface. the purpose is to determine if edges can be reliably
-	detected by the sensors or if significant aliasing occurs
-*/
-/*WAMCartesianPos4*/
-template<size_t DOF>
-void runCartesianRasterExperiment(systems::Wam<DOF>& wam, Hand* hand, ForceTorqueSensor* fts, ProductManager* pm){
-	BARRETT_UNITS_TEMPLATE_TYPEDEFS(DOF);
-	
-	loadExpVariables();
-	
-	//Eigen::Quaterniond wamBottomQ = hjp2quaternion(&wamBottomO);
-	systems::Wam<DIMENSION>::cp_type curr_pos;
-	
-	//start experiment: move WAM to first goal
-	(*((systems::Wam<DIMENSION>*)(&wam))).moveTo(wamBottomC, true, 3.0);
-	(*((systems::Wam<DIMENSION>*)(&wam))).moveTo(wamBottomQ, true, 0.3, 0.25);
-	
-	//causes wam to hold its tool at the desiredOrientation
-	systems::ExposedOutput<Eigen::Quaterniond> toSetpoint(wamBottomQ);
-	{
-		//std::cout << "maintaining " << toString(&wamBottomO) << std::endl;
-		BARRETT_SCOPED_LOCK(pm->getExecutionManager()->getMutex());
-
-		wam.idle();
-		forceConnect(toSetpoint.output, wam.toController.referenceInput);
-		forceConnect(wam.tt2jt.output, wam.input);
-	}
-	std::cout << "start!" << std::endl;
-	int curr_state = -1;
-	//int num_runs = 5;
-
-	//printf("/%02d   x_pos\n",num_runs);
-	//fflush(stdout);
-	std::cout << "x_pos" << std::endl;
-	
-	float min_x = wamBottomC[0];
-	float min_y = wamBottomC[1];
-	float max_x = wamTopC[0];
-	float max_y = wamTopC[1];
-	
-	float step = 0.003;	//3mm steps
-	curr_pos[0] = min_x;
-	curr_pos[1] = min_y;
-	curr_pos[2] = wamBottomC[2];	//want tool to remain in the same horizontal plane
-	
-	float x, y;		//temp coordinates of locations on tactile finger pad edges
-	float x0, y0;	//coordinates of centre point of tactile finger pad (point of rotation)
-	x = min_x;
-	x0 = max_x - min_x;
-	y0 = max_y - min_y;
-	float theta = 0.523;	//30 degree rotation
-	 
-	while((curr_pos[0] < max_x || curr_pos[1] < max_y) && !expsemastop){
-		boost::this_thread::sleep(boost::posix_time::milliseconds(10));
-		
-		if(wam.moveIsDone()){++curr_state;}else{continue;}
-		
-		switch(expshape){
-			case CIRCLE:{
-				if(curr_state%2 == 0){	//even
-					//swap y values
-					if(curr_pos[1] == max_y)
-						curr_pos[1] = min_y;
-					else
-						curr_pos[1] = max_y;
-				}
-				else{	//odd
-					curr_pos[0] += step;
-				}
-				break;
-			}
-			case SQUARE:{
-				if(curr_state%2 == 0){	//even
-					//swap x values
-					if(curr_pos[0] == max_x)
-						curr_pos[0] = min_x;
-					else
-						curr_pos[0] = max_x;
-				}
-				else{	//odd
-					curr_pos[1] += step;
-				}
-				break;
-			}
-			case TRIANGLE:{
-				if(curr_state%4 == 0){	//first of 4 steps
-					y = min_y;
-				}
-				if(curr_state%4 == 2){	//third of 4 steps
-					y = max_y;
-				}
-				else{	//second or fourth of 4 steps
-					x += step;
-				}
-				//rotate about tactile pad centre point by theta radians
-				curr_pos[0] = x0+(x-x0)*cos(theta)+(y-y0)*sin(theta);
-				curr_pos[1] = y0-(x-x0)*sin(theta)+(y-y0)*cos(theta);
-				break;
-			}
-		}
-		
-		//printf(" %02d ",curr_x);
-		//fflush(stdout);
-		std::cout << toString(&curr_pos) << std::endl;
-		(*((systems::Wam<DIMENSION>*)(&wam))).moveTo(curr_pos, false, 3.0);
-	}
-}
 void runExperiment(	Hand* hand, ForceTorqueSensor* fts, void* wamin, ProductManager* pm, 
 					enum EXPERIMENT_KEYS expnum){
 	systems::Wam<DIMENSION>* wam = (systems::Wam<DIMENSION>*)wamin;
 	
 	datasemastop = false;
 	boost::thread* dataCollectionThread = NULL;
-	if(collectData){
+	/*if(collectData){
 		dataCollectionThread = new boost::thread(dataCollect, hand, fts, wam, pm, expnum, expshape);
-	}
+	}*/
+
+    Experiment* exp;
 	
 	//std::cout << "Running " << experiment_keys[int(expnum)] << " Experiment..." << std::endl;
 	switch(expnum){
 		case ACTIONPHASE:{
-			runActionPhaseExperiment(*wam, hand, fts, pm);
-			break;
+//			runActionPhaseExperiment(*wam, hand, fts, pm);
+			exp = new ActionPhase(wam, hand, fts, pm);
+            break;
 		}
 		case ACTIVESENSING:{
-			runActiveSensingExperiment(*wam, hand, fts, pm);
+//			runActiveSensingExperiment(*wam, hand, fts, pm);
 			break;
 		}
 		case WAMVELOCITY:{
-			runWAMVelocityExperiment(*wam, hand, fts, pm);
+//			runWAMVelocityExperiment(*wam, hand, fts, pm);
 			break;
 		}
 		case WAMJOINTPOS:{
-			runWAMJointPosExperiment(*wam, hand, fts, pm);
+//			runWAMJointPosExperiment(*wam, hand, fts, pm);
 			break;
 		}
 		case WAMCARTESIANPOS:{
-			runWAMCartesianPosExperiment(*wam, hand, fts, pm);
+//			runWAMCartesianPosExperiment(*wam, hand, fts, pm);
 			break;
 		}
 		case WAMJOINTTORQUE:{
-			runWAMJointTorqueExperiment(*wam, hand, fts, pm);
+//			runWAMJointTorqueExperiment(*wam, hand, fts, pm);
 			break;
 		}
 		case BHVELOCITY:{
-			runBHVelocityExperiment(*wam, hand, fts, pm);
+//			runBHVelocityExperiment(*wam, hand, fts, pm);
 			break;
 		}
 		case BHPOSITION:{
-			runBHPositionExperiment(*wam, hand, fts, pm);
+//			runBHPositionExperiment(*wam, hand, fts, pm);
 			break;
 		}
 		case BHTORQUE:{
-			runBHTorqueExperiment(*wam, hand, fts, pm);
+//			runBHTorqueExperiment(*wam, hand, fts, pm);
 			break;
 		}
 		case BHTRAPEZOIDAL:{
-			runBHTrapezoidalExperiment(*wam, hand, fts, pm);
+//			runBHTrapezoidalExperiment(*wam, hand, fts, pm);
 			break;
 		}
 		case SIMPLESHAPES:{
-			runSimpleShapesExperiment(*wam, hand, fts, pm);
+//			runSimpleShapesExperiment(*wam, hand, fts, pm);
 			break;
 		}
 		case ACTIVEPROBING:{
-			runActiveProbing2Experiment(*wam, hand, fts, pm);
 			break;
 		}
 		case CARTESIANRASTER:{
-			runCartesianRasterExperiment(*wam, hand, fts, pm);
+//			runCartesianRasterExperiment(*wam, hand, fts, pm);
 			break;
 		}
 		default:{ 
@@ -1505,7 +243,7 @@ void runExperiment(	Hand* hand, ForceTorqueSensor* fts, void* wamin, ProductMana
 	
 	//std::cout << "Experiment " << experiment_keys[int(expnum)];
 	
-	if(!expsemastop){
+	/*if(!expsemastop){
 		std::cout << " Completed Successfully!" << std::endl;
 		datasemastop = true;
 		if(collectData)
@@ -1517,52 +255,9 @@ void runExperiment(	Hand* hand, ForceTorqueSensor* fts, void* wamin, ProductMana
 		datasemastop = true;
 		if(collectData)
 			dataCollectionThread->join();
-	}
-	
+	}*/	
 }
 
-template<size_t DOF, int R, int C, typename Units>
-void moveToStr(systems::Wam<DOF>& wam, math::Matrix<R,C, Units>* dest,
-		const std::string& description, const std::string& str)
-{
-	if (parseDoubles(dest, str)) {
-		std::cout << "Moving to " << description << ": " << *dest << std::endl;
-		wam.moveTo(*dest);
-	} else {
-		printf("ERROR: Please enter exactly %d numbers separated by "
-				"whitespace.\n", dest->size());
-	}
-}
-void moveToStr(Hand* hand, Hand::jp_type* dest,
-		const std::string& description, const std::string& str)
-{
-	if (parseDoubles(dest, str)) {
-		std::cout << "Moving Hand to " << description << ": " << *dest << std::endl;
-		hand->trapezoidalMove(*dest);
-	} else {
-		printf("ERROR: Please enter exactly 4 numbers separated by whitespace.\n");
-	}
-}
-
-double velCommand(bool open, bool close, double speed = 1.25) {
-	if (open  &&  !close) {
-		return -speed;
-	} else if (close  &&  !open) {
-		return speed;
-	} else {
-		return 0.0;
-	}
-}
-
-void handCommand(Hand* hand, unsigned char data){
-	Hand::jv_type hjv;
-	hjv[0] = velCommand(data & (1<<2), data & (1<<3));  // Middle
-	hjv[1] = velCommand(data & (1<<0), data & (1<<1));  // Pointer
-	hjv[2] = velCommand(data & (1<<4), data & (1<<5));  // Thumb
-	hjv[3] = velCommand(data & (1<<6), data & (1<<7));  // Rocker
-	hand->velocityMove(hjv);
-	std::cout << "Velocity: " << hjv << std::endl;
-}
 
 
 template<size_t DOF>
@@ -1576,11 +271,7 @@ int wam_main(int argc, char** argv, ProductManager& pm, systems::Wam<DOF>& wam) 
 	jp_type jp;  // jp is a DOFx1 column vector of joint positions
 	cp_type cp;  // cp is a 3x1 vector representing a Cartesian position
 	
-	setVectorValues(&finger_contacts, 0, 0);
-
-	//MasterMaster<DOF> mm(pm.getExecutionManager(), argv[1]);
-	//systems::connect(wam.jpOutput, mm.input);
-
+	//setVectorValues(&finger_contacts, 0, 0);
 
 	wam.gravityCompensate();
 
@@ -1599,7 +290,6 @@ int wam_main(int argc, char** argv, ProductManager& pm, systems::Wam<DOF>& wam) 
 		fts->tare();
 	}
 	// Is a Hand attached?
-
 	if (pm.foundHand()) {
 		hand = pm.getHand();
 		if (argc == 2) {  // auto init
@@ -1608,81 +298,6 @@ int wam_main(int argc, char** argv, ProductManager& pm, systems::Wam<DOF>& wam) 
 			hand->initialize();
 		}
 	}
-	
-	
-	//data logging
-	char tmpFile[] = "/tmp/btXXXXXX";
-	if (mkstemp(tmpFile) == -1) {
-		printf("ERROR: Couldn't create temporary file!\n");
-		return 1;
-	}
-	
-	/*
-	systems::Ramp time(pm.getExecutionManager(), 1.0);
-
-	systems::TupleGrouper<double, jp_type, jv_type, jt_type, cp_type, Eigen::Quaterniond> tg;
-	connect(time.output, tg.template getInput<0>());
-	connect(wam.jpOutput, tg.template getInput<1>());
-	connect(wam.jvOutput, tg.template getInput<2>());
-	connect(wam.jtSum.output, tg.template getInput<3>());
-	connect(wam.toolPosition.output, tg.template getInput<4>());
-	connect(wam.toolOrientation.output, tg.template getInput<5>());
-
-	typedef boost::tuple<double, jp_type, jv_type, jt_type, cp_type, Eigen::Quaterniond> tuple_type;
-	const size_t PERIOD_MULTIPLIER = 1;
-	systems::PeriodicDataLogger<tuple_type> logger(
-			pm.getExecutionManager(),
-			new log::RealTimeWriter<tuple_type>(tmpFile, PERIOD_MULTIPLIER * pm.getExecutionManager()->getPeriod()),
-			PERIOD_MULTIPLIER);
-
-	time.start();
-	connect(tg.output, logger.input);
-	printf("Logging started.\n");
-	*/
-	/*
-	char tmpFile[] = "/tmp/btXXXXXX";
-	if (mkstemp(tmpFile) == -1) {
-		printf("ERROR: Couldn't create temporary file!\n");
-		return 1;
-	}
-
-	systems::Ramp time(pm.getExecutionManager(), 1.0);
-
-	systems::TupleGrouper<double, jp_type, jv_type, jt_type, cp_type, Eigen::Quaterniond> tg;
-	connect(time.output, tg.template getInput<0>());
-	connect(wam.jpOutput, tg.template getInput<1>());
-	connect(wam.jvOutput, tg.template getInput<2>());
-	connect(wam.jtSum.output, tg.template getInput<3>());
-	connect(wam.toolPosition.output, tg.template getInput<4>());
-	connect(wam.toolOrientation.output, tg.template getInput<5>());
-
-	typedef boost::tuple<double, jp_type, jv_type, jt_type, cp_type, Eigen::Quaterniond> tuple_type;
-	const size_t PERIOD_MULTIPLIER = 1;
-	systems::PeriodicDataLogger<tuple_type> logger(
-			pm.getExecutionManager(),
-			new log::RealTimeWriter<tuple_type>(tmpFile, PERIOD_MULTIPLIER * pm.getExecutionManager()->getPeriod()),
-			PERIOD_MULTIPLIER);
-	time.start();
-	connect(tg.output, logger.input);
-	printf("Logging started.\n");
-	bool collectData = false;
-	if(collectData){		
-		dataCollect(hand, fts, wam, pm, (void*)&logger);
-		//dataCollectionThread = new boost::thread(dataCollect, hand, fts, &wam, &pm);
-	}
-	pm.getSafetyModule()->waitForMode(SafetyModule::IDLE);
-	
-	typedef boost::tuple<double, jp_type, jv_type, jt_type, cp_type, Eigen::Quaterniond> tuple_type;
-
-	((systems::PeriodicDataLogger<tuple_type>*)loggerin)->closeLog();
-	printf("Logging stopped.\n");
-	
-	log::Reader<tuple_type> lr(tmpFile);
-	lr.exportCSV(outFile);
-	printf("Output written to %s.\n", outFile);
-	std::remove(tmpFile);
-	exit(0);
-	*/
 	
 	while (pm.getSafetyModule()->getMode() == SafetyModule::ACTIVE) {
 		if (autoCmds.empty()) {
@@ -1922,8 +537,8 @@ int wam_main(int argc, char** argv, ProductManager& pm, systems::Wam<DOF>& wam) 
 			int found_w = int(line.find(" "));
 			int found_s = int(line.find("-s"));
 			int found_n = int(line.find("-n"));
-			int found_l = int(line.find("-l"));
-			int found_t = int(line.find("-t"));
+			//int found_l = int(line.find("-l"));
+			//int found_t = int(line.find("-t"));
 			//arg -s: shape of object to grasp
 			if (found_s!=int(std::string::npos)){
 				//find next whitespace or newline
@@ -1943,7 +558,7 @@ int wam_main(int argc, char** argv, ProductManager& pm, systems::Wam<DOF>& wam) 
 				}
 				
 				sub = line.substr(found_n+3,found_tmp-found_n+3);
-				num_runs = atoi(sub.c_str());
+				//num_runs = atoi(sub.c_str());
 			}
 			if(found_w==int(std::string::npos)){
 				found_w = int(line.find("\n"));
@@ -1952,7 +567,7 @@ int wam_main(int argc, char** argv, ProductManager& pm, systems::Wam<DOF>& wam) 
 			
 			if(expnumstr != ""){
 				int expnum 	= atoi(expnumstr.c_str());
-				expshape = EXPERIMENT_SHAPES(atoi(expshapestr.c_str()));
+				//expshape = EXPERIMENT_SHAPES(atoi(expshapestr.c_str()));
 				
 				boost::thread* experimentThread;
 				expsemastop = false;
@@ -1999,7 +614,7 @@ int wam_main(int argc, char** argv, ProductManager& pm, systems::Wam<DOF>& wam) 
 		{
 			int window_size = 1;
 			std::string sub = "";
-			int found_w = int(line.find(" "));
+			//int found_w = int(line.find(" "));
 			int found_s = int(line.find("-s"));
 			//arg -s: shape of object to grasp
 			if (found_s!=int(std::string::npos)){
@@ -2011,7 +626,7 @@ int wam_main(int argc, char** argv, ProductManager& pm, systems::Wam<DOF>& wam) 
 				sub = line.substr(found_s+3,found_tmp-found_s+3);
 				window_size = atoi(sub.c_str());
 			}
-			tare_strain(hand);
+			tare_fingertip_torque(hand);
 			tare_tactile(hand);
 			break;
 		}	
@@ -2036,12 +651,13 @@ int wam_main(int argc, char** argv, ProductManager& pm, systems::Wam<DOF>& wam) 
 		}
 		case 'd':
 		{
-			collectData = !collectData;
-			std::cout << "Data collection toggled: " << collectData << std::endl;
+			//collectData = !collectData;
+			//std::cout << "Data collection toggled: " << collectData << std::endl;
 			break;
 		}
 		case '1':
 		{
+            /*
 			loadExpVariables();
 			//cast wam to 7DOF first
 			wamBottom	= (*((systems::Wam<DIMENSION>*)(&wam))).getJointPositions();
@@ -2051,12 +667,13 @@ int wam_main(int argc, char** argv, ProductManager& pm, systems::Wam<DOF>& wam) 
 			std::cout << "Setting wamBottom to " << toString(&wamBottom) << std::endl;
 			std::cout << "Setting wamBottomC to " << toString(&wamBottomC) << std::endl;
 			std::cout << "Setting wamBottomQ to " << toString(&wamBottomO) << std::endl;
-			saveExpVariables();
+			saveExpVariables();*/
 			break;
 		}
 		case '2':
 		{
-			loadExpVariables();
+			/*
+            loadExpVariables();
 			//cast wam to 7DOF first
 			wamTop 	= (*((systems::Wam<DIMENSION>*)(&wam))).getJointPositions();
 			wamTopC = (*((systems::Wam<DIMENSION>*)(&wam))).getToolPosition();
@@ -2065,7 +682,7 @@ int wam_main(int argc, char** argv, ProductManager& pm, systems::Wam<DOF>& wam) 
 			std::cout << "Setting wamTop to " << toString(&wamTop) << std::endl;
 			std::cout << "Setting wamTopC to " << toString(&wamTopC) << std::endl;
 			std::cout << "Setting wamTopQ to " << toString(&wamTopO) << std::endl;
-			saveExpVariables();
+			saveExpVariables();*/
 			break;
 		}
 		default:
@@ -2090,7 +707,7 @@ int wam_main(int argc, char** argv, ProductManager& pm, systems::Wam<DOF>& wam) 
 			printf("    's' to show formatted output\n");
 			printf("    'r' to run experiment\n");
 			printf("    'e' to end program and output to log\n");
-			printf("    't' to tare the tactile and strain sensors\n");
+			printf("    't' to tare the tactile and fingertip_torque sensors\n");
 			printf("    'o' to cause WAM to hold its current orientation\n");
 			printf("	'd' to toggle data collection on/off (default off)\n");
 			printf("    '1' to record WAM bottom joint angles\n");
@@ -2099,163 +716,6 @@ int wam_main(int argc, char** argv, ProductManager& pm, systems::Wam<DOF>& wam) 
 		}
 	}
 	return 0;
-}
-
-int openSocket(const char* remoteHost, int port = 3333) {
-	int sock;
-
-	int err;
-	long flags;
-	struct sockaddr_in bind_addr;
-	struct sockaddr_in their_addr;
-
-	/* Create socket */
-	sock = socket(PF_INET, SOCK_DGRAM, 0);
-	if (sock == -1)
-	{
-		syslog(LOG_ERR,"%s: Could not create socket.",__func__);
-		throw std::runtime_error("openSocket(): Failed. Check /var/log/syslog.");
-	}
-
-	/* Set socket to non-blocking, set flag associated with open file */
-	flags = fcntl(sock, F_GETFL, 0);
-	if (flags < 0)
-	{
-		syslog(LOG_ERR,"%s: Could not get socket flags.",__func__);
-		throw std::runtime_error("openSocket(): Failed. Check /var/log/syslog.");
-	}
-	flags |= O_NONBLOCK;
-	err = fcntl(sock, F_SETFL, flags);
-	if (err < 0)
-	{
-		syslog(LOG_ERR,"%s: Could not set socket flags.",__func__);
-		throw std::runtime_error("openSocket(): Failed. Check /var/log/syslog.");
-	}
-
-	/* Set up the bind address */
-	bind_addr.sin_family = AF_INET;
-	bind_addr.sin_port = htons(port);
-	bind_addr.sin_addr.s_addr = htonl(INADDR_ANY);
-	err = bind(sock, (struct sockaddr *)&bind_addr, sizeof(bind_addr));
-	if (err == -1)
-	{
-		syslog(LOG_ERR,"%s: Could not bind to socket on port %d.",__func__,port);
-		throw std::runtime_error("openSocket(): Failed. Check /var/log/syslog.");
-	}
-
-	/* Set up the other guy's address */
-	their_addr.sin_family = AF_INET;
-	their_addr.sin_port = htons(port);
-	err = ! inet_pton(AF_INET, remoteHost, &their_addr.sin_addr);
-	if (err)
-	{
-		syslog(LOG_ERR,"%s: Bad IP argument '%s'.",__func__,remoteHost);
-		throw std::runtime_error("openSocket(): Failed. Check /var/log/syslog.");
-	}
-
-	/* Call "connect" to set datagram destination */
-	err = connect(sock, (struct sockaddr *)&their_addr, sizeof(struct sockaddr));
-	if (err)
-	{
-		syslog(LOG_ERR,"%s: Could not set datagram destination.",__func__);
-		throw std::runtime_error("openSocket(): Failed. Check /var/log/syslog.");
-	}
-
-	return sock;
-}
-void backDriveHand(Hand* hand, ForceTorqueSensor* fts, void* wamin, ProductManager* pm){
-	std::cout << "Hand Backdrivability ON" << std::endl;
-	double finger_joint_step = misc_parms[0];
-	double tact_stop = misc_parms[1];
-	double tact_push = misc_parms[2];
-	double strain_stop = misc_parms[3];
-	double strain_push = misc_parms[4];
-	double strain_pull = misc_parms[5];
-	double temp = misc_parms[6];
-	std::cout << "parameters: ";
-	std::cout 	<< finger_joint_step << ", "
-				<< tact_stop << ", "
-				<< tact_push << ", "
-				<< strain_stop << ", "
-				<< strain_push << ", "
-				<< strain_pull << ", " << std::endl;
-	std::cout << "tact_base_vals: ";
-	std::cout 	<< tact_base_val[0] << ", "
-				<< tact_base_val[1] << ", "
-				<< tact_base_val[2] << std::endl;
-	std::cout << "strain_base_vals: ";
-	std::cout 	<< strain_base_val[0] << ", "
-				<< strain_base_val[1] << ", "
-				<< strain_base_val[2] << ", "
-				<< strain_base_val[3] << std::endl;
-	//hand->setPositionMode();
-	while(!backdrivesemastop){
-		//boost::this_thread::sleep(boost::posix_time::milliseconds(1));
-		int num_fingers = 3;
-		hand->update(Hand::S_POSITION, true);
-		Hand::jp_type hjp = hand->getInnerLinkPosition();
-		//std::cout << "before: " << toString(&hjp) << std::endl;
-		for(int i = 0; i < num_fingers; i++){
-			//F > zero_thresh
-			if(check_tactile_contact(hand, i, tact_base_val[i]*tact_stop)||
-				check_strain_contact(hand, i, strain_base_val[i]*strain_stop)){	//F1,2,3
-				finger_contacts[i] = 1;
-				//F > push_thresh
-				if(check_tactile_contact(hand, i, tact_base_val[i]*tact_push)||
-					check_strain_contact(hand, i, strain_base_val[i]*strain_push)){
-					//Hand::jv_type hjv;
-					//setVectorValues(&hjv, 0, 0);
-					//std::cout << "Move F" << i+1 << " back slightly" << std::endl;
-					//hjv[i] = -0.1;	//radians/sec
-					//hand->velocityMove(hjv);
-					//hand->trapezoidalMove(hjp, true);
-					//std::cout << "changing for F" << i << std::endl;
-					//std::cout << toString(&hjp) << std::endl;
-
-					hjp[i] /*-= finger_joint_step;*/ = std::max(hjp[i]-finger_joint_step, finger_joint_step);	//radians
-					hand->setPositionMode();
-					hand->setPositionCommand(hjp);
-				}
-			}
-			//F < pull_thresh
-			if(i != 2 && get_strain_value(hand, i) < strain_base_val[i]*strain_pull){	//F1,2,3
-				//Hand::jv_type hjv;
-				//setVectorValues(&hjv, 0, 0);
-				//std::cout << "Move F" << i+1 << " back slightly" << std::endl;
-				//hjv[i] = 0.1;	//radians/s
-				//hand->velocityMove(hjv);
-				//hand->trapezoidalMove(hjp, true);
-				//std::cout << toString(&hjp) << std::endl;
-				
-				std::cout << get_strain_value(hand, i) << " < " << strain_base_val[i]*strain_pull << std::endl;
-				
-				hjp[i] /*+= finger_joint_step;*/ = std::min(hjp[i]+finger_joint_step, FINGER_JOINT_LIMIT-finger_joint_step);	//radians
-				hand->setPositionMode();
-				hand->setPositionCommand(hjp);
-			}
-			if(i == 2 && get_strain_value(hand, i) < strain_base_val[i]*strain_pull*1.1){	//F1,2,3
-				//Hand::jv_type hjv;
-				//setVectorValues(&hjv, 0, 0);
-				//std::cout << "Move F" << i+1 << " back slightly" << std::endl;
-				//hjv[i] = 0.1;	//radians/s
-				//hand->velocityMove(hjv);
-				//hand->trapezoidalMove(hjp, true);
-				//std::cout << toString(&hjp) << std::endl;
-				
-				std::cout << get_strain_value(hand, i) << " < " << strain_base_val[i]*strain_pull << std::endl;
-				
-				hjp[i] /*+= finger_joint_step;*/ = std::min(hjp[i]+finger_joint_step, FINGER_JOINT_LIMIT-finger_joint_step);	//radians
-				hand->setPositionMode();
-				hand->setPositionCommand(hjp);
-			}
-		}
-		//std::cout << "after: " << toString(&hjp) << std::endl;
-		//if(check_tactile_contact(hand, 3, ZERO_TACTILE_THRESHOLD*3)){	//PALM
-			//cp_type
-			//std::cout << "Move hand back slightly" << std::endl;
-		//}
-	}
-	std::cout << "Hand Backdrivability OFF" << std::endl;
 }
 
 void dataCollect(Hand* hand, ForceTorqueSensor* fts, void* wamin, ProductManager* pm, 
@@ -2272,7 +732,7 @@ void dataCollect(Hand* hand, ForceTorqueSensor* fts, void* wamin, ProductManager
 	ct.clear();						std::vector<Hand::ct_type>::iterator ctit;
 	std::vector<Hand::jp_type> hjp_in; 			std::vector<Hand::jp_type>::iterator hjpit; //can use for both in and out
 	std::vector<Hand::jp_type> hjp_out;
-	hstrain.clear(); 				std::vector< std::vector<int> >::iterator hsit;		std::vector<int>::iterator intit;
+	hfingertip_torque.clear(); 				std::vector< std::vector<int> >::iterator hsit;		std::vector<int>::iterator intit;
 	std::vector< std::vector<v_type> > htact;	std::vector< std::vector<v_type> >::iterator htit;	std::vector<v_type>::iterator vtit;
 	
 	std::vector<TactilePuck*> tps;
@@ -2318,12 +778,12 @@ void dataCollect(Hand* hand, ForceTorqueSensor* fts, void* wamin, ProductManager
 		hjp_in.push_back(hand->getInnerLinkPosition());
 		hjp_out.push_back(hand->getOuterLinkPosition());
 		
-		std::vector<int> strain = hand->getFingertipTorque();
-		hstrain.push_back(strain);
-		for (size_t i = 0; i < strain.size(); ++i){
-			double torque = strain[i]/STRAIN2TORQUE_RATIO;
-			if(torque < min_hstrain[i])
-				min_hstrain[i] = torque;
+		std::vector<int> fingertip_torque = hand->getFingertipTorque();
+		hfingertip_torque.push_back(fingertip_torque);
+		for (size_t i = 0; i < fingertip_torque.size(); ++i){
+			double torque = fingertip_torque[i]/FINGERTIP_TORQUE2TORQUE_RATIO;
+			if(torque < min_hfingertip_torque[i])
+				min_hfingertip_torque[i] = torque;
 		}
 		for (size_t i = 0; i < tps.size(); ++i){
 			temp.push_back(tps[i]->getFullData());
@@ -2348,7 +808,7 @@ void dataCollect(Hand* hand, ForceTorqueSensor* fts, void* wamin, ProductManager
 		std::ofstream FTST;
 		std::ofstream BHIN;
 		std::ofstream BHOUT;
-		std::ofstream HSTRAIN;
+		std::ofstream HFINGERTIP_TORQUE;
 		std::ofstream HTACT;
 		
 		std::string prefix = 	"data/" 						+ 
@@ -2367,7 +827,7 @@ void dataCollect(Hand* hand, ForceTorqueSensor* fts, void* wamin, ProductManager
 		FTST.open	((prefix + "FTST" 	+ suffix).c_str(), 	std::ios::trunc);
 		BHIN.open	((prefix + "BHIN" 	+ suffix).c_str(), 	std::ios::trunc);
 		BHOUT.open	((prefix + "BHOUT" 	+ suffix).c_str(), 	std::ios::trunc);
-		HSTRAIN.open((prefix + "HSTRAIN"+ suffix).c_str(),	std::ios::trunc);
+		HFINGERTIP_TORQUE.open((prefix + "HFINGERTIP_TORQUE"+ suffix).c_str(),	std::ios::trunc);
 		HTACT.open	((prefix + "HTACT" 	+ suffix).c_str(), 	std::ios::trunc);
 		
 		std::cout << "for...";
@@ -2386,11 +846,11 @@ void dataCollect(Hand* hand, ForceTorqueSensor* fts, void* wamin, ProductManager
 		for (ctit=ct.begin()	  ; ctit < ct.end()      ; ctit++)	{FTST << *ctit << std::endl; }
 		for (hjpit=hjp_in.begin() ; hjpit < hjp_in.end() ; hjpit++) {BHIN << *hjpit << std::endl;}
 		for (hjpit=hjp_out.begin(); hjpit < hjp_out.end(); hjpit++)	{BHOUT << *hjpit << std::endl;}
-		for (hsit=hstrain.begin() ; hsit < hstrain.end() ; hsit++){
+		for (hsit=hfingertip_torque.begin() ; hsit < hfingertip_torque.end() ; hsit++){
 			std::vector<int> hsvec = *hsit;
-			HSTRAIN << '[';
-			for(intit=hsvec.begin(); intit<hsvec.end()-1; intit++){HSTRAIN << *intit << ", ";}
-			HSTRAIN << *intit << ']' << std::endl;
+			HFINGERTIP_TORQUE << '[';
+			for(intit=hsvec.begin(); intit<hsvec.end()-1; intit++){HFINGERTIP_TORQUE << *intit << ", ";}
+			HFINGERTIP_TORQUE << *intit << ']' << std::endl;
 		}
 		for (htit=htact.begin()   ; htit < htact.end()   ; htit++){
 			std::vector<v_type> htvec = *htit;
