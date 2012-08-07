@@ -40,13 +40,11 @@
 // The ncurses library allows us to write text to any location on the screen
 #include <curses.h>
 
-#ifndef DIMENSION
 #define DIMENSION 7u
 #define FINGERTIP_TORQUE2TORQUE_RATIO 118.0     //convert hand fingertip_torque to N-m
 #define FINGER_JOINT_LIMIT 2.4435       //=140 degrees
 #define ZERO_FINGERTIP_TORQUE_THRESHOLD 2000    //required threshold to be considered non-noise reading
 #define ZERO_TACTILE_THRESHOLD 0.5      //required threshold to be considered non-noise reading
-#endif
 
 using namespace barrett;
 using systems::connect;

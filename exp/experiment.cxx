@@ -1,6 +1,27 @@
 #include "experiment.h"
 #include "utils.h"
 
+std::string experiment_keys[NUM_EXPERIMENTS] = {
+	"ActionPhase",
+	"ActiveSensing",
+	"WAMVelocity",
+	"WAMJointPos",
+	"WAMCartesianPos",
+	"WAMJointTorque",
+	"BHVelocity",
+	"BHPosition",
+	"BHTorque",
+	"BHTrapezoidal",
+	"SimpleShapes",	
+	"ActiveProbing",
+	"CartesianRaster"
+};
+std::string experiment_shapes[NUM_SHAPES] = {
+	"circle",
+	"square",
+	"triangle"
+};
+
 Experiment::Experiment(systems::Wam<DIMENSION>* wam, Hand* hand, ForceTorqueSensor* fts, ProductManager* pm){
     this->wam = wam;
     this->hand = hand;
@@ -8,7 +29,81 @@ Experiment::Experiment(systems::Wam<DIMENSION>* wam, Hand* hand, ForceTorqueSens
     this->pm = pm;
 }
 void Experiment::run(){
+    if(!is_initialized){
+        std::cout << "experiment not yet initialized...aborting" << std::endl;
+        return;
+    }
+    else{
+        //run!!
+        //boost::thread* experimentThread;
+        //expsemastop = false;
+        //experimentThread = new boost::thread(
+        //    runExperiment, EXPERIMENT_KEYS(exp_id));
+        //waitForEnter();
+        //expsemastop = true;
+    }
+
 }
+
+void Experiment::init(std::string args){
+    bool is_initialized = true;
+    std::string exp_idstr = "";
+    std::string expshapestr = "";
+    std::string sub = "";
+    int found_w = int(args.find(" "));
+    int found_s = int(args.find("-s"));
+    int found_n = int(args.find("-n"));
+    int found_l = int(args.find("-l"));
+    int found_t = int(args.find("-t"));
+    //arg -s: shape of object to grasp
+    if (found_s!=int(std::string::npos)){
+        //find next whitespace or newline
+        int found_tmp = int(args.find(" ",found_s+3));
+        if(found_tmp==int(std::string::npos)){
+            found_tmp = int(args.find("\n",found_s+3));
+        }
+                    
+        sub = args.substr(found_s+3,found_tmp-found_s+3);
+        expshapestr = sub;
+    }
+    if (found_n!=int(std::string::npos)){
+        //find next whitespace or newline
+        int found_tmp = int(args.find(" ",found_n+3));
+        if(found_tmp==int(std::string::npos)){
+            found_tmp = int(args.find("\n",found_n+3));
+        }
+        
+        sub = args.substr(found_n+3,found_tmp-found_n+3);
+        num_runs = atoi(sub.c_str());
+    }
+    if(found_w==int(std::string::npos)){
+        found_w = int(args.find("\n"));
+    }
+    exp_idstr = args.substr(1,found_w-1);
+    
+    if(exp_idstr != ""){
+        exp_id = EXPERIMENT_KEYS(atoi(exp_idstr.c_str()));
+        exp_shape = EXPERIMENT_SHAPES(atoi(expshapestr.c_str()));     
+    }
+    else{
+        help();
+    }
+}
+
+void Experiment::help(){
+    std::cout << "please enter r[exp#] -s [shape#] -n [num_runs]" << std::endl;
+	std::cout << "possible exp#:" << std::endl;
+    for(int i = 0; i < NUM_EXPERIMENTS; i++){
+        std::cout << "\t" << i << ": " << experiment_keys[i] << std::endl;
+    }
+    std::cout << "possible shape# (default:0):" << std::endl;
+    for(int i = 0; i < NUM_SHAPES; i++){
+        std::cout << "\t" << i << ": " << experiment_shapes[i] << std::endl;
+    }
+    std::cout << "num_runs (default: 1): how many times to repeat the experiment" << std::endl;
+
+}
+
 void Experiment::load_exp_variables(){
 	std::string wamBottomStr;
 	std::string wamTopStr;

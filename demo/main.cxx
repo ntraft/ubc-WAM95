@@ -6,159 +6,24 @@
  */
 
 #define BARRETT_SMF_VALIDATE_ARGS
-#include <barrett/standard_main_function.h>
-#include "stdheader.h"
+#include <barrett/standard_main_function.h> //wam_main function
+#include "stdheader.h"  //check here for all standard includes and definitions
+
 #include "utils.h"
 #include "senses.h"
 #include "control.h"
+
 #include "experiment.h"
-    #include "action.h"
+#include "action.h"
 
-
-// The ncurses library allows us to write text to any location on the screen
-#include <curses.h>
-#include <barrett/math.h>  // For barrett::math::saturate()
-
-#ifndef DIMENSION
-#define DIMENSION 7u
-#define FINGERTIP_TORQUE2TORQUE_RATIO 118.0     //convert hand fingertip_torque to N-m
-#define FINGER_JOINT_LIMIT 2.4435       //=140 degrees
-#define ZERO_FINGERTIP_TORQUE_THRESHOLD 2000    //required threshold to be considered non-noise reading
-#define ZERO_TACTILE_THRESHOLD 0.5      //required threshold to be considered non-noise reading
-#endif
-
-/*
-enum EXPERIMENT_KEYS{
-	ACTIONPHASE,
-	ACTIVESENSING,
-	WAMVELOCITY,
-	WAMJOINTPOS,
-	WAMCARTESIANPOS,
-	WAMJOINTTORQUE,
-	BHVELOCITY,
-	BHPOSITION,
-	BHTORQUE,
-	BHTRAPEZOIDAL,
-	SIMPLESHAPES,
-	ACTIVEPROBING,
-	CARTESIANRASTER,
-	NUM_EXPERIMENTS
-};
-enum EXPERIMENT_SHAPES{
-	CIRCLE,
-	SQUARE,
-	TRIANGLE,
-	NUM_SHAPES
-};
-enum ACTION_PHASES{
-	APPROACH = -1,
-	PRELOAD,
-	LOADING,
-	TRANSITIONAL,
-	STATIC,
-	REPLACEMENT,
-	UNLOADING,
-	NUM_ACTION_PHASES
-} ActionPhase;*/
-
-using namespace barrett;
-using systems::connect;
-using detail::waitForEnter;
-
-//typedef math::Vector<24>::type TactilePuck::v_type;
+Experiment* experiment;
 
 //thread management
-bool expsemastop = true;
+/*bool expsemastop = true;
 bool datasemastop = true;
 bool backdrivesemastop = true;
 bool graspsemastop = true;
-bool showsensorsemastop = true;
-
-// Functions that help display data from the Hand's (optional) tactile sensors.
-// Note that the palm tactile sensor has a unique cell layout that these
-// functions do not print  correctly.
-const int TACT_CELL_HEIGHT = 3;
-const int TACT_CELL_WIDTH = 6;
-const int TACT_BOARD_ROWS = 8;
-const int TACT_BOARD_COLS = 3;
-const int TACT_BOARD_STRIDE = TACT_BOARD_COLS * TACT_CELL_WIDTH + 2;
-void drawBoard(WINDOW *win, int starty, int startx, int rows, int cols,
-		int tileHeight, int tileWidth);
-void graphPressures(WINDOW *win, int starty, int startx,
-		const TactilePuck::v_type& pressures);
-
-//constants for hand sensors
-//static const unsigned int Hand::S_POSITION          = 1 << 0;
-//static const unsigned int Hand::S_FINGER_TIP_TORQUE = 1 << 1;
-//static const unsigned int Hand::S_TACT_FULL         = 1 << 2;
-//static const unsigned int Hand::S_ALL = Hand::S_POSITION | Hand::S_FINGER_TIP_TORQUE | Hand::S_TACT_FULL;
-		
-//for data logging
-char tmpFile[14] = "/tmp/btXXXXXX";
-char outFile[14] = "data/data.csv";
-void dataCollect(Hand* hand, ForceTorqueSensor* fts, void* wamin, ProductManager* pm, 
-					enum EXPERIMENT_KEYS expnum, enum EXPERIMENT_SHAPES expshape);
-void runExperiment(	Hand* hand, ForceTorqueSensor* fts, void* wamin, ProductManager* pm,
-					enum EXPERIMENT_KEYS expnum);
-void backDriveHand(Hand* hand, ForceTorqueSensor* fts, void* wamin, ProductManager* pm);
-void graspObject(Hand* hand);
-void stop_thread(bool* semaphore);
-/*
-//experiment variables
-bool realtime = true;
-int prev_state = -1;
-int num_runs = 1;
-std::string experiment_keys[NUM_EXPERIMENTS] = {
-	"ActionPhase",
-	"ActiveSensing",
-	"WAMVelocity",
-	"WAMJointPos",
-	"WAMCartesianPos",
-	"WAMJointTorque",
-	"BHVelocity",
-	"BHPosition",
-	"BHTorque",
-	"BHTrapezoidal",
-	"SimpleShapes",	
-	"ActiveProbing",
-	"CartesianRaster"
-};
-std::string experiment_shapes[NUM_SHAPES] = {
-	"circle",
-	"square",
-	"triangle"
-};*/
-//systems::Wam<DIMENSION>::jp_type wamBottom;
-//systems::Wam<DIMENSION>::jp_type wamTop;
-//systems::Wam<DIMENSION>::cp_type wamBottomC;
-//systems::Wam<DIMENSION>::cp_type wamBottomC_ip;	//intermediate point
-//systems::Wam<DIMENSION>::cp_type wamTopC;
-//Hand::jp_type wamBottomO;
-//Hand::jp_type wamTopO;
-//Eigen::Quaterniond wamTopQ;
-//Eigen::Quaterniond wamBottomQ;
-//Hand::jv_type handPregrasp;
-//Hand::jv_type handGrasp;
-//Hand::jv_type handUnGrasp;
-//Hand::jv_type tact_base_val;
-//Hand::jv_type fingertip_torque_base_val;
-//Hand::ct_type torque_epsilon;
-//systems::Wam<DIMENSION>::jp_type joint_tolerance;
-//systems::Wam<DIMENSION>::jp_type temp;
-//systems::Wam<DIMENSION>::jp_type misc_parms;	//miscellaneous parameters
-//Hand::jp_type finger_contacts;	//entries are 0 if no contact, 1 if contact
-//enum EXPERIMENT_SHAPES expshape;
-
-//experiment-specific flags
-//bool move_and_lift;
-//bool land_and_stroke;
-
-//data collection vectors
-//std::vector< std::vector<int> > hfingertip_torque;	//hand fingertip_torque measure
-//std::vector<double> min_hfingertip_torque(4,9999999);//running minimum values
-//std::vector<Hand::ct_type> ct;	//cartesian torque
-//Hand::ct_type min_ct;	//running minimum values
-//bool collectData = false;
+bool showsensorsemastop = true;*/
 
 
 bool validate_args(int argc, char** argv) {
@@ -175,7 +40,7 @@ void runExperiment(	Hand* hand, ForceTorqueSensor* fts, void* wamin, ProductMana
 					enum EXPERIMENT_KEYS expnum){
 	systems::Wam<DIMENSION>* wam = (systems::Wam<DIMENSION>*)wamin;
 	
-	datasemastop = false;
+	//datasemastop = false;
 	boost::thread* dataCollectionThread = NULL;
 	/*if(collectData){
 		dataCollectionThread = new boost::thread(dataCollect, hand, fts, wam, pm, expnum, expshape);
@@ -520,74 +385,19 @@ int wam_main(int argc, char** argv, ProductManager& pm, systems::Wam<DOF>& wam) 
 			break;
 		}
 		case 'b':{
-			if(backdrivesemastop){
+			/*if(backdrivesemastop){
 				boost::thread* backDriveHandThread;
 				backdrivesemastop = false;
 				backDriveHandThread = new boost::thread(backDriveHand, hand, fts, &wam, &pm);
 			}
 			else{
 				backdrivesemastop = true;
-			}
+			}*/
 			break;
 		}
 		case 'r':{
-			std::string expnumstr = "";
-			std::string expshapestr = "";
-			std::string sub = "";
-			int found_w = int(line.find(" "));
-			int found_s = int(line.find("-s"));
-			int found_n = int(line.find("-n"));
-			//int found_l = int(line.find("-l"));
-			//int found_t = int(line.find("-t"));
-			//arg -s: shape of object to grasp
-			if (found_s!=int(std::string::npos)){
-				//find next whitespace or newline
-				int found_tmp = int(line.find(" ",found_s+3));
-				if(found_tmp==int(std::string::npos)){
-					found_tmp = int(line.find("\n",found_s+3));
-				}
-							
-				sub = line.substr(found_s+3,found_tmp-found_s+3);
-				expshapestr = sub;
-			}
-			if (found_n!=int(std::string::npos)){
-				//find next whitespace or newline
-				int found_tmp = int(line.find(" ",found_n+3));
-				if(found_tmp==int(std::string::npos)){
-					found_tmp = int(line.find("\n",found_n+3));
-				}
-				
-				sub = line.substr(found_n+3,found_tmp-found_n+3);
-				//num_runs = atoi(sub.c_str());
-			}
-			if(found_w==int(std::string::npos)){
-				found_w = int(line.find("\n"));
-			}
-			expnumstr = line.substr(1,found_w-1);
-			
-			if(expnumstr != ""){
-				int expnum 	= atoi(expnumstr.c_str());
-				//expshape = EXPERIMENT_SHAPES(atoi(expshapestr.c_str()));
-				
-				boost::thread* experimentThread;
-				expsemastop = false;
-				experimentThread = new boost::thread(
-					runExperiment, hand, fts, &wam, &pm, EXPERIMENT_KEYS(expnum));
-				waitForEnter();
-				expsemastop = true;
-			}
-			else{
-				std::cout << "please enter r[exp#] -s [shape#] -n [num_runs]" << std::endl;
-				std::cout << "possible exp#:" << std::endl;
-				for(int i = 0; i < NUM_EXPERIMENTS; i++){
-					//std::cout << "\t" << i << ": " << experiment_keys[i] << std::endl;
-				}
-				std::cout << "possible shape# (default:0):" << std::endl;
-				for(int i = 0; i < NUM_SHAPES; i++){
-					//std::cout << "\t" << i << ": " << experiment_shapes[i] << std::endl;
-				}
-				std::cout << "num_runs (default: 1): how many times to repeat the experiment" << std::endl;
-			}
+            experiment->init(line);
+            experiment->run();
 			break;
 		}
 		case 'e':
