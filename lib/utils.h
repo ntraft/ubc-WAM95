@@ -100,4 +100,6 @@ void getInterpolatingSteps(     math::Matrix<R,C, Units>* step,
                 (*step)[i] = ((*to)[i] - (*from)[i]) / num_steps;
         }
 }
+void stop_thread(bool* semaphore);
+
 #endif /* UTILS_H_ */

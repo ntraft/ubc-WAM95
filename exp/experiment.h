@@ -3,6 +3,9 @@
 
 #include "stdheader.h"
 
+class Controller;
+class Senses;
+
 enum EXPERIMENT_KEYS{
         ACTIONPHASE,
         ACTIVESENSING,
@@ -29,11 +32,6 @@ enum EXPERIMENT_SHAPES{
 class Experiment{
 
 public:
-    systems::Wam<DIMENSION>* wam;
-    Hand* hand;
-    ForceTorqueSensor* fts;
-    ProductManager* pm;
-
 	enum EXPERIMENT_KEYS exp_id;
 	enum EXPERIMENT_SHAPES exp_shape;
 	
@@ -67,14 +65,29 @@ public:
 
     bool is_initialized;
 
+    //data collection vectors
+    std::vector< std::vector<int> > hfingertip_torque;      //hand strain measure
+    std::vector<Hand::ct_type> ct_vector;        //cartesian torque
+    Hand::ct_type min_ct; //running minimum values
+    //bool collectData = false;
+
+protected:
+    void data_collect();
+    bool flag_collect_data;
+    Controller* controller;
+    Senses* senses;
+
 public:
-	Experiment(systems::Wam<DIMENSION>* wam, Hand* hand, ForceTorqueSensor* fts, ProductManager* pm);
+	Experiment(Controller* controller, Senses* senses);
+
+    void toggle_collect_data();
+    void teach_pose(int seqnum);
+    void run_experiment();
     void init(std::string args);
     void help();
 	virtual void run();
     void load_exp_variables();
     void save_exp_variables();
 };
-
 
 #endif

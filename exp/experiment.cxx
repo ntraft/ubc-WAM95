@@ -1,5 +1,8 @@
 #include "experiment.h"
 #include "utils.h"
+#include "action.h"
+#include "control.h"
+#include "senses.h"
 
 std::string experiment_keys[NUM_EXPERIMENTS] = {
 	"ActionPhase",
@@ -21,13 +24,132 @@ std::string experiment_shapes[NUM_SHAPES] = {
 	"square",
 	"triangle"
 };
+std::vector<double> min_hfingertip_torque(4,9999999);//running minimum values
 
-Experiment::Experiment(systems::Wam<DIMENSION>* wam, Hand* hand, ForceTorqueSensor* fts, ProductManager* pm){
-    this->wam = wam;
-    this->hand = hand;
-    this->fts = fts;
-    this->pm = pm;
+
+Experiment::Experiment(Controller* controller, Senses* senses){
+    this->controller = controller;
+    this->senses = senses;
 }
+
+void Experiment::toggle_collect_data(){
+    flag_collect_data = !flag_collect_data;
+    std::cout << "Data collection toggled: " << flag_collect_data << std::endl;
+}
+
+void Experiment::run_experiment(){
+	//datasemastop = false;
+	//boost::thread* dataCollectionThread = NULL;
+	/*if(flag_collect_data){
+		dataCollectionThread = new boost::thread(dataCollect, hand, fts, wam, pm, exp_id, expshape);
+	}*/
+
+    Experiment* exp;
+	
+	//std::cout << "Running " << experiment_keys[int(exp_id)] << " Experiment..." << std::endl;
+	switch(exp_id){
+		case ACTIONPHASE:{
+//			runActionPhaseExperiment(*wam, hand, fts, pm);
+			exp = new ActionPhase(controller, senses);
+            break;
+		}
+		case ACTIVESENSING:{
+//			runActiveSensingExperiment(*wam, hand, fts, pm);
+			break;
+		}
+		case WAMVELOCITY:{
+//			runWAMVelocityExperiment(*wam, hand, fts, pm);
+			break;
+		}
+		case WAMJOINTPOS:{
+//			runWAMJointPosExperiment(*wam, hand, fts, pm);
+			break;
+		}
+		case WAMCARTESIANPOS:{
+//			runWAMCartesianPosExperiment(*wam, hand, fts, pm);
+			break;
+		}
+		case WAMJOINTTORQUE:{
+//			runWAMJointTorqueExperiment(*wam, hand, fts, pm);
+			break;
+		}
+		case BHVELOCITY:{
+//			runBHVelocityExperiment(*wam, hand, fts, pm);
+			break;
+		}
+		case BHPOSITION:{
+//			runBHPositionExperiment(*wam, hand, fts, pm);
+			break;
+		}
+		case BHTORQUE:{
+//			runBHTorqueExperiment(*wam, hand, fts, pm);
+			break;
+		}
+		case BHTRAPEZOIDAL:{
+//			runBHTrapezoidalExperiment(*wam, hand, fts, pm);
+			break;
+		}
+		case SIMPLESHAPES:{
+//			runSimpleShapesExperiment(*wam, hand, fts, pm);
+			break;
+		}
+		case ACTIVEPROBING:{
+			break;
+		}
+		case CARTESIANRASTER:{
+//			runCartesianRasterExperiment(*wam, hand, fts, pm);
+			break;
+		}
+		default:{ 
+		}
+	}
+	
+	//std::cout << "Experiment " << experiment_keys[int(exp_id)];
+	
+	/*if(!expsemastop){
+		std::cout << " Completed Successfully!" << std::endl;
+		datasemastop = true;
+		if(flag_collect_data)
+			dataCollectionThread->join();
+		std::cout << "Press [Enter] to continue." << std::endl;
+	}
+	else{
+		std::cout << " Was Interrupted!" << std::endl;
+		datasemastop = true;
+		if(flag_collect_data)
+			dataCollectionThread->join();
+	}*/	
+}
+
+void Experiment::teach_pose(int seqnum){
+    load_exp_variables();
+	if(seqnum == 0){		
+        //cast wam to 7DOF first
+        /*
+        wamBottom	= (*((systems::Wam<DIMENSION>*)(&wam))).getJointPositions();
+        wamBottomC 	= (*((systems::Wam<DIMENSION>*)(&wam))).getToolPosition();
+        wamBottomQ 	= (*((systems::Wam<DIMENSION>*)(&wam))).getToolOrientation();
+        wamBottomO	= quaternion2hjp(&wamBottomQ);
+        std::cout << "Setting wamBottom to " << toString(&wamBottom) << std::endl;
+        std::cout << "Setting wamBottomC to " << toString(&wamBottomC) << std::endl;
+        std::cout << "Setting wamBottomQ to " << toString(&wamBottomO) << std::endl;
+        */
+    }
+    else if(seqnum == 1){	
+        //cast wam to 7DOF first
+        /*
+        wamTop 	= (*((systems::Wam<DIMENSION>*)(&wam))).getJointPositions();
+        wamTopC = (*((systems::Wam<DIMENSION>*)(&wam))).getToolPosition();
+        wamTopQ = (*((systems::Wam<DIMENSION>*)(&wam))).getToolOrientation();
+        wamTopO = quaternion2hjp(&wamTopQ);
+        std::cout << "Setting wamTop to " << toString(&wamTop) << std::endl;
+        std::cout << "Setting wamTopC to " << toString(&wamTopC) << std::endl;
+        std::cout << "Setting wamTopQ to " << toString(&wamTopO) << std::endl;
+        */
+    }
+    save_exp_variables();
+}
+
 void Experiment::run(){
     if(!is_initialized){
         std::cout << "experiment not yet initialized...aborting" << std::endl;
@@ -42,13 +164,12 @@ void Experiment::run(){
         //waitForEnter();
         //expsemastop = true;
     }
-
 }
 
 void Experiment::init(std::string args){
     bool is_initialized = true;
     std::string exp_idstr = "";
-    std::string expshapestr = "";
+    std::string exp_shapestr = "";
     std::string sub = "";
     int found_w = int(args.find(" "));
     int found_s = int(args.find("-s"));
@@ -64,7 +185,7 @@ void Experiment::init(std::string args){
         }
                     
         sub = args.substr(found_s+3,found_tmp-found_s+3);
-        expshapestr = sub;
+        exp_shapestr = sub;
     }
     if (found_n!=int(std::string::npos)){
         //find next whitespace or newline
@@ -83,7 +204,7 @@ void Experiment::init(std::string args){
     
     if(exp_idstr != ""){
         exp_id = EXPERIMENT_KEYS(atoi(exp_idstr.c_str()));
-        exp_shape = EXPERIMENT_SHAPES(atoi(expshapestr.c_str()));     
+        exp_shape = EXPERIMENT_SHAPES(atoi(exp_shapestr.c_str()));     
     }
     else{
         help();
@@ -196,3 +317,159 @@ void Experiment::save_exp_variables(){
 	std::cout << "saving joint_toleranceas " << toString(&joint_tolerance)<< std::endl;
 #endif
 }
+
+void Experiment::data_collect(){
+    /*
+	std::vector<jp_type> jp; 	std::vector<jp_type>::iterator jpit;
+	std::vector<jv_type> jv; 	std::vector<jv_type>::iterator jvit;
+	std::vector<jt_type> jt; 	std::vector<jt_type>::iterator jtit;
+	std::vector<systems::Wam<DIMENSION>::cp_type> cp; 	std::vector<systems::Wam<DIMENSION>::cp_type>::iterator cpit;
+	std::vector< std::vector<double> > to; 		std::vector< std::vector<double> >::iterator toit;  std::vector<double>::iterator eigscait;
+	std::vector<Hand::cf_type> cf; 				std::vector<Hand::cf_type>::iterator cfit;
+	ct_vector.clear();						std::vector<Hand::ct_type>::iterator ctit;
+	std::vector<Hand::jp_type> hjp_in; 			std::vector<Hand::jp_type>::iterator hjpit; //can use for both in and out
+	std::vector<Hand::jp_type> hjp_out;
+	hfingertip_torque.clear(); 				std::vector< std::vector<int> >::iterator hsit;		std::vector<int>::iterator intit;
+	std::vector< std::vector<TactilePuck::v_type> > htact;	std::vector< std::vector<TactilePuck::v_type> >::iterator htit;	std::vector<TactilePuck::v_type>::iterator vtit;
+	
+	std::vector<TactilePuck*> tps;
+	tps = hand->getTactilePucks();
+	
+	std::vector<TactilePuck::v_type> temp;
+	
+	std::cout << "data collection thread started!" << std::endl;
+	
+	//systems::Wam<DIMENSION>::jp_type wamBottom;
+	//parseDoubles(&wamBottom, "-0.0800 -1.8072 -0.0199 0.9068 0.5583 -0.4459 0.0");
+	//wam->moveTo(wamBottom, false, 1.0);
+	
+	while(pm->getSafetyModule()->getMode() == SafetyModule::ACTIVE){//datasemastop){
+		// WAM
+		jp.push_back(wam->getJointPositions());
+		jv.push_back(wam->getJointVelocities());
+		jt.push_back(wam->getJointTorques());
+		
+		//WAM end-link Position (wrist)
+		cp.push_back(wam->getToolPosition());
+		Eigen::Quaterniond q = wam->getToolOrientation();
+		std::vector<double> q_Scalars;
+		q_Scalars.push_back(q.w());
+		q_Scalars.push_back(q.x());
+		q_Scalars.push_back(q.y());
+		q_Scalars.push_back(q.z());
+		to.push_back(q_Scalars);
+		
+		// FTS
+		fts->update(true);
+		cf.push_back(fts->getForce());
+		
+		Hand::ct_type _ct = fts->getTorque();
+		ct_vector.push_back(_ct);
+		for(int i = 0; i < (int)_ct.size(); ++i){
+			if(_ct[i] < min_ct[i])
+				min_ct[i] = _ct[i];
+		}
+		
+		// Hand
+		hand->update(Hand::S_ALL, true);
+		hjp_in.push_back(hand->getInnerLinkPosition());
+		hjp_out.push_back(hand->getOuterLinkPosition());
+		
+		std::vector<int> fingertip_torque = hand->getFingertipTorque();
+		hfingertip_torque.push_back(fingertip_torque);
+		for (size_t i = 0; i < fingertip_torque.size(); ++i){
+			double torque = fingertip_torque[i]/FINGERTIP_TORQUE2TORQUE_RATIO;
+			if(torque < min_hfingertip_torque[i])
+				min_hfingertip_torque[i] = torque;
+		}
+		for (size_t i = 0; i < tps.size(); ++i){
+			temp.push_back(tps[i]->getFullData());
+		}
+		htact.push_back(temp);
+		temp.clear();
+		
+		usleep(10000);	//record data @ 100 Hz
+	}
+	
+	bool dump_data = true;
+	if(dump_data){
+		std::cout << "dumping data to file...";
+		fflush(stdout);
+		//dump data to file
+		std::ofstream WAMJP;
+		std::ofstream WAMJV;
+		std::ofstream WAMJT;
+		std::ofstream WAMCP;
+		std::ofstream WAMTO;
+		std::ofstream FTSF;
+		std::ofstream FTST;
+		std::ofstream BHIN;
+		std::ofstream BHOUT;
+		std::ofstream HFINGERTIP_TORQUE;
+		std::ofstream HTACT;
+		
+		std::string prefix = 	"data/" 						+ 
+								experiment_keys[  int(exp_id  )]+ "/" +
+								experiment_shapes[int(exp_shape)]+ "/" ;
+		std::string suffix = ".dat";
+		
+		std::cout << "open..." << prefix << "...";
+		
+		WAMJP.open	((prefix + "WAMJP" 	+ suffix).c_str(),	std::ios::trunc);
+		WAMJV.open	((prefix + "WAMJV" 	+ suffix).c_str(),	std::ios::trunc);
+		WAMJT.open	((prefix + "WAMJT" 	+ suffix).c_str(),	std::ios::trunc);
+		WAMCP.open	((prefix + "WAMCP" 	+ suffix).c_str(),	std::ios::trunc);
+		WAMTO.open	((prefix + "WAMTO" 	+ suffix).c_str(),	std::ios::trunc);
+		FTSF.open	((prefix + "FTSF" 	+ suffix).c_str(), 	std::ios::trunc);
+		FTST.open	((prefix + "FTST" 	+ suffix).c_str(), 	std::ios::trunc);
+		BHIN.open	((prefix + "BHIN" 	+ suffix).c_str(), 	std::ios::trunc);
+		BHOUT.open	((prefix + "BHOUT" 	+ suffix).c_str(), 	std::ios::trunc);
+		HFINGERTIP_TORQUE.open((prefix + "HFINGERTIP_TORQUE"+ suffix).c_str(),	std::ios::trunc);
+		HTACT.open	((prefix + "HTACT" 	+ suffix).c_str(), 	std::ios::trunc);
+		
+		std::cout << "for...";
+		
+		for (jpit=jp.begin()	  ; jpit < jp.end()		 ; jpit++)	{WAMJP << *jpit << std::endl;}
+		for (jvit=jv.begin()	  ; jvit < jv.end()		 ; jvit++)	{WAMJV << *jvit << std::endl;}
+		for (jtit=jt.begin()	  ; jtit < jt.end()		 ; jtit++)	{WAMJT << *jtit << std::endl;}
+		for (cpit=cp.begin()	  ; cpit < cp.end()		 ; cpit++)	{WAMCP << *cpit << std::endl;}
+		for (toit=to.begin()	  ; toit < to.end()		 ; toit++)	{
+			std::vector<double> tovec = *toit;
+			WAMTO << '[';
+			for(eigscait=tovec.begin(); eigscait<tovec.end()-1; eigscait++){WAMTO << *eigscait << ", ";}
+			WAMTO << *eigscait << ']' << std::endl;
+		}
+		for (cfit=cf.begin()	  ; cfit < cf.end()		 ; cfit++)	{FTSF << *cfit << std::endl; }
+		for (ctit=ct_vector.begin()	  ; ctit < ct_vector.end()      ; ctit++)	{FTST << *ctit << std::endl; }
+		for (hjpit=hjp_in.begin() ; hjpit < hjp_in.end() ; hjpit++) {BHIN << *hjpit << std::endl;}
+		for (hjpit=hjp_out.begin(); hjpit < hjp_out.end(); hjpit++)	{BHOUT << *hjpit << std::endl;}
+		for (hsit=hfingertip_torque.begin() ; hsit < hfingertip_torque.end() ; hsit++){
+			std::vector<int> hsvec = *hsit;
+			HFINGERTIP_TORQUE << '[';
+			for(intit=hsvec.begin(); intit<hsvec.end()-1; intit++){HFINGERTIP_TORQUE << *intit << ", ";}
+			HFINGERTIP_TORQUE << *intit << ']' << std::endl;
+		}
+		for (htit=htact.begin()   ; htit < htact.end()   ; htit++){
+			std::vector<TactilePuck::v_type> htvec = *htit;
+			HTACT << '[';
+			for(vtit=htvec.begin(); vtit<htvec.end(); vtit++){HTACT << *vtit;}
+			HTACT << ']' << std::endl;
+		}
+		
+		std::cout << "close...";
+		
+		WAMJP.close();
+		WAMJV.close();
+		WAMJT.close();
+		WAMCP.close();
+		WAMTO.close();
+		FTSF.close();
+		FTST.close();
+		BHIN.close();
+		BHOUT.close();
+		std::cout << "done" << std::endl;
+	}
+
+    */
+}
+

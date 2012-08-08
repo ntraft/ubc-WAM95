@@ -50,7 +50,10 @@ using namespace barrett;
 using systems::connect;
 using detail::waitForEnter;
 
-typedef math::Vector<24>::type v_type;
+typedef TactilePuck::v_type v_type;
+typedef systems::Wam<DIMENSION>::jv_type jv_type;
+typedef systems::Wam<DIMENSION>::jp_type jp_type;
+typedef systems::Wam<DIMENSION>::jt_type jt_type;
 
 
 //Function defns

@@ -4,13 +4,16 @@
 #include "control.h"
 #include "senses.h"
 
-Action::Action(systems::Wam<DIMENSION>* wam, Hand* hand, ForceTorqueSensor* fts, ProductManager* pm)
-: Experiment(wam, hand, fts, pm){
+Action::Action(Controller* controller, Senses* senses)
+: Experiment(controller, senses){
+}
+ActionPhase::ActionPhase(Controller* controller, Senses* senses)
+: Action(controller, senses){
+}
+SimpleShapes::SimpleShapes(Controller* controller, Senses* senses)
+: Action(controller, senses){
 }
 void Action::run(){
-}
-ActionPhase::ActionPhase(systems::Wam<DIMENSION>* wam, Hand* hand, ForceTorqueSensor* fts, ProductManager* pm)
-: Action(wam, hand, fts, pm){
 }
 void ActionPhase::run(){
 	//BARRETT_UNITS_TEMPLATE_TYPEDEFS(DIMENSION);
@@ -185,19 +188,14 @@ void ActionPhase::run(){
 }
 
 
-SimpleShapes::SimpleShapes(systems::Wam<DIMENSION>* wam, Hand* hand, ForceTorqueSensor* fts, ProductManager* pm)
-: Action(wam, hand, fts, pm){
-}
 void SimpleShapes::run(){
 /*SimpleShapes10*/
 //template<size_t DIMENSION>
 //void runSimpleShapesExperiment(systems::Wam<DIMENSION>& wam, Hand* hand, ForceTorqueSensor* fts, ProductManager* pm){
 	//BARRETT_UNITS_TEMPLATE_TYPEDEFS(DIMENSION);
 	
-	load_exp_variables();
-	
 	//start experiment: move WAM to first goal (no blocking)
-	(*((systems::Wam<DIMENSION>*)(&wam))).moveTo(wamBottom, false, 3.0, 5.0);
+	/*(*((systems::Wam<DIMENSION>*)(&wam))).moveTo(wamBottom, false, 3.0, 5.0);
 	std::cout << "start!" << std::endl;
 	int curr_state = 0;
 	//num_runs = 3;
@@ -228,6 +226,6 @@ void SimpleShapes::run(){
 				break;
 			}
 		}
-	}
+	}*/
 }
 

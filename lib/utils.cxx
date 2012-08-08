@@ -37,3 +37,7 @@ std::string toString(Eigen::Quaterniond* src) {
 	Hand::jp_type temp = quaternion2hjp(src); 
 	return toString(&temp);
 }
+void stop_thread(bool* semaphore){
+	waitForEnter();
+	*semaphore = !*semaphore;
+}
