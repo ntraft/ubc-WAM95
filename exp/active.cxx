@@ -8,7 +8,7 @@ void runActiveSensingExperiment(systems::Wam<DOF>& wam, Hand* hand, ForceTorqueS
 	loadExpVariables();
 	
 	//start experiment: move WAM to first goal (no blocking)
-	(*((systems::Wam<DIMENSION>*)(&wam))).moveTo(wamBottom, false, 3.0, 3.0);
+	(*((systems::Wam<DIMENSION>*)(&wam))).moveTo(exp_vars[WAM_BOTTOM], false, 3.0, 3.0);
 	std::cout << "start!" << std::endl;
 	int curr_state = 0;
 	//num_runs = 2;
@@ -20,18 +20,18 @@ void runActiveSensingExperiment(systems::Wam<DOF>& wam, Hand* hand, ForceTorqueS
 		
 		if(curr_state % 2){ //odd
 			if(num_runs % 2){	//odd
-				(*((systems::Wam<DIMENSION>*)(&wam))).moveTo(wamTop, false, 3.0, 0.5);
+				(*((systems::Wam<DIMENSION>*)(&wam))).moveTo(exp_vars[WAM_TOP], false, 3.0, 0.5);
 			}
 			else{	//even
-				(*((systems::Wam<DIMENSION>*)(&wam))).moveTo(wamTopC, false, 3.0, 0.5);
+				(*((systems::Wam<DIMENSION>*)(&wam))).moveTo(exp_vars[WAM_TOP_C], false, 3.0, 0.5);
 			}
 		}
 		else{ //even
 			if(num_runs % 2){	//odd
-				(*((systems::Wam<DIMENSION>*)(&wam))).moveTo(wamBottom, false, 3.0, 0.5);
+				(*((systems::Wam<DIMENSION>*)(&wam))).moveTo(exp_vars[WAM_BOTTOM], false, 3.0, 0.5);
 			}
 			else{	//even
-				(*((systems::Wam<DIMENSION>*)(&wam))).moveTo(wamBottomC, false, 3.0, 0.5);
+				(*((systems::Wam<DIMENSION>*)(&wam))).moveTo(exp_vars[WAM_BOTTOM_C], false, 3.0, 0.5);
 			}
 		}
 	}
@@ -50,36 +50,36 @@ void runActiveProbingExperiment(systems::Wam<DOF>& wam, Hand* hand, ForceTorqueS
 	loadExpVariables();
 	
 	//start experiment: move WAM to first goal (no blocking)
-	(*((systems::Wam<DIMENSION>*)(&wam))).moveTo(wamBottom, false, 0.3, 0.25);
+	(*((systems::Wam<DIMENSION>*)(&wam))).moveTo(exp_vars[WAM_BOTTOM], false, 0.3, 0.25);
 	std::cout << "start!" << std::endl;
 	int curr_state = 0;
 	int num_states = 2;
 	Hand::jp_type digits;
-	setVectorValues(&digits,0,0);	//init
-	setVectorValues(&digits,FINGER_JOINT_LIMIT/2,-1);	//activate all except spread
+	set_vector_values(&digits,0,0);	//init
+	set_vector_values(&digits,FINGER_JOINT_LIMIT/2,-1);	//activate all except spread
 	
 	bool fingertip_torqueContact = false;
 	bool tactileContact = false;
 	bool handAboveTable = false;
 	bool objectDetected = false;
 	
-	//wamBottomQ = hjp2quaternion(&wamBottomO);
-	//wamTopQ = hjp2quaternion(&wamTopO);
+	//exp_vars[WAM_BOTTOM]Q = hjp2quaternion(&exp_vars[WAM_BOTTOM_O]);
+	//exp_vars[WAM_TOP]Q = hjp2quaternion(&exp_vars[WAM_TOP_O]);
 	
 	float minX, maxX, minY, maxY, minZ, maxZ;
 	
-	minX = wamBottomC[0];
-	minY = wamBottomC[1];
-	minZ = wamBottomC[2];
-	maxX = wamTopC[0];
-	maxY = wamTopC[1];
+	minX = exp_vars[WAM_BOTTOM_C][0];
+	minY = exp_vars[WAM_BOTTOM_C][1];
+	minZ = exp_vars[WAM_BOTTOM_C][2];
+	maxX = exp_vars[WAM_TOP_C][0];
+	maxY = exp_vars[WAM_TOP_C][1];
 	maxZ = 0.25;
 	
-	wamTopC[0] = (maxX+minX)/2;
-	wamTopC[1] = (maxY+minY)/2;
-	wamTopC[2] = maxZ;
+	exp_vars[WAM_TOP_C][0] = (maxX+minX)/2;
+	exp_vars[WAM_TOP_C][1] = (maxY+minY)/2;
+	exp_vars[WAM_TOP_C][2] = maxZ;
 	
-	wamBottomC_ip[2] = wamBottomC[2] + 0.1;
+	exp_vars[WAM_BOTTOM_C]_ip[2] = exp_vars[WAM_BOTTOM_C][2] + 0.1;
 	
 	//hand->trapezoidalMove(digits, false);
 	 
@@ -117,24 +117,24 @@ void runActiveProbingExperiment(systems::Wam<DOF>& wam, Hand* hand, ForceTorqueS
 		
 		switch(phase){
 			case 0 : {
-				//std::cout << "moving to wtc @ " << toString(&wamTopC);
+				//std::cout << "moving to wtc @ " << to_string(&exp_vars[WAM_TOP_C]);
 				std::cout << "ActiveProbing take " << curr_state/num_states << std::endl;
-				std::cout << "Moving to " << toString(&wamTopC) << std::endl;
-				(*((systems::Wam<DIMENSION>*)(&wam))).moveTo(wamTopC, false, 0.3, 0.25);
+				std::cout << "Moving to " << to_string(&exp_vars[WAM_TOP_C]) << std::endl;
+				(*((systems::Wam<DIMENSION>*)(&wam))).moveTo(exp_vars[WAM_TOP_C], false, 0.3, 0.25);
 				break;
 			}
 			case 1 : {
 				objectDetected = false;
-				wamBottomC[0] = randomFloat(minX, maxX);
-				wamBottomC[1] = randomFloat(minY, maxY);
-				wamBottomC_ip[0] = wamBottomC[0];
-				wamBottomC_ip[1] = wamBottomC[1];
-				//std::cout << "wbc0: " << wamBottomC[0] << std::endl;
-				//std::cout << "wbc1: " << wamBottomC[1] << std::endl;
-				//std::cout << "moving to wbc @ " << toString(&wamBottomC);
-				(*((systems::Wam<DIMENSION>*)(&wam))).moveTo(wamBottomC_ip, true, 0.3, 0.25);
-				(*((systems::Wam<DIMENSION>*)(&wam))).moveTo(wamBottomQ, true, 0.3, 0.25);
-				(*((systems::Wam<DIMENSION>*)(&wam))).moveTo(wamBottomC, false, 0.3, 0.25);
+				exp_vars[WAM_BOTTOM_C][0] = random_float(minX, maxX);
+				exp_vars[WAM_BOTTOM_C][1] = random_float(minY, maxY);
+				exp_vars[WAM_BOTTOM_C]_ip[0] = exp_vars[WAM_BOTTOM_C][0];
+				exp_vars[WAM_BOTTOM_C]_ip[1] = exp_vars[WAM_BOTTOM_C][1];
+				//std::cout << "wbc0: " << exp_vars[WAM_BOTTOM_C][0] << std::endl;
+				//std::cout << "wbc1: " << exp_vars[WAM_BOTTOM_C][1] << std::endl;
+				//std::cout << "moving to wbc @ " << to_string(&exp_vars[WAM_BOTTOM_C]);
+				(*((systems::Wam<DIMENSION>*)(&wam))).moveTo(exp_vars[WAM_BOTTOM_C]_ip, true, 0.3, 0.25);
+				(*((systems::Wam<DIMENSION>*)(&wam))).moveTo(exp_vars[WAM_BOTTOM]Q, true, 0.3, 0.25);
+				(*((systems::Wam<DIMENSION>*)(&wam))).moveTo(exp_vars[WAM_BOTTOM_C], false, 0.3, 0.25);
 				break;
 			}
 		}
@@ -151,49 +151,49 @@ void runActiveProbing2Experiment(systems::Wam<DOF>& wam, Hand* hand, ForceTorque
 	loadExpVariables();
 	
 	//start experiment: move WAM to first goal (no blocking)
-	(*((systems::Wam<DIMENSION>*)(&wam))).moveTo(wamBottom, false, 0.3, 0.25);
+	(*((systems::Wam<DIMENSION>*)(&wam))).moveTo(exp_vars[WAM_BOTTOM], false, 0.3, 0.25);
 	std::cout << "start!" << std::endl;
 	int curr_state = 0;
 	int num_states = 2;
 	Hand::jp_type digits;
-	setVectorValues(&digits,0,0);	//init
-	setVectorValues(&digits,FINGER_JOINT_LIMIT/2,-1);	//activate all except spread
+	set_vector_values(&digits,0,0);	//init
+	set_vector_values(&digits,FINGER_JOINT_LIMIT/2,-1);	//activate all except spread
 	
 	bool fingertip_torqueContact = false;
 	bool tactileContact = false;
 	bool handAboveTable = false;
 	bool objectDetected = false;
 	
-	//wamBottomQ = hjp2quaternion(&wamBottomO);
-	//wamTopQ = hjp2quaternion(&wamTopO);
+	//exp_vars[WAM_BOTTOM]Q = hjp2quaternion(&exp_vars[WAM_BOTTOM_O]);
+	//exp_vars[WAM_TOP]Q = hjp2quaternion(&exp_vars[WAM_TOP_O]);
 	
 	float minX, maxX, minY, maxY, minZ, maxZ;
 	
-	minX = wamBottomC[0];
-	minY = wamBottomC[1];
-	minZ = wamBottomC[2];
-	maxX = wamTopC[0];
-	maxY = wamTopC[1];
+	minX = exp_vars[WAM_BOTTOM_C][0];
+	minY = exp_vars[WAM_BOTTOM_C][1];
+	minZ = exp_vars[WAM_BOTTOM_C][2];
+	maxX = exp_vars[WAM_TOP_C][0];
+	maxY = exp_vars[WAM_TOP_C][1];
 	maxZ = 0.25;
 	
-	wamTopC[0] = (maxX+minX)/2;
-	wamTopC[1] = (maxY+minY)/2;
-	wamTopC[2] = maxZ;
+	exp_vars[WAM_TOP_C][0] = (maxX+minX)/2;
+	exp_vars[WAM_TOP_C][1] = (maxY+minY)/2;
+	exp_vars[WAM_TOP_C][2] = maxZ;
 	
-	wamBottomC_ip[2] = wamBottomC[2] + 0.1;
+	exp_vars[WAM_BOTTOM_C]_ip[2] = exp_vars[WAM_BOTTOM_C][2] + 0.1;
 	
 	//hand->trapezoidalMove(digits, false);
 	
-	(*((systems::Wam<DIMENSION>*)(&wam))).moveTo(wamTopC, true, 0.3, 0.25);
-	(*((systems::Wam<DIMENSION>*)(&wam))).moveTo(wamBottomQ, true, 0.3, 0.25);
+	(*((systems::Wam<DIMENSION>*)(&wam))).moveTo(exp_vars[WAM_TOP_C], true, 0.3, 0.25);
+	(*((systems::Wam<DIMENSION>*)(&wam))).moveTo(exp_vars[WAM_BOTTOM]Q, true, 0.3, 0.25);
 	
 	//causes wam to hold its tool at the desiredOrientation
-	systems::ExposedOutput<Eigen::Quaterniond> toSetpoint(wamBottomQ);
+	systems::ExposedOutput<Eigen::Quaterniond> toSetpoint(exp_vars[WAM_BOTTOM]Q);
 	//systems::disconnect(toSetpoint.output);
 	//systems::disconnect(wam.tt2jt.output);
 	
 	{
-		std::cout << "maintaining " << toString(&wamBottomQ) << std::endl;
+		std::cout << "maintaining " << to_string(&exp_vars[WAM_BOTTOM]Q) << std::endl;
 		BARRETT_SCOPED_LOCK(pm->getExecutionManager()->getMutex());
 
 		wam.idle();
@@ -239,29 +239,29 @@ void runActiveProbing2Experiment(systems::Wam<DOF>& wam, Hand* hand, ForceTorque
 		
 		switch(phase){
 			case 0 : {
-				//std::cout << "moving to wtc @ " << toString(&wamTopC);
+				//std::cout << "moving to wtc @ " << to_string(&exp_vars[WAM_TOP_C]);
 				if(!objectDetected && move_and_lift){
 					++curr_state; //try moving randomly again until we hit something
 				}
 				else{
 					std::cout << "ActiveProbing take " << curr_state/num_states << std::endl;
-					std::cout << "Moving to " << toString(&wamTopC) << std::endl;
-					(*((systems::Wam<DIMENSION>*)(&wam))).moveTo(wamTopC, false, 0.3, 0.25);
+					std::cout << "Moving to " << to_string(&exp_vars[WAM_TOP_C]) << std::endl;
+					(*((systems::Wam<DIMENSION>*)(&wam))).moveTo(exp_vars[WAM_TOP_C], false, 0.3, 0.25);
 				}
 				break;
 			}
 			case 1 : {
 				objectDetected = false;
-				wamBottomC[0] = randomFloat(minX, maxX);
-				wamBottomC[1] = randomFloat(minY, maxY);
-				wamBottomC_ip[0] = wamBottomC[0];
-				wamBottomC_ip[1] = wamBottomC[1];
-				//std::cout << "wbc0: " << wamBottomC[0] << std::endl;
-				//std::cout << "wbc1: " << wamBottomC[1] << std::endl;
-				//std::cout << "moving to wbc @ " << toString(&wamBottomC);
-				//(*((systems::Wam<DIMENSION>*)(&wam))).moveTo(wamBottomC_ip, true, 0.3, 0.25);
-				//(*((systems::Wam<DIMENSION>*)(&wam))).moveTo(wamBottomQ, true, 0.3, 0.25);
-				(*((systems::Wam<DIMENSION>*)(&wam))).moveTo(wamBottomC, false, 0.3, 0.25);
+				exp_vars[WAM_BOTTOM_C][0] = random_float(minX, maxX);
+				exp_vars[WAM_BOTTOM_C][1] = random_float(minY, maxY);
+				exp_vars[WAM_BOTTOM_C]_ip[0] = exp_vars[WAM_BOTTOM_C][0];
+				exp_vars[WAM_BOTTOM_C]_ip[1] = exp_vars[WAM_BOTTOM_C][1];
+				//std::cout << "wbc0: " << exp_vars[WAM_BOTTOM_C][0] << std::endl;
+				//std::cout << "wbc1: " << exp_vars[WAM_BOTTOM_C][1] << std::endl;
+				//std::cout << "moving to wbc @ " << to_string(&exp_vars[WAM_BOTTOM_C]);
+				//(*((systems::Wam<DIMENSION>*)(&wam))).moveTo(exp_vars[WAM_BOTTOM_C]_ip, true, 0.3, 0.25);
+				//(*((systems::Wam<DIMENSION>*)(&wam))).moveTo(exp_vars[WAM_BOTTOM]Q, true, 0.3, 0.25);
+				(*((systems::Wam<DIMENSION>*)(&wam))).moveTo(exp_vars[WAM_BOTTOM_C], false, 0.3, 0.25);
 				break;
 			}
 		}

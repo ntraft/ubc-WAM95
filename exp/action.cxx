@@ -21,7 +21,7 @@ void ActionPhase::run(){
 	load_exp_variables();
 	
 	//start experiment: move WAM to first goal (no blocking)
-	(*((systems::Wam<DIMENSION>*)(&wam))).moveTo(wamBottom, false, 3.0);
+	(*((systems::Wam<DIMENSION>*)(&wam))).moveTo(exp_vars[WAM_BOTTOM], false, 3.0);
 	std::cout << "start!" << std::endl;
 	long timer = 0;
 	while(prev_state < NUM_ACTION_PHASES){// && !expsemastop){
@@ -44,17 +44,17 @@ void ActionPhase::run(){
 			case LOADING:{
 				fts->update(true);
 				Hand::ct_type torques = fts->getTorque();
-				if(ct.size() >= 100){ //more than torque_epsilon different than 1 second ago
+				if(ct.size() >= 100){ //more than exp_vars[TORQUE_EPSILON] different than 1 second ago
 					//std::cout << "prev_torque: " << ct[ct.size()-100][1] << std::endl;
 					//std::cout << "torque: " << torques[1] << std::endl;
 					//std::cout << "prev_torque-torque: " << ct[ct.size()-100][1]-torques[1] << std::endl;
 					transition = 
-						ct[ct.size()-100][1]-torques[1] > torque_epsilon[1] || 
-						ct[ct.size()-100][1]-torques[1] < -1*torque_epsilon[1];
+						ct[ct.size()-100][1]-torques[1] > exp_vars[TORQUE_EPSILON][1] || 
+						ct[ct.size()-100][1]-torques[1] < -1*exp_vars[TORQUE_EPSILON][1];
 				}
 				break;
 			}
-			//WAM reached wamTop
+			//WAM reached exp_vars[WAM_TOP]
 			case TRANSITIONAL:{
 				//std::cout << "Wam done? " << wam->moveIsDone() << std::endl;
 				transition = wam->moveIsDone();
@@ -106,10 +106,10 @@ void ActionPhase::run(){
 					//std::cout << "prev_grip_ratio: " << prev_grip_ratio << std::endl;
 					//std::cout << "grip_ratio: " << grip_ratio << std::endl;
 					
-					//more than torque_epsilon different than previously
+					//more than exp_vars[TORQUE_EPSILON] different than previously
 					transition = 
-						prev_grip_ratio - grip_ratio > torque_epsilon[1] ||
-						prev_grip_ratio - grip_ratio < -1*torque_epsilon[1];
+						prev_grip_ratio - grip_ratio > exp_vars[TORQUE_EPSILON][1] ||
+						prev_grip_ratio - grip_ratio < -1*exp_vars[TORQUE_EPSILON][1];
 				}
 				break;
 			}
@@ -136,14 +136,14 @@ void ActionPhase::run(){
 			//stop approach & start finger close
 			case PRELOAD:{
 				std::cout << "Performing PRELOAD action-phase!" << std::endl;
-				hand->setVelocity(handGrasp);
+				hand->setVelocity(exp_vars[HAND_GRASP]);
 				break;
 			}
 			
-			//slowly lift WAM to wamTop
+			//slowly lift WAM to exp_vars[WAM_TOP]
 			case LOADING:{
 				std::cout << "Performing LOADING action-phase!" << std::endl;
-				(*((systems::Wam<DIMENSION>*)(&wam))).moveTo(wamTop, false, 3.0);
+				(*((systems::Wam<DIMENSION>*)(&wam))).moveTo(exp_vars[WAM_TOP], false, 3.0);
 				break;
 			}
 			
@@ -160,17 +160,17 @@ void ActionPhase::run(){
 				break;
 			}
 			
-			//slowly lower WAM to wamBottom
+			//slowly lower WAM to exp_vars[WAM_BOTTOM]
 			case REPLACEMENT:{
 				std::cout << "Performing REPLACEMENT action-phase!" << std::endl;
-				(*((systems::Wam<DIMENSION>*)(&wam))).moveTo(wamBottom, false, 3.0);
+				(*((systems::Wam<DIMENSION>*)(&wam))).moveTo(exp_vars[WAM_BOTTOM], false, 3.0);
 				break;
 			}
 			
 			//slowly open finger
 			case UNLOADING:{
 				std::cout << "Performing UNLOADING action-phase!" << std::endl;
-				hand->setVelocity(handUnGrasp);
+				hand->setVelocity(exp_vars[HAND_UNGRASP]);
 				break;
 			}
 			
@@ -181,7 +181,7 @@ void ActionPhase::run(){
 			}
 		}
 		
-		//hand->setVelocity(handPregrasp);	
+		//hand->setVelocity(exp_vars[HAND_PREGRASP]);	
 		//while(!hand->doneMoving(true));		
 		prev_state = curr_state;
 	}*/
@@ -195,13 +195,13 @@ void SimpleShapes::run(){
 	//BARRETT_UNITS_TEMPLATE_TYPEDEFS(DIMENSION);
 	
 	//start experiment: move WAM to first goal (no blocking)
-	/*(*((systems::Wam<DIMENSION>*)(&wam))).moveTo(wamBottom, false, 3.0, 5.0);
+	/*(*((systems::Wam<DIMENSION>*)(&wam))).moveTo(exp_vars[WAM_BOTTOM], false, 3.0, 5.0);
 	std::cout << "start!" << std::endl;
 	int curr_state = 0;
 	//num_runs = 3;
 	Hand::jp_type digits;
-	setVectorValues(&digits,0,0);	//init
-	setVectorValues(&digits,1,-1);	//activate all except spread
+	set_vector_values(&digits,0,0);	//init
+	set_vector_values(&digits,1,-1);	//activate all except spread
 	 
 	while(curr_state < num_runs*4){// && !expsemastop){
 		boost::this_thread::sleep(boost::posix_time::milliseconds(10));
@@ -214,11 +214,11 @@ void SimpleShapes::run(){
 				break;
 			}
 			case 2 : {
-				(*((systems::Wam<DIMENSION>*)(&wam))).moveTo(wamTop, false, 3.0, 5.0);
+				(*((systems::Wam<DIMENSION>*)(&wam))).moveTo(exp_vars[WAM_TOP], false, 3.0, 5.0);
 				break;
 			}
 			case 3 : {
-				(*((systems::Wam<DIMENSION>*)(&wam))).moveTo(wamBottom, false, 3.0, 5.0);
+				(*((systems::Wam<DIMENSION>*)(&wam))).moveTo(exp_vars[WAM_BOTTOM], false, 3.0, 5.0);
 				break;
 			}
 			case 0 : {

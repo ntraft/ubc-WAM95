@@ -8,7 +8,7 @@ void runWAMVelocityExperiment(systems::Wam<DOF>& wam, Hand* hand, ForceTorqueSen
 	loadExpVariables();
 	
 	//start experiment: move WAM to first goal (no blocking)
-	(*((systems::Wam<DIMENSION>*)(&wam))).moveTo(wamBottom, false, 3.0);
+	(*((systems::Wam<DIMENSION>*)(&wam))).moveTo(exp_vars[WAM_BOTTOM], false, 3.0);
 	std::cout << "start!" << std::endl;
 	int curr_state = 0;
 	//int num_runs = 30;
@@ -27,15 +27,15 @@ void runWAMVelocityExperiment(systems::Wam<DOF>& wam, Hand* hand, ForceTorqueSen
 		fflush(stdout);
 		
 		if(curr_state % 2){ //odd
-			(*((systems::Wam<DIMENSION>*)(&wam))).moveTo(wamTop, false, velocity, accel);
+			(*((systems::Wam<DIMENSION>*)(&wam))).moveTo(exp_vars[WAM_TOP], false, velocity, accel);
 		}
 		else{ //even
-			(*((systems::Wam<DIMENSION>*)(&wam))).moveTo(wamBottom, false, velocity, accel);
+			(*((systems::Wam<DIMENSION>*)(&wam))).moveTo(exp_vars[WAM_BOTTOM], false, velocity, accel);
 		}
 		velocity+= 0.25;
 		accel	+= 0.25;
 		
-		//hand->setVelocity(handPregrasp);	
+		//hand->setVelocity(exp_vars[HAND_PREGRASP]);	
 		//while(!hand->doneMoving(true));
 		
 	}
@@ -48,12 +48,12 @@ void runWAMJointPosExperiment(systems::Wam<DOF>& wam, Hand* hand, ForceTorqueSen
 	loadExpVariables();
 	
 	//start experiment: move WAM to first goal (no blocking)
-	(*((systems::Wam<DIMENSION>*)(&wam))).moveTo(wamBottom, false, 3.0);
+	(*((systems::Wam<DIMENSION>*)(&wam))).moveTo(exp_vars[WAM_BOTTOM], false, 3.0);
 	std::cout << "start!" << std::endl;
 	int curr_state = 0;
 	//int num_runs = 5;
 	systems::Wam<DIMENSION>::jp_type steps;
-	getInterpolatingSteps(&steps, &wamBottom, &wamTop, num_runs);
+	get_interpolating_steps(&steps, &exp_vars[WAM_BOTTOM], &exp_vars[WAM_TOP], num_runs);
 	
 	printf("/%02d   pos\n",num_runs);
 	fflush(stdout);
@@ -63,11 +63,11 @@ void runWAMJointPosExperiment(systems::Wam<DOF>& wam, Hand* hand, ForceTorqueSen
 		
 		if(wam.moveIsDone()){++curr_state;}else{continue;}
 		
-		addVectorValues(&wamBottom,&steps);
+		add_vector_values(&exp_vars[WAM_BOTTOM],&steps);
 		printf(" %02d ",curr_state);
 		fflush(stdout);
-		std::cout << toString(&wamBottom) << std::endl;
-		(*((systems::Wam<DIMENSION>*)(&wam))).moveTo(wamBottom, false, 3.0);
+		std::cout << to_string(&exp_vars[WAM_BOTTOM]) << std::endl;
+		(*((systems::Wam<DIMENSION>*)(&wam))).moveTo(exp_vars[WAM_BOTTOM], false, 3.0);
 	}
 }
 /*WAMCartesianPos4*/
@@ -77,16 +77,16 @@ void runWAMCartesianPosExperiment(systems::Wam<DOF>& wam, Hand* hand, ForceTorqu
 	
 	loadExpVariables();
 	
-	Eigen::Quaterniond wamBottomQ = hjp2quaternion(&wamBottomO);
+	Eigen::Quaterniond exp_vars[WAM_BOTTOM]Q = hjp2quaternion(&exp_vars[WAM_BOTTOM_O]);
 	
 	//start experiment: move WAM to first goal (no blocking)
-	(*((systems::Wam<DIMENSION>*)(&wam))).moveTo(wamBottomC, false, 3.0);
-	(*((systems::Wam<DIMENSION>*)(&wam))).moveTo(wamBottomQ, true, 0.3, 0.25);
+	(*((systems::Wam<DIMENSION>*)(&wam))).moveTo(exp_vars[WAM_BOTTOM_C], false, 3.0);
+	(*((systems::Wam<DIMENSION>*)(&wam))).moveTo(exp_vars[WAM_BOTTOM]Q, true, 0.3, 0.25);
 	
 	//causes wam to hold its tool at the desiredOrientation
-	systems::ExposedOutput<Eigen::Quaterniond> toSetpoint(wamBottomQ);
+	systems::ExposedOutput<Eigen::Quaterniond> toSetpoint(exp_vars[WAM_BOTTOM]Q);
 	{
-		//std::cout << "maintaining " << toString(&wamBottomO) << std::endl;
+		//std::cout << "maintaining " << to_string(&exp_vars[WAM_BOTTOM_O]) << std::endl;
 		BARRETT_SCOPED_LOCK(pm->getExecutionManager()->getMutex());
 
 }
@@ -98,7 +98,7 @@ void runActiveSensingExperiment(systems::Wam<DOF>& wam, Hand* hand, ForceTorqueS
 	loadExpVariables();
 	
 	//start experiment: move WAM to first goal (no blocking)
-	(*((systems::Wam<DIMENSION>*)(&wam))).moveTo(wamBottom, false, 3.0, 3.0);
+	(*((systems::Wam<DIMENSION>*)(&wam))).moveTo(exp_vars[WAM_BOTTOM], false, 3.0, 3.0);
 	std::cout << "start!" << std::endl;
 	int curr_state = 0;
 	//num_runs = 2;
@@ -110,18 +110,18 @@ void runActiveSensingExperiment(systems::Wam<DOF>& wam, Hand* hand, ForceTorqueS
 		
 		if(curr_state % 2){ //odd
 			if(num_runs % 2){	//odd
-				(*((systems::Wam<DIMENSION>*)(&wam))).moveTo(wamTop, false, 3.0, 0.5);
+				(*((systems::Wam<DIMENSION>*)(&wam))).moveTo(exp_vars[WAM_TOP], false, 3.0, 0.5);
 			}
 			else{	//even
-				(*((systems::Wam<DIMENSION>*)(&wam))).moveTo(wamTopC, false, 3.0, 0.5);
+				(*((systems::Wam<DIMENSION>*)(&wam))).moveTo(exp_vars[WAM_TOP_C], false, 3.0, 0.5);
 			}
 		}
 		else{ //even
 			if(num_runs % 2){	//odd
-				(*((systems::Wam<DIMENSION>*)(&wam))).moveTo(wamBottom, false, 3.0, 0.5);
+				(*((systems::Wam<DIMENSION>*)(&wam))).moveTo(exp_vars[WAM_BOTTOM], false, 3.0, 0.5);
 			}
 			else{	//even
-				(*((systems::Wam<DIMENSION>*)(&wam))).moveTo(wamBottomC, false, 3.0, 0.5);
+				(*((systems::Wam<DIMENSION>*)(&wam))).moveTo(exp_vars[WAM_BOTTOM_C], false, 3.0, 0.5);
 			}
 		}
 	}
@@ -134,7 +134,7 @@ void runWAMJointTorqueExperiment(systems::Wam<DOF>& wam, Hand* hand, ForceTorque
 	loadExpVariables();
 	
 	//start experiment: move WAM to first goal (no blocking)
-	(*((systems::Wam<DIMENSION>*)(&wam))).moveTo(wamBottom, false, 3.0);
+	(*((systems::Wam<DIMENSION>*)(&wam))).moveTo(exp_vars[WAM_BOTTOM], false, 3.0);
 	std::cout << "start!" << std::endl;
 	int curr_state = 0;
 	//int num_runs = 15;
@@ -154,10 +154,10 @@ void runWAMJointTorqueExperiment(systems::Wam<DOF>& wam, Hand* hand, ForceTorque
 		fflush(stdout);
 		
 		if(curr_state % 2){ //odd
-			setVectorValues(&joint_torques,position, -1);
+			set_vector_values(&joint_torques,position, -1);
 		}
 		else{ //even
-			setVectorValues(&joint_torques,FINGER_JOINT_LIMIT-position, -1);
+			set_vector_values(&joint_torques,FINGER_JOINT_LIMIT-position, -1);
 		}
 		hand->setPositionCommand(joint_torques);
 		position+= step;

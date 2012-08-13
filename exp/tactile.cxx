@@ -13,17 +13,17 @@ void runCartesianRasterExperiment(systems::Wam<DOF>& wam, Hand* hand, ForceTorqu
 	
 	loadExpVariables();
 	
-	//Eigen::Quaterniond wamBottomQ = hjp2quaternion(&wamBottomO);
+	//Eigen::Quaterniond exp_vars[WAM_BOTTOM]Q = hjp2quaternion(&exp_vars[WAM_BOTTOM_O]);
 	systems::Wam<DIMENSION>::cp_type curr_pos;
 	
 	//start experiment: move WAM to first goal
-	(*((systems::Wam<DIMENSION>*)(&wam))).moveTo(wamBottomC, true, 3.0);
-	(*((systems::Wam<DIMENSION>*)(&wam))).moveTo(wamBottomQ, true, 0.3, 0.25);
+	(*((systems::Wam<DIMENSION>*)(&wam))).moveTo(exp_vars[WAM_BOTTOM_C], true, 3.0);
+	(*((systems::Wam<DIMENSION>*)(&wam))).moveTo(exp_vars[WAM_BOTTOM]Q, true, 0.3, 0.25);
 	
 	//causes wam to hold its tool at the desiredOrientation
-	systems::ExposedOutput<Eigen::Quaterniond> toSetpoint(wamBottomQ);
+	systems::ExposedOutput<Eigen::Quaterniond> toSetpoint(exp_vars[WAM_BOTTOM]Q);
 	{
-		//std::cout << "maintaining " << toString(&wamBottomO) << std::endl;
+		//std::cout << "maintaining " << to_string(&exp_vars[WAM_BOTTOM_O]) << std::endl;
 		BARRETT_SCOPED_LOCK(pm->getExecutionManager()->getMutex());
 
 		wam.idle();
@@ -38,15 +38,15 @@ void runCartesianRasterExperiment(systems::Wam<DOF>& wam, Hand* hand, ForceTorqu
 	//fflush(stdout);
 	std::cout << "x_pos" << std::endl;
 	
-	float min_x = wamBottomC[0];
-	float min_y = wamBottomC[1];
-	float max_x = wamTopC[0];
-	float max_y = wamTopC[1];
+	float min_x = exp_vars[WAM_BOTTOM_C][0];
+	float min_y = exp_vars[WAM_BOTTOM_C][1];
+	float max_x = exp_vars[WAM_TOP_C][0];
+	float max_y = exp_vars[WAM_TOP_C][1];
 	
 	float step = 0.003;	//3mm steps
 	curr_pos[0] = min_x;
 	curr_pos[1] = min_y;
-	curr_pos[2] = wamBottomC[2];	//want tool to remain in the same horizontal plane
+	curr_pos[2] = exp_vars[WAM_BOTTOM_C][2];	//want tool to remain in the same horizontal plane
 	
 	float x, y;		//temp coordinates of locations on tactile finger pad edges
 	float x0, y0;	//coordinates of centre point of tactile finger pad (point of rotation)
@@ -106,7 +106,7 @@ void runCartesianRasterExperiment(systems::Wam<DOF>& wam, Hand* hand, ForceTorqu
 		
 		//printf(" %02d ",curr_x);
 		//fflush(stdout);
-		std::cout << toString(&curr_pos) << std::endl;
+		std::cout << to_string(&curr_pos) << std::endl;
 		(*((systems::Wam<DIMENSION>*)(&wam))).moveTo(curr_pos, false, 3.0);
 	}
 }

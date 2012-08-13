@@ -7,9 +7,6 @@ const int TACT_BOARD_ROWS = 8;
 const int TACT_BOARD_COLS = 3;
 const int TACT_BOARD_STRIDE = TACT_BOARD_COLS * TACT_CELL_WIDTH + 2;
 
-Hand::jv_type tact_base_val; 
-Hand::jv_type fingertip_torque_base_val; 
-Hand::ct_type torque_epsilon;
 
 Senses::Senses(ProductManager* pm, systems::Wam<DIMENSION>* wam){
     this->pm = pm;
@@ -46,8 +43,8 @@ bool Senses::check_tactile_contact(int finger_num){
         tps = hand->getTactilePucks();
         v_type finger_tact = tps[finger_num]->getFullData();
         for(int i = 0; i < finger_tact.size(); i++){
-                //std::cout << finger_tact[i] << " > " << tact_base_val(finger_num) << "?" << std::endl;
-                if(finger_tact[i] > tact_base_val[finger_num]){
+                //std::cout << finger_tact[i] << " > " << sensor_vars[TACT_BASE_VAL](finger_num) << "?" << std::endl;
+                if(finger_tact[i] > sensor_vars[TACT_BASE_VAL][finger_num]){
                         return true;
                 }
         }
@@ -88,9 +85,9 @@ bool Senses::check_fingertip_torque_contact(int fingertip_torque_thresh){
                 || check_fingertip_torque_contact(2, fingertip_torque_thresh);
 }
 bool Senses::check_fingertip_torque_contact(){
-        return check_fingertip_torque_contact(0, fingertip_torque_base_val[0])
-                || check_fingertip_torque_contact(1, fingertip_torque_base_val[1])
-                || check_fingertip_torque_contact(2, fingertip_torque_base_val[2]);
+        return check_fingertip_torque_contact(0, sensor_vars[FT_TORQUE_BASE_VAL][0])
+                || check_fingertip_torque_contact(1, sensor_vars[FT_TORQUE_BASE_VAL][1])
+                || check_fingertip_torque_contact(2, sensor_vars[FT_TORQUE_BASE_VAL][2]);
 }
 void Senses::tare_tactile(){
         //std::cout << "check_tactile_contact!" << std::endl;
@@ -107,7 +104,7 @@ void Senses::tare_tactile(){
                         }
                 }
                 std::cout << "    F" << finger_num+1 << ": " << max << std::endl;
-                tact_base_val[finger_num] = max;
+                sensor_vars[TACT_BASE_VAL][finger_num] = max;
         }
 }
 //reset zero-value of fingertip torque sensors
@@ -116,7 +113,7 @@ void Senses::tare_fingertip_torque(){
         std::vector<int> fingertip_torque = hand->getFingertipTorque();
         std::cout << "tare-value for fingertip_torque: " << std::endl;
         for(unsigned int finger_num = 0; finger_num < fingertip_torque.size(); finger_num++){
-                fingertip_torque_base_val[finger_num] = fingertip_torque[finger_num];
+                sensor_vars[FT_TORQUE_BASE_VAL][finger_num] = fingertip_torque[finger_num];
                  std::cout << "    F" << finger_num+1 << ": " << fingertip_torque[finger_num] << std::endl;
         }
 }

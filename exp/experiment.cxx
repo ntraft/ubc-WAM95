@@ -1,6 +1,7 @@
 #include "experiment.h"
 #include "utils.h"
 #include "action.h"
+#include "bh.h"
 #include "control.h"
 #include "senses.h"
 
@@ -24,12 +25,29 @@ std::string experiment_shapes[NUM_SHAPES] = {
 	"square",
 	"triangle"
 };
+std::string var_keys_7[NUM_EXP_VARS_7] = {
+    "WamBottom",
+    "WamTop",
+    "JointTolerance",
+    "MiscParms"
+};
+std::string var_keys_4[NUM_EXP_VARS_4] = {
+    "WamBottomO",
+    "WamTopO",
+    "HandPregrasp",
+    "HandGrasp",
+    "HandUngrasp"
+};
+std::string var_keys_3[NUM_EXP_VARS_3] = {
+    "WamBottomC",
+    "WamTopC"
+};
 std::vector<double> min_hfingertip_torque(4,9999999);//running minimum values
-
-
-Experiment::Experiment(Controller* controller, Senses* senses){
+Experiment::Experiment(Controller* controller, Senses* senses){ 
     this->controller = controller;
     this->senses = senses;
+    wam = senses->getWAM();
+    hand = senses->getHand();
 }
 
 void Experiment::toggle_collect_data(){
@@ -37,74 +55,78 @@ void Experiment::toggle_collect_data(){
     std::cout << "Data collection toggled: " << flag_collect_data << std::endl;
 }
 
-void Experiment::run_experiment(){
+Experiment* Experiment::get_experiment(){
+	std::cout << "Running " << experiment_keys[int(exp_id)] << " Experiment..." << std::endl;
+	switch(exp_id){
+		case ACTIONPHASE:{      return new ActionPhase(controller, senses);}
+		case ACTIVESENSING:{    return new BHTorque(controller, senses);}
+		case WAMVELOCITY:{      return new BHTorque(controller, senses);}
+		case WAMJOINTPOS:{      return new BHTorque(controller, senses);}
+		case WAMCARTESIANPOS:{  return new BHTorque(controller, senses);}
+		case WAMJOINTTORQUE:{   return new BHTorque(controller, senses);}
+		case BHVELOCITY:{       return new BHTorque(controller, senses);}
+		case BHPOSITION:{       return new BHTorque(controller, senses);}
+		case BHTORQUE:{         return new BHTorque(controller, senses);}
+		case BHTRAPEZOIDAL:{    return new BHTorque(controller, senses);}
+		case SIMPLESHAPES:{     return new BHTorque(controller, senses);}
+		case ACTIVEPROBING:{    return new BHTorque(controller, senses);}
+		case CARTESIANRASTER:{  return new BHTorque(controller, senses);}
+		default:{}
+	}
+}
+
+void Experiment::teach_pose(int seqnum){
+    load_exp_variables();
+	if(seqnum == 0){		
+        //cast wam to 7DOF first
+        
+        copy_matrix(&exp_vars_7[WAM_BOTTOM], wam->getJointPositions());
+        copy_matrix(&exp_vars_3[WAM_BOTTOM_C], wam->getToolPosition());
+        Eigen::Quaterniond wam_bottom_q =  wam->getToolOrientation();
+        copy_matrix(&exp_vars_4[WAM_BOTTOM_O], quaternion2hjp(&wam_bottom_q));
+        /*
+        std::cout << "Setting exp_vars[WAM_BOTTOM] to " << to_string(&exp_vars[WAM_BOTTOM]) << std::endl;
+        std::cout << "Setting exp_vars[WAM_BOTTOM_C] to " << to_string(&exp_vars[WAM_BOTTOM_C]) << std::endl;
+        std::cout << "Setting exp_vars[WAM_BOTTOM]Q to " << to_string(&exp_vars[WAM_BOTTOM_O]) << std::endl;
+        */
+    }
+    else if(seqnum == 1){	
+        //cast wam to 7DOF first
+        
+        copy_matrix(&exp_vars_7[WAM_TOP], wam->getJointPositions());
+        copy_matrix(&exp_vars_3[WAM_TOP_C], wam->getToolPosition());
+        Eigen::Quaterniond wam_top_q =  wam->getToolOrientation();
+        copy_matrix(&exp_vars_4[WAM_TOP_O], quaternion2hjp(&wam_top_q));
+        /*
+        std::cout << "Setting exp_vars[WAM_TOP] to " << to_string(&exp_vars[WAM_TOP]) << std::endl;
+        std::cout << "Setting exp_vars[WAM_TOP_C] to " << to_string(&exp_vars[WAM_TOP_C]) << std::endl;
+        std::cout << "Setting exp_vars[WAM_TOP]Q to " << to_string(&exp_vars[WAM_TOP_O]) << std::endl;
+        */
+    }
+    save_exp_variables();
+}
+
+void Experiment::run(){
 	//datasemastop = false;
 	//boost::thread* dataCollectionThread = NULL;
 	/*if(flag_collect_data){
 		dataCollectionThread = new boost::thread(dataCollect, hand, fts, wam, pm, exp_id, expshape);
-	}*/
-
-    Experiment* exp;
-	
-	//std::cout << "Running " << experiment_keys[int(exp_id)] << " Experiment..." << std::endl;
-	switch(exp_id){
-		case ACTIONPHASE:{
-//			runActionPhaseExperiment(*wam, hand, fts, pm);
-			exp = new ActionPhase(controller, senses);
-            break;
-		}
-		case ACTIVESENSING:{
-//			runActiveSensingExperiment(*wam, hand, fts, pm);
-			break;
-		}
-		case WAMVELOCITY:{
-//			runWAMVelocityExperiment(*wam, hand, fts, pm);
-			break;
-		}
-		case WAMJOINTPOS:{
-//			runWAMJointPosExperiment(*wam, hand, fts, pm);
-			break;
-		}
-		case WAMCARTESIANPOS:{
-//			runWAMCartesianPosExperiment(*wam, hand, fts, pm);
-			break;
-		}
-		case WAMJOINTTORQUE:{
-//			runWAMJointTorqueExperiment(*wam, hand, fts, pm);
-			break;
-		}
-		case BHVELOCITY:{
-//			runBHVelocityExperiment(*wam, hand, fts, pm);
-			break;
-		}
-		case BHPOSITION:{
-//			runBHPositionExperiment(*wam, hand, fts, pm);
-			break;
-		}
-		case BHTORQUE:{
-//			runBHTorqueExperiment(*wam, hand, fts, pm);
-			break;
-		}
-		case BHTRAPEZOIDAL:{
-//			runBHTrapezoidalExperiment(*wam, hand, fts, pm);
-			break;
-		}
-		case SIMPLESHAPES:{
-//			runSimpleShapesExperiment(*wam, hand, fts, pm);
-			break;
-		}
-		case ACTIVEPROBING:{
-			break;
-		}
-		case CARTESIANRASTER:{
-//			runCartesianRasterExperiment(*wam, hand, fts, pm);
-			break;
-		}
-		default:{ 
-		}
 	}
-	
-	//std::cout << "Experiment " << experiment_keys[int(exp_id)];
+    if(!is_initialized){
+        std::cout << "experiment not yet initialized...aborting" << std::endl;
+        return;
+    }
+    else{*/
+        get_experiment()->run();
+        //run!!
+        //boost::thread* experimentThread;
+        //expsemastop = false;
+        //experimentThread = new boost::thread(
+        //    runExperiment, EXPERIMENT_KEYS(exp_id));
+        //waitForEnter();
+        //expsemastop = true;
+    //}
+    ////`std::cout << "Experiment " << experiment_keys[int(exp_id)];
 	
 	/*if(!expsemastop){
 		std::cout << " Completed Successfully!" << std::endl;
@@ -119,51 +141,7 @@ void Experiment::run_experiment(){
 		if(flag_collect_data)
 			dataCollectionThread->join();
 	}*/	
-}
 
-void Experiment::teach_pose(int seqnum){
-    load_exp_variables();
-	if(seqnum == 0){		
-        //cast wam to 7DOF first
-        /*
-        wamBottom	= (*((systems::Wam<DIMENSION>*)(&wam))).getJointPositions();
-        wamBottomC 	= (*((systems::Wam<DIMENSION>*)(&wam))).getToolPosition();
-        wamBottomQ 	= (*((systems::Wam<DIMENSION>*)(&wam))).getToolOrientation();
-        wamBottomO	= quaternion2hjp(&wamBottomQ);
-        std::cout << "Setting wamBottom to " << toString(&wamBottom) << std::endl;
-        std::cout << "Setting wamBottomC to " << toString(&wamBottomC) << std::endl;
-        std::cout << "Setting wamBottomQ to " << toString(&wamBottomO) << std::endl;
-        */
-    }
-    else if(seqnum == 1){	
-        //cast wam to 7DOF first
-        /*
-        wamTop 	= (*((systems::Wam<DIMENSION>*)(&wam))).getJointPositions();
-        wamTopC = (*((systems::Wam<DIMENSION>*)(&wam))).getToolPosition();
-        wamTopQ = (*((systems::Wam<DIMENSION>*)(&wam))).getToolOrientation();
-        wamTopO = quaternion2hjp(&wamTopQ);
-        std::cout << "Setting wamTop to " << toString(&wamTop) << std::endl;
-        std::cout << "Setting wamTopC to " << toString(&wamTopC) << std::endl;
-        std::cout << "Setting wamTopQ to " << toString(&wamTopO) << std::endl;
-        */
-    }
-    save_exp_variables();
-}
-
-void Experiment::run(){
-    if(!is_initialized){
-        std::cout << "experiment not yet initialized...aborting" << std::endl;
-        return;
-    }
-    else{
-        //run!!
-        //boost::thread* experimentThread;
-        //expsemastop = false;
-        //experimentThread = new boost::thread(
-        //    runExperiment, EXPERIMENT_KEYS(exp_id));
-        //waitForEnter();
-        //expsemastop = true;
-    }
 }
 
 void Experiment::init(std::string args){
@@ -204,7 +182,7 @@ void Experiment::init(std::string args){
     
     if(exp_idstr != ""){
         exp_id = EXPERIMENT_KEYS(atoi(exp_idstr.c_str()));
-        exp_shape = EXPERIMENT_SHAPES(atoi(exp_shapestr.c_str()));     
+        exp_shape = EXPERIMENT_SHAPES(atoi(exp_shapestr.c_str()));
     }
     else{
         help();
@@ -226,96 +204,121 @@ void Experiment::help(){
 }
 
 void Experiment::load_exp_variables(){
-	std::string wamBottomStr;
-	std::string wamTopStr;
-	std::string wamBottomCStr;
-	std::string wamTopCStr;
-	std::string wamBottomOStr;
-	std::string wamTopOStr;
-	std::string handPregraspStr;
-	std::string handGraspStr;
-	std::string handUnGraspStr;
-	std::string tact_base_valStr;
-	std::string torque_epsilonStr;
-	std::string joint_toleranceStr;
-	std::string misc_parmsStr;
-	
-	//read parameters from file
-	std::ifstream myfile ("in.txt");
+
+    std::cout << "loading experiment variables" << std::endl;
+    
+    load_exp_variables_3();
+    load_exp_variables_4();
+    load_exp_variables_7();
+}
+void Experiment::load_exp_variables_7(){
+
+    //read parameters from file
+	std::ifstream myfile ("data/exp7.dat");
 	if (!myfile.is_open()){
-		std::cout << "Unable to open file"; 
+		std::cout << "Unable to open file" << std::endl; 
 		exit(1);
 	}
-	std::getline (myfile,wamBottomStr);
-	std::getline (myfile,wamTopStr);
-	std::getline (myfile,wamBottomCStr);
-	std::getline (myfile,wamTopCStr);
-	std::getline (myfile,wamBottomOStr);
-	std::getline (myfile,wamTopOStr);
-	std::getline (myfile,handPregraspStr);
-	std::getline (myfile,handGraspStr);
-	std::getline (myfile,handUnGraspStr);
-	//std::getline (myfile,tact_base_valStr);
-	//std::getline (myfile,torque_epsilonStr);
-	std::getline (myfile,joint_toleranceStr);
-	std::getline (myfile,misc_parmsStr);
-	
-	//parse paramater vectors
-	parseDoubles(&wamBottom, wamBottomStr);
-	parseDoubles(&wamTop, wamTopStr);
-	parseDoubles(&wamBottomC, wamBottomCStr);
-	parseDoubles(&wamTopC, wamTopCStr);
-	parseDoubles(&wamBottomO, wamBottomOStr); 
-        wamBottomQ = hjp2quaternion(&wamBottomO);
-	parseDoubles(&wamTopO, wamTopOStr); 
-        wamTopQ = hjp2quaternion(&wamTopO);
-	parseDoubles(&handPregrasp, handPregraspStr);
-	parseDoubles(&handGrasp, handGraspStr);
-	parseDoubles(&handUnGrasp, handUnGraspStr);
-	//parseDoubles(&tact_base_val, tact_base_valStr);
-	//parseDoubles(&torque_epsilon, torque_epsilonStr);
-	parseDoubles(&joint_tolerance, joint_toleranceStr);
-	parseDoubles(&misc_parms, misc_parmsStr);
+    
+    for(int i = 0; i < NUM_EXP_VARS_7; i++){
+        std::string temp;
+        std::getline(myfile,temp);
+        parseDoubles(&exp_vars_7[i], temp);
+    }
+    //wam_bottom_q = hjp2quaternion(&exp_vars[WAM_BOTTOM_O]);
+    //wam_top_q    = hjp2quaternion(&exp_vars[WAM_TOP_O]);
 }
+void Experiment::load_exp_variables_4(){
+
+    //read parameters from file
+	std::ifstream myfile ("data/exp4.dat");
+	if (!myfile.is_open()){
+		std::cout << "Unable to open file" << std::endl; 
+		exit(1);
+	}
+    
+    for(int i = 0; i < NUM_EXP_VARS_4; i++){
+        std::string temp;
+        std::getline(myfile,temp);
+        parseDoubles(&exp_vars_4[i], temp);
+    }
+    //wam_bottom_q = hjp2quaternion(&exp_vars[WAM_BOTTOM_O]);
+    //wam_top_q    = hjp2quaternion(&exp_vars[WAM_TOP_O]);
+}
+void Experiment::load_exp_variables_3(){
+
+    //read parameters from file
+	std::ifstream myfile ("data/exp3.dat");
+	if (!myfile.is_open()){
+		std::cout << "Unable to open file" << std::endl; 
+		exit(1);
+	}
+    
+    for(int i = 0; i < NUM_EXP_VARS_3; i++){
+        std::string temp;
+        std::getline(myfile,temp);
+        parseDoubles(&exp_vars_3[i], temp);
+    }
+    //wam_bottom_q = hjp2quaternion(&exp_vars[WAM_BOTTOM_O]);
+    //wam_top_q    = hjp2quaternion(&exp_vars[WAM_TOP_O]);
+}
+
 void Experiment::save_exp_variables(){	
-	//read parameters from file
-	std::ofstream myfile ("in.txt");
+
+    std::cout << "saving experiment variables" << std::endl;
+
+    save_exp_variables_3();
+    save_exp_variables_4();
+    save_exp_variables_7();
+	
+}
+void Experiment::save_exp_variables_7(){
+    //read parameters from file
+	std::ofstream myfile ("data/exp7.dat");
 	if (!myfile.is_open()){
 		std::cout << "Unable to open file" << std::endl; 
 		exit(1);
 	}
 
+	//exp_vars[WAM_BOTTOM_O] = quaternion2hjp(&wam_bottom_q);
+    //exp_vars[WAM_TOP_O] = quaternion2hjp(&wam_top_q);
 	//save paramater vectors
-	myfile << toString(&wamBottom);
-	myfile << toString(&wamTop);
-	myfile << toString(&wamBottomC);
-	myfile << toString(&wamTopC);
-	    wamBottomO = quaternion2hjp(&wamBottomQ);
-	myfile << toString(&wamBottomO);
-	    wamTopO = quaternion2hjp(&wamTopQ);
-	myfile << toString(&wamTopO);
-	myfile << toString(&handPregrasp);
-	myfile << toString(&handGrasp);
-	myfile << toString(&handUnGrasp);
-	//myfile << toString(&tact_base_val);
-	//myfile << toString(&torque_epsilon);
-	myfile << toString(&joint_tolerance);
-	myfile << toString(&misc_parms);
+    for(int i = 0; i < NUM_EXP_VARS_7; i++){
+        myfile << to_string(&exp_vars_7[i]);
+        //std::cout << "saving " << var_keys[i] << " as " << to_string(&exp_vars[i]) << std::endl;
+    }
+}
+void Experiment::save_exp_variables_4(){
+    //read parameters from file
+	std::ofstream myfile ("data/exp4.dat");
+	if (!myfile.is_open()){
+		std::cout << "Unable to open file" << std::endl; 
+		exit(1);
+	}
 
-#if 0
-	std::cout << "saving wamBottom      as " << toString(&wamBottom) 	  << std::endl;
-	std::cout << "saving wamTop         as " << toString(&wamTop) 		  << std::endl;
-	std::cout << "saving wamBottomC     as " << toString(&wamBottomC) 	  << std::endl;
-	std::cout << "saving wamTopC        as " << toString(&wamTopC) 		  << std::endl;
-	std::cout << "saving wamBottomO     as " << toString(&wamBottomO) 	  << std::endl;
-	std::cout << "saving wamTopO        as " << toString(&wamTopO) 		  << std::endl;
-	std::cout << "saving handPregrasp   as " << toString(&handPregrasp)   << std::endl;
-	std::cout << "saving handGrasp      as " << toString(&handGrasp) 	  << std::endl;
-	std::cout << "saving handUnGrasp    as " << toString(&handUnGrasp) 	  << std::endl;
-	std::cout << "saving tact_base_val  as " << toString(&tact_base_val)  << std::endl;
-	std::cout << "saving torque_epsilon as " << toString(&torque_epsilon) << std::endl;
-	std::cout << "saving joint_toleranceas " << toString(&joint_tolerance)<< std::endl;
-#endif
+	//exp_vars[WAM_BOTTOM_O] = quaternion2hjp(&wam_bottom_q);
+    //exp_vars[WAM_TOP_O] = quaternion2hjp(&wam_top_q);
+	//save paramater vectors
+    for(int i = 0; i < NUM_EXP_VARS_4; i++){
+        myfile << to_string(&exp_vars_4[i]);
+        //std::cout << "saving " << var_keys[i] << " as " << to_string(&exp_vars[i]) << std::endl;
+    }
+}
+void Experiment::save_exp_variables_3(){
+    //read parameters from file
+	std::ofstream myfile ("data/exp3.dat");
+	if (!myfile.is_open()){
+		std::cout << "Unable to open file" << std::endl; 
+		exit(1);
+	}
+
+	//exp_vars[WAM_BOTTOM_O] = quaternion2hjp(&wam_bottom_q);
+    //exp_vars[WAM_TOP_O] = quaternion2hjp(&wam_top_q);
+	//save paramater vectors
+    for(int i = 0; i < NUM_EXP_VARS_3; i++){
+        myfile << to_string(&exp_vars_3[i]);
+        //std::cout << "saving " << var_keys[i] << " as " << to_string(&exp_vars[i]) << std::endl;
+    }
 }
 
 void Experiment::data_collect(){
@@ -339,9 +342,9 @@ void Experiment::data_collect(){
 	
 	std::cout << "data collection thread started!" << std::endl;
 	
-	//systems::Wam<DIMENSION>::jp_type wamBottom;
-	//parseDoubles(&wamBottom, "-0.0800 -1.8072 -0.0199 0.9068 0.5583 -0.4459 0.0");
-	//wam->moveTo(wamBottom, false, 1.0);
+	//systems::Wam<DIMENSION>::jp_type exp_vars[WAM_BOTTOM];
+	//parseDoubles(&exp_vars[WAM_BOTTOM], "-0.0800 -1.8072 -0.0199 0.9068 0.5583 -0.4459 0.0");
+	//wam->moveTo(exp_vars[WAM_BOTTOM], false, 1.0);
 	
 	while(pm->getSafetyModule()->getMode() == SafetyModule::ACTIVE){//datasemastop){
 		// WAM

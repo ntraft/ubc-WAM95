@@ -34,19 +34,19 @@ std::string experiment_shapes[NUM_SHAPES] = {
 //experiment data loading is still too tightly coupled with main.cpp, will migrate it here at a later time
 /*
 void loadExpVariables(){
-	std::string wamBottomStr;
-	std::string wamTopStr;
-	std::string wamBottomCStr;
-	std::string wamTopCStr;
-	std::string wamBottomOStr;
-	std::string wamTopOStr;
-	std::string handPregraspStr;
-	std::string handGraspStr;
-	std::string handUnGraspStr;
-	std::string tact_base_valStr;
-	std::string torque_epsilonStr;
-	std::string joint_toleranceStr;
-	std::string misc_parmsStr;
+	std::string exp_vars[WAM_BOTTOM]Str;
+	std::string exp_vars[WAM_TOP]Str;
+	std::string exp_vars[WAM_BOTTOM_C]Str;
+	std::string exp_vars[WAM_TOP_C]Str;
+	std::string exp_vars[WAM_BOTTOM_O]Str;
+	std::string exp_vars[WAM_TOP_O]Str;
+	std::string exp_vars[HAND_PREGRASP]Str;
+	std::string exp_vars[HAND_GRASP]Str;
+	std::string exp_vars[HAND_UNGRASP]Str;
+	std::string exp_vars[TACT_BASE_VAL]Str;
+	std::string exp_vars[TORQUE_EPSILON]Str;
+	std::string exp_vars[JOINT_TOLERANCE]Str;
+	std::string exp_vars[MISC_PARMS]Str;
 	
 	//read parameters from file
 	std::ifstream myfile ("in.txt");
@@ -54,34 +54,34 @@ void loadExpVariables(){
 		std::cout << "Unable to open file"; 
 		exit(1);
 	}
-	std::getline (myfile,wamBottomStr);
-	std::getline (myfile,wamTopStr);
-	std::getline (myfile,wamBottomCStr);
-	std::getline (myfile,wamTopCStr);
-	std::getline (myfile,wamBottomOStr);
-	std::getline (myfile,wamTopOStr);
-	std::getline (myfile,handPregraspStr);
-	std::getline (myfile,handGraspStr);
-	std::getline (myfile,handUnGraspStr);
-	std::getline (myfile,tact_base_valStr);
-	std::getline (myfile,torque_epsilonStr);
-	std::getline (myfile,joint_toleranceStr);
-	std::getline (myfile,misc_parmsStr);
+	std::getline (myfile,exp_vars[WAM_BOTTOM]Str);
+	std::getline (myfile,exp_vars[WAM_TOP]Str);
+	std::getline (myfile,exp_vars[WAM_BOTTOM_C]Str);
+	std::getline (myfile,exp_vars[WAM_TOP_C]Str);
+	std::getline (myfile,exp_vars[WAM_BOTTOM_O]Str);
+	std::getline (myfile,exp_vars[WAM_TOP_O]Str);
+	std::getline (myfile,exp_vars[HAND_PREGRASP]Str);
+	std::getline (myfile,exp_vars[HAND_GRASP]Str);
+	std::getline (myfile,exp_vars[HAND_UNGRASP]Str);
+	std::getline (myfile,exp_vars[TACT_BASE_VAL]Str);
+	std::getline (myfile,exp_vars[TORQUE_EPSILON]Str);
+	std::getline (myfile,exp_vars[JOINT_TOLERANCE]Str);
+	std::getline (myfile,exp_vars[MISC_PARMS]Str);
 	
 	//parse paramater vectors
-	parseDoubles(&wamBottom, wamBottomStr);
-	parseDoubles(&wamTop, wamTopStr);
-	parseDoubles(&wamBottomC, wamBottomCStr);
-	parseDoubles(&wamTopC, wamTopCStr);
-	parseDoubles(&wamBottomO, wamBottomOStr); wamBottomQ = hjp2quaternion(&wamBottomO);
-	parseDoubles(&wamTopO, wamTopOStr); wamTopQ = hjp2quaternion(&wamTopO);
-	parseDoubles(&handPregrasp, handPregraspStr);
-	parseDoubles(&handGrasp, handGraspStr);
-	parseDoubles(&handUnGrasp, handUnGraspStr);
-	parseDoubles(&tact_base_val, tact_base_valStr);
-	parseDoubles(&torque_epsilon, torque_epsilonStr);
-	parseDoubles(&joint_tolerance, joint_toleranceStr);
-	parseDoubles(&misc_parms, misc_parmsStr);
+	parseDoubles(&exp_vars[WAM_BOTTOM], exp_vars[WAM_BOTTOM]Str);
+	parseDoubles(&exp_vars[WAM_TOP], exp_vars[WAM_TOP]Str);
+	parseDoubles(&exp_vars[WAM_BOTTOM_C], exp_vars[WAM_BOTTOM_C]Str);
+	parseDoubles(&exp_vars[WAM_TOP_C], exp_vars[WAM_TOP_C]Str);
+	parseDoubles(&exp_vars[WAM_BOTTOM_O], exp_vars[WAM_BOTTOM_O]Str); exp_vars[WAM_BOTTOM]Q = hjp2quaternion(&exp_vars[WAM_BOTTOM_O]);
+	parseDoubles(&exp_vars[WAM_TOP_O], exp_vars[WAM_TOP_O]Str); exp_vars[WAM_TOP]Q = hjp2quaternion(&exp_vars[WAM_TOP_O]);
+	parseDoubles(&exp_vars[HAND_PREGRASP], exp_vars[HAND_PREGRASP]Str);
+	parseDoubles(&exp_vars[HAND_GRASP], exp_vars[HAND_GRASP]Str);
+	parseDoubles(&exp_vars[HAND_UNGRASP], exp_vars[HAND_UNGRASP]Str);
+	parseDoubles(&exp_vars[TACT_BASE_VAL], exp_vars[TACT_BASE_VAL]Str);
+	parseDoubles(&exp_vars[TORQUE_EPSILON], exp_vars[TORQUE_EPSILON]Str);
+	parseDoubles(&exp_vars[JOINT_TOLERANCE], exp_vars[JOINT_TOLERANCE]Str);
+	parseDoubles(&exp_vars[MISC_PARMS], exp_vars[MISC_PARMS]Str);
 }
 void saveExpVariables(){	
 	//read parameters from file
@@ -92,35 +92,35 @@ void saveExpVariables(){
 	}
 
 	//save paramater vectors
-	myfile << toString(&wamBottom);
-	myfile << toString(&wamTop);
-	myfile << toString(&wamBottomC);
-	myfile << toString(&wamTopC);
-	wamBottomO = quaternion2hjp(&wamBottomQ);
-	myfile << toString(&wamBottomO);
-	wamTopO = quaternion2hjp(&wamTopQ);
-	myfile << toString(&wamTopO);
-	myfile << toString(&handPregrasp);
-	myfile << toString(&handGrasp);
-	myfile << toString(&handUnGrasp);
-	myfile << toString(&tact_base_val);
-	myfile << toString(&torque_epsilon);
-	myfile << toString(&joint_tolerance);
-	myfile << toString(&misc_parms);
+	myfile << to_string(&exp_vars[WAM_BOTTOM]);
+	myfile << to_string(&exp_vars[WAM_TOP]);
+	myfile << to_string(&exp_vars[WAM_BOTTOM_C]);
+	myfile << to_string(&exp_vars[WAM_TOP_C]);
+	exp_vars[WAM_BOTTOM_O] = quaternion2hjp(&exp_vars[WAM_BOTTOM]Q);
+	myfile << to_string(&exp_vars[WAM_BOTTOM_O]);
+	exp_vars[WAM_TOP_O] = quaternion2hjp(&exp_vars[WAM_TOP]Q);
+	myfile << to_string(&exp_vars[WAM_TOP_O]);
+	myfile << to_string(&exp_vars[HAND_PREGRASP]);
+	myfile << to_string(&exp_vars[HAND_GRASP]);
+	myfile << to_string(&exp_vars[HAND_UNGRASP]);
+	myfile << to_string(&exp_vars[TACT_BASE_VAL]);
+	myfile << to_string(&exp_vars[TORQUE_EPSILON]);
+	myfile << to_string(&exp_vars[JOINT_TOLERANCE]);
+	myfile << to_string(&exp_vars[MISC_PARMS]);
 
 #if 0
-	std::cout << "saving wamBottom      as " << toString(&wamBottom) 	  << std::endl;
-	std::cout << "saving wamTop         as " << toString(&wamTop) 		  << std::endl;
-	std::cout << "saving wamBottomC     as " << toString(&wamBottomC) 	  << std::endl;
-	std::cout << "saving wamTopC        as " << toString(&wamTopC) 		  << std::endl;
-	std::cout << "saving wamBottomO     as " << toString(&wamBottomO) 	  << std::endl;
-	std::cout << "saving wamTopO        as " << toString(&wamTopO) 		  << std::endl;
-	std::cout << "saving handPregrasp   as " << toString(&handPregrasp)   << std::endl;
-	std::cout << "saving handGrasp      as " << toString(&handGrasp) 	  << std::endl;
-	std::cout << "saving handUnGrasp    as " << toString(&handUnGrasp) 	  << std::endl;
-	std::cout << "saving tact_base_val  as " << toString(&tact_base_val)  << std::endl;
-	std::cout << "saving torque_epsilon as " << toString(&torque_epsilon) << std::endl;
-	std::cout << "saving joint_toleranceas " << toString(&joint_tolerance)<< std::endl;
+	std::cout << "saving exp_vars[WAM_BOTTOM]      as " << to_string(&exp_vars[WAM_BOTTOM]) 	  << std::endl;
+	std::cout << "saving exp_vars[WAM_TOP]         as " << to_string(&exp_vars[WAM_TOP]) 		  << std::endl;
+	std::cout << "saving exp_vars[WAM_BOTTOM_C]     as " << to_string(&exp_vars[WAM_BOTTOM_C]) 	  << std::endl;
+	std::cout << "saving exp_vars[WAM_TOP_C]        as " << to_string(&exp_vars[WAM_TOP_C]) 		  << std::endl;
+	std::cout << "saving exp_vars[WAM_BOTTOM_O]     as " << to_string(&exp_vars[WAM_BOTTOM_O]) 	  << std::endl;
+	std::cout << "saving exp_vars[WAM_TOP_O]        as " << to_string(&exp_vars[WAM_TOP_O]) 		  << std::endl;
+	std::cout << "saving exp_vars[HAND_PREGRASP]   as " << to_string(&exp_vars[HAND_PREGRASP])   << std::endl;
+	std::cout << "saving exp_vars[HAND_GRASP]      as " << to_string(&exp_vars[HAND_GRASP]) 	  << std::endl;
+	std::cout << "saving exp_vars[HAND_UNGRASP]    as " << to_string(&exp_vars[HAND_UNGRASP]) 	  << std::endl;
+	std::cout << "saving exp_vars[TACT_BASE_VAL]  as " << to_string(&exp_vars[TACT_BASE_VAL])  << std::endl;
+	std::cout << "saving exp_vars[TORQUE_EPSILON] as " << to_string(&exp_vars[TORQUE_EPSILON]) << std::endl;
+	std::cout << "saving exp_vars[JOINT_TOLERANCE]as " << to_string(&exp_vars[JOINT_TOLERANCE])<< std::endl;
 #endif
 }
 */
@@ -147,9 +147,9 @@ void dataCollect(Hand* hand, ForceTorqueSensor* fts, void* wamin, ProductManager
 	
 	std::cout << "data collection thread started!" << std::endl;
 	
-	//systems::Wam<DIMENSION>::jp_type wamBottom;
-	//parseDoubles(&wamBottom, "-0.0800 -1.8072 -0.0199 0.9068 0.5583 -0.4459 0.0");
-	//wam->moveTo(wamBottom, false, 1.0);
+	//systems::Wam<DIMENSION>::jp_type exp_vars[WAM_BOTTOM];
+	//parseDoubles(&exp_vars[WAM_BOTTOM], "-0.0800 -1.8072 -0.0199 0.9068 0.5583 -0.4459 0.0");
+	//wam->moveTo(exp_vars[WAM_BOTTOM], false, 1.0);
 	
 	while(pm->getSafetyModule()->getMode() == SafetyModule::ACTIVE){
 		// WAM

@@ -14,6 +14,13 @@ void backDriveHand(Hand* hand, ForceTorqueSensor* fts, void* wamin, ProductManag
 void graspObject(Hand* hand);
 void stop_thread(bool* semaphore);*/
 
+enum SENSOR_KEYS{
+    TACT_BASE_VAL,
+    FT_TORQUE_BASE_VAL,
+    TORQUE_EPSILON,
+    NUM_SENSOR_VARS
+};
+
 
 class Senses{
     private:
@@ -21,6 +28,8 @@ class Senses{
         systems::Wam<DIMENSION>* wam;
         Hand* hand;
         ForceTorqueSensor* fts;
+
+        Hand::jv_type sensor_vars[NUM_SENSOR_VARS]; 
     public:
         Senses(ProductManager* pm, systems::Wam<DIMENSION>* wam);
         void init_wam();
