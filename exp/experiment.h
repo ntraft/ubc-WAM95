@@ -20,6 +20,14 @@ enum EXPERIMENT_KEYS{
     SIMPLESHAPES,
     ACTIVEPROBING,
     CARTESIANRASTER,
+    
+    //examples
+    HOLDPOSITION,
+    SYSTEMSINTRO,
+    REALTIMEMOVE,
+    TEACHANDPLAY,
+    TORQUECONTROL,
+    HAPTICS,
     NUM_EXPERIMENTS
 };
 enum EXPERIMENT_SHAPES{
@@ -83,7 +91,7 @@ protected:
     systems::Wam<DIMENSION>::cp_type exp_vars_3[NUM_EXP_VARS_3];
     Eigen::Quaterniond wam_bottom_q;
     Eigen::Quaterniond wam_top_q;
-
+    
     void load_exp_variables();
     void save_exp_variables();
     void load_exp_variables_3();
@@ -103,6 +111,7 @@ public:
     void init(std::string args);
     void help();
 	virtual void run();
+    void set_num_runs(int num);
 };
 
 #endif

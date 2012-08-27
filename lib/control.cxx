@@ -14,7 +14,7 @@ Controller::Controller(Senses* senses){
     init_hand();
 }
 void Controller::init_wam(){
-    wam->gravityCompensate();
+    wam->gravityCompensate(true);
 }
 void Controller::init_hand(){
     //printf(">>> Press [Enter] to initialize Hand. (Make sure it has room!)");
@@ -190,22 +190,6 @@ void Controller::hand_command(unsigned char data){
 	hjv[3] = vel_command(data & (1<<6), data & (1<<7));  // Rocker
 	hand->velocityMove(hjv);
 	std::cout << "Velocity: " << hjv << std::endl;
-}
-void Controller::lock_orientation(){
-    std::cout << "not yet implemented" << std::endl;
-    /*Eigen::Quaterniond orientation = wam->getToolOrientation();
-    std::cout 	<< "maintaining " 
-                << to_string(&quaternion2hjp(&orientation)) 
-                << std::endl;			
-    wam->moveTo(orientation, true, 0.3, 0.25);
-    systems::ExposedOutput<Eigen::Quaterniond> toSetpoint(orientation);
-    //causes wam to hold its tool at the desiredOrientation
-    {
-        BARRETT_SCOPED_LOCK(pm.getExecutionManager()->getMutex());
-        wam->idle();
-        forceConnect(toSetpoint.output, wam->toController.referenceInput);
-        forceConnect(wam->tt2jt.output, wam->input);
-    }*/
 }
 void Controller::idle(){
     printf("WAM & Hand idled.\n");

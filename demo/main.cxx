@@ -90,7 +90,6 @@ int wam_main(int argc, char** argv, ProductManager& pm, systems::Wam<DOF>& wam) 
                 senses->tare_fingertip_torque();
                 senses->tare_tactile();
                 break;
-            case 'o': controller->lock_orientation();
             case 'd': experiment->toggle_collect_data(); break;
             case '1': experiment->teach_pose(0); break;
             case '2': experiment->teach_pose(1); break;

@@ -7,29 +7,16 @@
 	detected by the sensors or if significant aliasing occurs
 */
 /*WAMCartesianPos4*/
-template<size_t DOF>
-void runCartesianRasterExperiment(systems::Wam<DOF>& wam, Hand* hand, ForceTorqueSensor* fts, ProductManager* pm){
-	BARRETT_UNITS_TEMPLATE_TYPEDEFS(DOF);
-	
-	loadExpVariables();
+void CartesianRaster::run(){
+	load_exp_variables();
 	
 	//Eigen::Quaterniond exp_vars[WAM_BOTTOM]Q = hjp2quaternion(&exp_vars[WAM_BOTTOM_O]);
 	systems::Wam<DIMENSION>::cp_type curr_pos;
 	
 	//start experiment: move WAM to first goal
-	(*((systems::Wam<DIMENSION>*)(&wam))).moveTo(exp_vars[WAM_BOTTOM_C], true, 3.0);
-	(*((systems::Wam<DIMENSION>*)(&wam))).moveTo(exp_vars[WAM_BOTTOM]Q, true, 0.3, 0.25);
+    wam->moveTo(exp_vars[WAM_BOTTOM_C], true, 3.0);
+	wam->moveTo(exp_vars[WAM_BOTTOM]Q, true, 0.3, 0.25);
 	
-	//causes wam to hold its tool at the desiredOrientation
-	systems::ExposedOutput<Eigen::Quaterniond> toSetpoint(exp_vars[WAM_BOTTOM]Q);
-	{
-		//std::cout << "maintaining " << to_string(&exp_vars[WAM_BOTTOM_O]) << std::endl;
-		BARRETT_SCOPED_LOCK(pm->getExecutionManager()->getMutex());
-
-		wam.idle();
-		forceConnect(toSetpoint.output, wam.toController.referenceInput);
-		forceConnect(wam.tt2jt.output, wam.input);
-	}
 	std::cout << "start!" << std::endl;
 	int curr_state = -1;
 	//int num_runs = 5;

@@ -13,8 +13,7 @@ BHTorque::BHTorque(Controller* controller, Senses* senses):BHExp(controller, sen
 }
 
 void BHTorque::run(){
-	//load_exp_variables();
-	
+	load_exp_variables();
 	//start experiment: move WAM to first goal (no blocking)
 	wam->moveTo(exp_vars_7[WAM_BOTTOM], false, 3.0);
 	std::cout << "start!" << std::endl;
@@ -29,6 +28,7 @@ void BHTorque::run(){
 	
 	//hand->setTorqueMode();
 	 
+    std::cout << "num_runs: " << num_runs << std::endl;
 	while(curr_state < num_runs){// && !expsemastop){
 		boost::this_thread::sleep(boost::posix_time::milliseconds(10));
 		

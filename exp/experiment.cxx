@@ -1,4 +1,5 @@
 #include "experiment.h"
+#include "example.h"
 #include "utils.h"
 #include "action.h"
 #include "bh.h"
@@ -18,6 +19,12 @@ std::string experiment_keys[NUM_EXPERIMENTS] = {
 	"BHTrapezoidal",
 	"SimpleShapes",	
 	"ActiveProbing",
+    "HoldPosition",
+    "SystemsIntro",
+    "RealTimeMove",
+    "TeachAndPlay",
+    "TorqueControl",
+    "Haptics",
 	"CartesianRaster"
 };
 std::string experiment_shapes[NUM_SHAPES] = {
@@ -49,12 +56,10 @@ Experiment::Experiment(Controller* controller, Senses* senses){
     wam = senses->getWAM();
     hand = senses->getHand();
 }
-
 void Experiment::toggle_collect_data(){
     flag_collect_data = !flag_collect_data;
     std::cout << "Data collection toggled: " << flag_collect_data << std::endl;
 }
-
 Experiment* Experiment::get_experiment(){
 	std::cout << "Running " << experiment_keys[int(exp_id)] << " Experiment..." << std::endl;
 	switch(exp_id){
@@ -70,16 +75,18 @@ Experiment* Experiment::get_experiment(){
 		case BHTRAPEZOIDAL:{    return new BHTorque(controller, senses);}
 		case SIMPLESHAPES:{     return new BHTorque(controller, senses);}
 		case ACTIVEPROBING:{    return new BHTorque(controller, senses);}
-		case CARTESIANRASTER:{  return new BHTorque(controller, senses);}
+		case HOLDPOSITION:{  return new HoldPosition(controller, senses);}
+		case SYSTEMSINTRO:{  return new SystemsIntro(controller, senses);}
+		case REALTIMEMOVE:{  return new RealtimeMove(controller, senses);}
+		case TEACHANDPLAY:{  return new TeachAndPlay(controller, senses);}
+		case TORQUECONTROL:{  return new TorqueControl(controller, senses);}
+		case HAPTICS:{  return new Haptics(controller, senses);}
 		default:{}
 	}
 }
-
 void Experiment::teach_pose(int seqnum){
     load_exp_variables();
 	if(seqnum == 0){		
-        //cast wam to 7DOF first
-        
         copy_matrix(&exp_vars_7[WAM_BOTTOM], wam->getJointPositions());
         copy_matrix(&exp_vars_3[WAM_BOTTOM_C], wam->getToolPosition());
         Eigen::Quaterniond wam_bottom_q =  wam->getToolOrientation();
@@ -91,8 +98,6 @@ void Experiment::teach_pose(int seqnum){
         */
     }
     else if(seqnum == 1){	
-        //cast wam to 7DOF first
-        
         copy_matrix(&exp_vars_7[WAM_TOP], wam->getJointPositions());
         copy_matrix(&exp_vars_3[WAM_TOP_C], wam->getToolPosition());
         Eigen::Quaterniond wam_top_q =  wam->getToolOrientation();
@@ -117,7 +122,9 @@ void Experiment::run(){
         return;
     }
     else{*/
-        get_experiment()->run();
+        Experiment* exp = get_experiment();
+        exp->set_num_runs(num_runs);
+        exp->run();
         //run!!
         //boost::thread* experimentThread;
         //expsemastop = false;
@@ -174,6 +181,7 @@ void Experiment::init(std::string args){
         
         sub = args.substr(found_n+3,found_tmp-found_n+3);
         num_runs = atoi(sub.c_str());
+        //std::cout << "num_runs: " << num_runs << std::endl;
     }
     if(found_w==int(std::string::npos)){
         found_w = int(args.find("\n"));
@@ -320,7 +328,9 @@ void Experiment::save_exp_variables_3(){
         //std::cout << "saving " << var_keys[i] << " as " << to_string(&exp_vars[i]) << std::endl;
     }
 }
-
+void Experiment::set_num_runs(int num){
+    this->num_runs = num;
+}
 void Experiment::data_collect(){
     /*
 	std::vector<jp_type> jp; 	std::vector<jp_type>::iterator jpit;
