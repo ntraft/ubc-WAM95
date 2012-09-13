@@ -1,5 +1,7 @@
 #include "experiment.h"
-#include "example.h"
+#include "flip.h"
+#include "action.h"
+//#include "example.h"
 #include "utils.h"
 #include "action.h"
 #include "bh.h"
@@ -19,13 +21,14 @@ std::string experiment_keys[NUM_EXPERIMENTS] = {
 	"BHTrapezoidal",
 	"SimpleShapes",	
 	"ActiveProbing",
-    "HoldPosition",
-    "SystemsIntro",
-    "RealTimeMove",
-    "TeachAndPlay",
-    "TorqueControl",
-    "Haptics",
-	"CartesianRaster"
+	"CartesianRaster",
+    "Flip"
+    //,"HoldPosition",
+    //"SystemsIntro",
+    //"RealTimeMove",
+    //"TeachAndPlay",
+    //"TorqueControl",
+    //"Haptics"
 };
 std::string experiment_shapes[NUM_SHAPES] = {
 	"circle",
@@ -55,6 +58,7 @@ Experiment::Experiment(Controller* controller, Senses* senses){
     this->senses = senses;
     wam = senses->getWAM();
     hand = senses->getHand();
+    pm = senses->getPM();
 }
 void Experiment::toggle_collect_data(){
     flag_collect_data = !flag_collect_data;
@@ -63,7 +67,7 @@ void Experiment::toggle_collect_data(){
 Experiment* Experiment::get_experiment(){
 	std::cout << "Running " << experiment_keys[int(exp_id)] << " Experiment..." << std::endl;
 	switch(exp_id){
-		case ACTIONPHASE:{      return new ActionPhase(controller, senses);}
+		case ACTIONPHASE:{      return new BHTorque(controller, senses);}
 		case ACTIVESENSING:{    return new BHTorque(controller, senses);}
 		case WAMVELOCITY:{      return new BHTorque(controller, senses);}
 		case WAMJOINTPOS:{      return new BHTorque(controller, senses);}
@@ -75,21 +79,26 @@ Experiment* Experiment::get_experiment(){
 		case BHTRAPEZOIDAL:{    return new BHTorque(controller, senses);}
 		case SIMPLESHAPES:{     return new BHTorque(controller, senses);}
 		case ACTIVEPROBING:{    return new BHTorque(controller, senses);}
-		case HOLDPOSITION:{  return new HoldPosition(controller, senses);}
-		case SYSTEMSINTRO:{  return new SystemsIntro(controller, senses);}
-		case REALTIMEMOVE:{  return new RealtimeMove(controller, senses);}
-		case TEACHANDPLAY:{  return new TeachAndPlay(controller, senses);}
-		case TORQUECONTROL:{  return new TorqueControl(controller, senses);}
-		case HAPTICS:{  return new Haptics(controller, senses);}
-		default:{}
+		case CARTESIANRASTER:{  return new BHTorque(controller, senses);}
+		case FLIP:{             return new FlipTilt(controller, senses);}
+		//case HOLDPOSITION:{  return new HoldPosition(controller, senses);}
+		//case SYSTEMSINTRO:{  return new SystemsIntro(controller, senses);}
+		//case REALTIMEMOVE:{  return new RealtimeMove(controller, senses);}
+		//case TEACHANDPLAY:{  return new TeachAndPlay(controller, senses);}
+		//case TORQUECONTROL:{  return new TorqueControl(controller, senses);}
+		//case HAPTICS:{  return new Haptics(controller, senses);}
+        default:{   
+            std::cout << "exp# " << int(exp_id) << " not recognized...returning NULL" << std::endl;
+            return NULL;
+        }
 	}
 }
 void Experiment::teach_pose(int seqnum){
     load_exp_variables();
 	if(seqnum == 0){		
-        copy_matrix(&exp_vars_7[WAM_BOTTOM], wam->getJointPositions());
-        copy_matrix(&exp_vars_3[WAM_BOTTOM_C], wam->getToolPosition());
-        Eigen::Quaterniond wam_bottom_q =  wam->getToolOrientation();
+        copy_matrix(&exp_vars_7[WAM_BOTTOM], senses->getWAM()->getJointPositions());
+        copy_matrix(&exp_vars_3[WAM_BOTTOM_C], senses->getWAM()->getToolPosition());
+        Eigen::Quaterniond wam_bottom_q =  senses->getWAM()->getToolOrientation();
         copy_matrix(&exp_vars_4[WAM_BOTTOM_O], quaternion2hjp(&wam_bottom_q));
         /*
         std::cout << "Setting exp_vars[WAM_BOTTOM] to " << to_string(&exp_vars[WAM_BOTTOM]) << std::endl;
@@ -98,9 +107,9 @@ void Experiment::teach_pose(int seqnum){
         */
     }
     else if(seqnum == 1){	
-        copy_matrix(&exp_vars_7[WAM_TOP], wam->getJointPositions());
-        copy_matrix(&exp_vars_3[WAM_TOP_C], wam->getToolPosition());
-        Eigen::Quaterniond wam_top_q =  wam->getToolOrientation();
+        copy_matrix(&exp_vars_7[WAM_TOP], senses->getWAM()->getJointPositions());
+        copy_matrix(&exp_vars_3[WAM_TOP_C], senses->getWAM()->getToolPosition());
+        Eigen::Quaterniond wam_top_q =  senses->getWAM()->getToolOrientation();
         copy_matrix(&exp_vars_4[WAM_TOP_O], quaternion2hjp(&wam_top_q));
         /*
         std::cout << "Setting exp_vars[WAM_TOP] to " << to_string(&exp_vars[WAM_TOP]) << std::endl;
@@ -109,6 +118,51 @@ void Experiment::teach_pose(int seqnum){
         */
     }
     save_exp_variables();
+}
+
+void Experiment::init_data_log(){
+    tmpFile = "/tmp/btXXXXXX";
+	if (mkstemp(tmpFile) == -1) {
+		printf("ERROR: Couldn't create temporary file!\n");
+		exit(1);
+	}
+    std::cout << "tmpFile created" << std::endl;
+    time = new systems::Ramp(senses->getPM()->getExecutionManager(), 1.0);
+    std::cout << "time created" << std::endl;
+	
+    tg = new systems::TupleGrouper<double, jp_type, jv_type, jt_type, Hand::cp_type, Eigen::Quaterniond>;
+    std::cout << "tg created" << std::endl;
+	connect(time->output, tg->getInput<0>());
+	connect(senses->getWAM()->jpOutput, tg->getInput<1>());
+	connect(senses->getWAM()->jvOutput, tg->getInput<2>());
+	connect(senses->getWAM()->jtSum.output, tg->getInput<3>());
+	connect(senses->getWAM()->toolPosition.output, tg->getInput<4>());
+	connect(senses->getWAM()->toolOrientation.output, tg->getInput<5>());
+    std::cout << "tg connected" << std::endl;
+
+	typedef boost::tuple<double, jp_type, jv_type, jt_type, Hand::cp_type, Eigen::Quaterniond> tuple_type;
+	const size_t PERIOD_MULTIPLIER = 1;
+	logger = new systems::PeriodicDataLogger<tuple_type>(
+			senses->getPM()->getExecutionManager(),
+			new log::RealTimeWriter<tuple_type>(tmpFile, PERIOD_MULTIPLIER * senses->getPM()->getExecutionManager()->getPeriod()),
+			PERIOD_MULTIPLIER);
+
+    std::cout << "Logging initialized" << std::endl;
+}
+void Experiment::start_data_log(){
+    time->start();
+	connect(tg->output, logger->input);
+	printf("Logging started.\n");
+}
+
+void Experiment::stop_data_log(){
+	logger->closeLog();
+	printf("Logging stopped.\n");
+	log::Reader<tuple_type> lr(tmpFile);
+    char outfile[] = "data/datalog.csv";
+	lr.exportCSV(outfile);
+	printf("Output written to %s.\n", outfile);
+	std::remove(tmpFile);
 }
 
 void Experiment::run(){
@@ -123,8 +177,12 @@ void Experiment::run(){
     }
     else{*/
         Experiment* exp = get_experiment();
+        std::cout << "got it" << std::endl;
         exp->set_num_runs(num_runs);
+        init_data_log();
+        start_data_log();
         exp->run();
+        stop_data_log();
         //run!!
         //boost::thread* experimentThread;
         //expsemastop = false;
@@ -354,17 +412,17 @@ void Experiment::data_collect(){
 	
 	//systems::Wam<DIMENSION>::jp_type exp_vars[WAM_BOTTOM];
 	//parseDoubles(&exp_vars[WAM_BOTTOM], "-0.0800 -1.8072 -0.0199 0.9068 0.5583 -0.4459 0.0");
-	//wam->moveTo(exp_vars[WAM_BOTTOM], false, 1.0);
+	//senses->getWAM()->moveTo(exp_vars[WAM_BOTTOM], false, 1.0);
 	
 	while(pm->getSafetyModule()->getMode() == SafetyModule::ACTIVE){//datasemastop){
 		// WAM
-		jp.push_back(wam->getJointPositions());
-		jv.push_back(wam->getJointVelocities());
-		jt.push_back(wam->getJointTorques());
+		jp.push_back(senses->getWAM()->getJointPositions());
+		jv.push_back(senses->getWAM()->getJointVelocities());
+		jt.push_back(senses->getWAM()->getJointTorques());
 		
 		//WAM end-link Position (wrist)
-		cp.push_back(wam->getToolPosition());
-		Eigen::Quaterniond q = wam->getToolOrientation();
+		cp.push_back(senses->getWAM()->getToolPosition());
+		Eigen::Quaterniond q = senses->getWAM()->getToolOrientation();
 		std::vector<double> q_Scalars;
 		q_Scalars.push_back(q.w());
 		q_Scalars.push_back(q.x());
