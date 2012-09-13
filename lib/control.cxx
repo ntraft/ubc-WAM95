@@ -14,12 +14,12 @@ Controller::Controller(Senses* senses){
     init_hand();
 }
 void Controller::init_wam(){
-    wam->gravityCompensate(true);
+    //wam->gravityCompensate(true);
 }
 void Controller::init_hand(){
     //printf(">>> Press [Enter] to initialize Hand. (Make sure it has room!)");
     //waitForEnter();
-    hand->initialize();
+    //hand->initialize();
 }
 //Close all fingers
 void Controller::close_hand(){

@@ -93,6 +93,7 @@ int wam_main(int argc, char** argv, ProductManager& pm, systems::Wam<DOF>& wam) 
             case 'd': experiment->toggle_collect_data(); break;
             case '1': experiment->teach_pose(0); break;
             case '2': experiment->teach_pose(1); break;
+            case '3': senses->getWAM()->gravityCompensate(); break;
             default:
                 unsigned char in = atoi(line.c_str());
                 controller->hand_command(in);
@@ -114,6 +115,7 @@ int wam_main(int argc, char** argv, ProductManager& pm, systems::Wam<DOF>& wam) 
                 printf("	'd' to toggle data collection on/off (default off)\n");
                 printf("    '1' to record WAM bottom joint angles\n");
                 printf("    '2' to record WAM top joint angles\n");
+                printf("    '3' to compensate for Gravity with WAM\n");
                 break;
 		}
 	}

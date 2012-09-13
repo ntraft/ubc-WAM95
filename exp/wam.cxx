@@ -1,5 +1,4 @@
 #include "wam.h"
-
 /*WAMVelocity2*/
 template<size_t DOF>
 void runWAMVelocityExperiment(systems::Wam<DOF>& wam, Hand* hand, ForceTorqueSensor* fts, ProductManager* pm){

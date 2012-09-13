@@ -6,6 +6,9 @@
 class Controller;
 class Senses;
 
+#define LOG_DATA_TYPES double,jp_type,jv_type,jt_type,Hand::cp_type,Eigen::Quaterniond
+typedef boost::tuple<LOG_DATA_TYPES> tuple_type;
+
 enum EXPERIMENT_KEYS{
     ACTIONPHASE,
     ACTIVESENSING,
@@ -20,6 +23,7 @@ enum EXPERIMENT_KEYS{
     SIMPLESHAPES,
     ACTIVEPROBING,
     CARTESIANRASTER,
+    FLIP,
     
     //examples
     HOLDPOSITION,
@@ -82,6 +86,7 @@ protected:
     Senses* senses;
     systems::Wam<DIMENSION>* wam;
     Hand* hand;
+    ProductManager* pm;
 
     enum EXPERIMENT_KEYS exp_id;
     enum EXPERIMENT_SHAPES exp_shape;
@@ -101,6 +106,12 @@ protected:
     void load_exp_variables_7();
     void save_exp_variables_7();
 
+    //data logging
+    std::string tmpFile;
+	systems::Ramp* time;
+    systems::TupleGrouper<LOG_DATA_TYPES>* tg;
+	systems::PeriodicDataLogger<tuple_type>* logger;
+
 public:
     EIGEN_MAKE_ALIGNED_OPERATOR_NEW 
 	Experiment(Controller* controller, Senses* senses);
@@ -112,6 +123,11 @@ public:
     void help();
 	virtual void run();
     void set_num_runs(int num);
+
+    //data logging
+    void init_data_log();
+    void start_data_log();
+    void stop_data_log();
 };
 
 #endif
