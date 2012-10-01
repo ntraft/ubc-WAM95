@@ -6,7 +6,16 @@
 	the tactile surface. the purpose is to determine if edges can be reliably
 	detected by the sensors or if significant aliasing occurs
 */
-/*WAMCartesianPos4*/
+
+Tactile::Tactile(Controller* controller, Senses* senses):
+    Experiment(controller, senses){
+}
+CartesianRaster::CartesianRaster(Controller* controller, Senses* senses):
+    Tactile(controller, senses){
+}
+
+Tactile::run(){
+}
 void CartesianRaster::run(){
 	load_exp_variables();
 	

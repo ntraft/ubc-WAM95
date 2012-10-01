@@ -14,7 +14,7 @@ public:
 class CartesianRaster: public Tactile{
 public:
     CartesianRaster(Controller* controller, Senses* senses);
-    virtual void run();
+    void run();
 };
 /*class SimpleShapes: public Active{
 public:

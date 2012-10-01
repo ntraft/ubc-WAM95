@@ -1,11 +1,15 @@
 #include "active.h"
 
+CartesianRaster::CartesianRaster(Controller* controller, Senses* senses):
+    Active(controller, senses){
+}
+
+//MISTAKE: NOT CARTESIAN RASTER CODE!!
 /*ActiveSensing1*/
-template<size_t DOF>
-void runActiveSensingExperiment(systems::Wam<DOF>& wam, Hand* hand, ForceTorqueSensor* fts, ProductManager* pm){
-	BARRETT_UNITS_TEMPLATE_TYPEDEFS(DOF);
+void CartesianRaster::run(){
+	//BARRETT_UNITS_TEMPLATE_TYPEDEFS(DOF);
 	
-	loadExpVariables();
+	//loadExpVariables();
 	
 	//start experiment: move WAM to first goal (no blocking)
 	(*((systems::Wam<DIMENSION>*)(&wam))).moveTo(exp_vars[WAM_BOTTOM], false, 3.0, 3.0);

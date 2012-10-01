@@ -11,11 +11,6 @@ public:
     virtual void run();
 };
 
-class CartesianRaster: public Active{
-public:
-    CartesianRaster(Controller* controller, Senses* senses);
-    virtual void run();
-};
 /*class SimpleShapes: public Active{
 public:
     SimpleShapes(Controller* controller, Senses* senses);
