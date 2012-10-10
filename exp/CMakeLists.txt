@@ -19,5 +19,4 @@ add_library(exp
     flip.cxx
     bh.cxx
     action.cxx
-    tactile.cxx
 )

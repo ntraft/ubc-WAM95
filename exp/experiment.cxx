@@ -80,7 +80,7 @@ Experiment* Experiment::get_experiment(){
 		case BHTRAPEZOIDAL:{    return new BHTorque(controller, senses);}
 		case SIMPLESHAPES:{     return new BHTorque(controller, senses);}
 		case ACTIVEPROBING:{    return new BHTorque(controller, senses);}
-		case CARTESIANRASTER:{  return new CartesianRaster(controller, senses);}
+		case CARTESIANRASTER:{  return 0;/*new CartesianRaster(controller, senses);*/}
 		case FLIP:{             return new FlipTilt(controller, senses);}
 		//case HOLDPOSITION:{  return new HoldPosition(controller, senses);}
 		//case SYSTEMSINTRO:{  return new SystemsIntro(controller, senses);}
