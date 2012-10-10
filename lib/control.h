@@ -25,6 +25,7 @@ public:
     void grasp_object();
     //open all fingers and reset finger contact flags
     void ungrasp_object();
+    void backdrive_hand_thread();
     void backdrive_hand();
     template<size_t DOF, int R, int C, typename Units>
     void move_wam_to_str(math::Matrix<R,C, Units>* dest,
