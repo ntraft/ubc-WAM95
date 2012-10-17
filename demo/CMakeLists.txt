@@ -12,11 +12,15 @@ set (EXTRA_LIBS ${EXTRA_LIBS} ${CURSES_LIBRARIES})
 # Make sure the compiler can find include header files from our library. 
 include_directories (${WAM95Ctrl_SOURCE_DIR}/lib)
 include_directories (${WAM95Ctrl_SOURCE_DIR}/exp)
+include_directories (${WAM95Ctrl_SOURCE_DIR}/tap)
 # Make sure the linker can find the libraries once they are built. 
 link_directories (${WAM95Ctrl_BINARY_DIR}/lib)
 link_directories (${WAM95Ctrl_BINARY_DIR}/exp)
+link_directories (${WAM95Ctrl_BINARY_DIR}/tap)
 # Add executable called "helloDemo" that is built from the source files 
 # "demo.cxx" and "demo_b.cxx". The extensions are automatically found. 
 add_executable (demo main.cxx)
-# Link the executable to the Hello library. 
-target_link_libraries (demo exp control senses utils ${EXTRA_LIBS})
+
+# Link the executable to dependent modules
+# Note: Order is important! place modules to the right of their respective dependents
+target_link_libraries (demo exp control senses mainline teach play utils ${EXTRA_LIBS})

@@ -16,6 +16,8 @@ Senses::Senses(ProductManager* pm, systems::Wam<DIMENSION>* wam){
     init_wam();
     init_hand();
     init_fts();
+
+    module_name = "Senses";
 }
 
 void Senses::init_wam(){
@@ -25,6 +27,19 @@ void Senses::init_hand(){
 void Senses::init_fts(){
    fts->tare();
 }
+
+//MAINLINE
+void Senses::help(){
+    std::cout << "Senses help" << std::endl;
+}
+void Senses::validate_args(){
+    std::cout << "Senses validate args" << std::endl;
+}
+void Senses::run(){
+    step();
+}
+
+//ACCESSORS
 
 ProductManager* Senses::getPM(){return pm;}
 systems::Wam<DIMENSION>* Senses::getWAM(){return wam;}

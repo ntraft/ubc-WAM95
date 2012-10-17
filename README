@@ -1,3 +1,10 @@
 configure: cmake .
 compile: make
 run: demo/demo
+
+when adding new modules
+1. Include new subdirectory (if any) in topmost CMakeLists.txt
+2. Include new subdirectory (if any) in demo/CMakeLists.txt
+3. Link new subdirectory (if any) in demo/CMakeLists.txt
+4. Include module source file inside its respective subdirectory
+5. Include module binary file in demo/CMakeLists.txt

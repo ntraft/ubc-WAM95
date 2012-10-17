@@ -79,7 +79,7 @@ enum FINGER_IDS{
 };
 
 void Controller::backdrive_hand_thread(){
-    std::cout << "Hand Backdrivability ON" << std::endl;
+    /*std::cout << "Hand Backdrivability ON" << std::endl;
     
     double backdrive_parms[6];
     backdrive_parms[FINGER_JOINT_STEP] = 1;
@@ -107,18 +107,18 @@ void Controller::backdrive_hand_thread(){
         for(int i = 0; i < NUM_FINGERS; i++){
             //F > zero_thresh
             finger_contacts[i] = senses->tactile_contact(i) || senses->torque_contact(i,true);
-/*
+
                 if(check_tactile_contact(hand, i, exp_vars[TACT_BASE_VAL][i]*backdrive_parms[TACT_STOP])||
                         check_fingertip_torque_contact(hand, i, fingertip_torque_base_val[i]*fingertip_torque_stop)){   //F1,2,3
                         finger_contacts[i] = 1;
-                        */
+
 
             //F > push_thresh
             if(senses->tactile_push(i) || senses->torque_push(i))
                 step_finger(i);
             
             
-            /*if(check_tactile_contact(hand, i, exp_vars[TACT_BASE_VAL][i]*tact_push)||
+            if(check_tactile_contact(hand, i, exp_vars[TACT_BASE_VAL][i]*tact_push)||
                     check_fingertip_torque_contact(hand, i, fingertip_torque_base_val[i]*fingertip_torque_push)){
 //Hand::jv_type hjv;
                     //set_vector_values(&hjv, 0, 0);
@@ -132,13 +132,13 @@ void Controller::backdrive_hand_thread(){
                     hjp[i] = std::max(hjp[i]-finger_joint_step, finger_joint_step);       //radians
                     hand->setPositionMode();
                     hand->setPositionCommand(hjp);
-            }*/
+            }}
     //}
             //F < pull_thresh
             if(senses->tactile_pull(i) || senses->torque_pull(i)){
                 step_finger(i,false);
             } 
-/*
+
     if(i != 2 && get_fingertip_torque_value(hand, i) < fingertip_torque_base_val[i]*fingertip_torque_pull){ //F1,2,3
             //Hand::jv_type hjv;
             //set_vector_values(&hjv, 0, 0);
@@ -174,9 +174,9 @@ hjp[i] = std::min(hjp[i]+finger_joint_step, FINGER_JOINT_LIMIT-finger_joint_step
                 //cp_type
                 //std::cout << "Move hand back slightly" << std::endl;
         //}
-        */
     }
     std::cout << "Hand Backdrivability OFF" << std::endl;
+    */
 }
 
 void Controller::backdrive_hand(){

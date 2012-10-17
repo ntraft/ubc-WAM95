@@ -2,6 +2,7 @@
 #define SENSES_H_
 
 #include "stdheader.h"
+#include "mainline.h"
 
 //for data logging
 /*char tmpFile[14] = "/tmp/btXXXXXX";
@@ -22,7 +23,7 @@ enum SENSOR_KEYS{
 };
 
 
-class Senses{
+class Senses: public MainLine{
     private:
         ProductManager* pm;
         systems::Wam<DIMENSION>* wam;
@@ -36,6 +37,13 @@ class Senses{
         void init_hand();
         void init_fts();
 
+
+        //mainline
+        virtual void help();
+        virtual void validate_args();
+        virtual void run();
+
+        //accessors
         ProductManager* getPM();
         systems::Wam<DIMENSION>* getWAM();
         ForceTorqueSensor* getFTS();
