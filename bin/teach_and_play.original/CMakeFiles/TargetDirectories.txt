@@ -1,0 +1,3 @@
+/home/robot/WAM95Ctrl/bin/teach_and_play.original/CMakeFiles/bt-wam-ccg.dir
+/home/robot/WAM95Ctrl/bin/teach_and_play.original/CMakeFiles/play.dir
+/home/robot/WAM95Ctrl/bin/teach_and_play.original/CMakeFiles/teach.dir

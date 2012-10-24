@@ -1,0 +1,1 @@
+/usr/bin/c++       CMakeFiles/bt-wam-ccg.dir/calibrate_control_gains.cpp.o  -o bt-wam-ccg -rdynamic -L/usr/local/lib -lboost_thread-mt -lpthread -lboost_python -L/usr/lib -lgsl -lgslcblas -lm -lconfig -lconfig++ /usr/xenomai/lib/libnative.so /usr/xenomai/lib/libxenomai.so /usr/xenomai/lib/librtdm.so -lpython2.7 -lbarrett -Wl,-rpath,/usr/local/lib:/usr/xenomai/lib 

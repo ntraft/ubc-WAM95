@@ -1,0 +1,53 @@
+K 25
+svn:wc:ra_dav:version-url
+V 58
+/svn/libbarrett/!svn/ver/1079/trunk/sandbox/teach_and_play
+END
+play.cpp
+K 25
+svn:wc:ra_dav:version-url
+V 67
+/svn/libbarrett/!svn/ver/1079/trunk/sandbox/teach_and_play/play.cpp
+END
+calibrate_control_gains.cpp
+K 25
+svn:wc:ra_dav:version-url
+V 86
+/svn/libbarrett/!svn/ver/1076/trunk/sandbox/teach_and_play/calibrate_control_gains.cpp
+END
+CMakeLists.txt
+K 25
+svn:wc:ra_dav:version-url
+V 73
+/svn/libbarrett/!svn/ver/1076/trunk/sandbox/teach_and_play/CMakeLists.txt
+END
+README
+K 25
+svn:wc:ra_dav:version-url
+V 65
+/svn/libbarrett/!svn/ver/1076/trunk/sandbox/teach_and_play/README
+END
+calibration4.conf
+K 25
+svn:wc:ra_dav:version-url
+V 76
+/svn/libbarrett/!svn/ver/1076/trunk/sandbox/teach_and_play/calibration4.conf
+END
+calibration7.conf
+K 25
+svn:wc:ra_dav:version-url
+V 76
+/svn/libbarrett/!svn/ver/1076/trunk/sandbox/teach_and_play/calibration7.conf
+END
+control_mode_switcher.h
+K 25
+svn:wc:ra_dav:version-url
+V 82
+/svn/libbarrett/!svn/ver/1076/trunk/sandbox/teach_and_play/control_mode_switcher.h
+END
+teach.cpp
+K 25
+svn:wc:ra_dav:version-url
+V 68
+/svn/libbarrett/!svn/ver/1076/trunk/sandbox/teach_and_play/teach.cpp
+END
