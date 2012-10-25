@@ -13,6 +13,7 @@
 #include <boost/filesystem.hpp>
 #include <boost/lexical_cast.hpp>
 #include <boost/tokenizer.hpp>
+#include <boost/filesystem.hpp>  //for create_directories
 #include <libconfig.h++>
 #include <Eigen/Core>
 
@@ -40,6 +41,8 @@
 #include <barrett/products/product_manager.h>
 
 #include <barrett/standard_main_function.h>
+
+#include "data_stream.h" //for sensor data stream io
 
 
 using namespace barrett;
@@ -197,6 +200,9 @@ protected:
 	typedef boost::tuple<double, cp_type> input_cp_type;
 	typedef boost::tuple<double, Eigen::Quaterniond> input_quat_type;
 
+    std::string tmpStr, saveName, fileOut;
+	char* tmpFile;
+
 	ControlModeSwitcher<DOF>* cms;
 
 	std::vector<input_cp_type, Eigen::aligned_allocator<input_cp_type> >* cpVec;
@@ -242,6 +248,8 @@ public:
 	disconnectSystems();
 	void
 	reconnectSystems();
+
+    void collect_data_stream();
 
 private:
 	DISALLOW_COPY_AND_ASSIGN(Play);
@@ -388,7 +396,7 @@ void Play<DOF>::displayEntryPoint() {
 	}
 
 	// Is a Hand attached?
-	Hand* hand = NULL;
+	//Hand* hand = NULL;
 	std::vector<TactilePuck*> tps;
 	if (pm.foundHand()) {
 		hand = pm.getHand();
@@ -678,6 +686,11 @@ void Play<DOF>::reconnectSystems() {
 }
 
 template<size_t DOF>
+void Play<DOF>::collect_data_stream(){
+    boost::thread data_stream(&data_collect,hand,pm.getForceTorqueSensor(),(void*)&wam,&pm);
+}
+
+template<size_t DOF>
 int wam_main(int argc, char** argv, ProductManager& pm,
 		systems::Wam<DOF>& wam) {
 	BARRETT_UNITS_TEMPLATE_TYPEDEFS(DOF);
@@ -715,6 +728,7 @@ int wam_main(int argc, char** argv, ProductManager& pm,
 			case STOPPED:
 				play.moveToStart();
 				play.reconnectSystems();
+                play.collect_data_stream();
 				play.startPlayback();
 				lastState = PLAYING;
 				break;

@@ -14,9 +14,13 @@ include_directories(${CURSES_INCLUDE_DIR})
 add_executable(teach teach.cpp)
 target_link_libraries(teach ${BARRETT_LIBRARIES} ${CURSES_LIBRARIES})
 
+
+add_library (data_stream data_stream.cxx)
+
 add_executable(play play.cpp)
 target_link_libraries(play ${BARRETT_LIBRARIES} boost_system boost_filesystem)
 target_link_libraries(play ${BARRETT_LIBRARIES} ${CURSES_LIBRARIES})
+target_link_libraries(play data_stream)
 
 add_executable(bt-wam-ccg calibrate_control_gains.cpp)
 target_link_libraries(bt-wam-ccg ${BARRETT_LIBRARIES})
