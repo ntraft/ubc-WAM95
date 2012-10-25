@@ -107,9 +107,16 @@ protected:
     void save_exp_variables_7();
 
     //data logging
+//<<<<<<< HEAD
     std::string tmpFile;
 	systems::Ramp* time;
     systems::TupleGrouper<LOG_DATA_TYPES>* tg;
+/*=======
+    char* tmpFile;
+	systems::Ramp* time;
+	typedef boost::tuple<double, jp_type, jv_type, jt_type, Hand::cp_type, Eigen::Quaterniond> tuple_type;
+    systems::TupleGrouper<double, jp_type, jv_type, jt_type, Hand::cp_type, Eigen::Quaterniond>* tg;
+>>>>>>> 1c56da562cfc60bca87c4a0bb71c5525a1749d6b*/
 	systems::PeriodicDataLogger<tuple_type>* logger;
 
 public:

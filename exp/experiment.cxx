@@ -80,7 +80,11 @@ Experiment* Experiment::get_experiment(){
 		case BHTRAPEZOIDAL:{    return new BHTorque(controller, senses);}
 		case SIMPLESHAPES:{     return new BHTorque(controller, senses);}
 		case ACTIVEPROBING:{    return new BHTorque(controller, senses);}
+<<<<<<< HEAD
 		case CARTESIANRASTER:{  return 0;/*new CartesianRaster(controller, senses);*/}
+=======
+		case CARTESIANRASTER:{  return new BHTorque(controller, senses);}
+>>>>>>> 1c56da562cfc60bca87c4a0bb71c5525a1749d6b
 		case FLIP:{             return new FlipTilt(controller, senses);}
 		//case HOLDPOSITION:{  return new HoldPosition(controller, senses);}
 		//case SYSTEMSINTRO:{  return new SystemsIntro(controller, senses);}
@@ -123,11 +127,76 @@ void Experiment::teach_pose(int seqnum){
 
 void Experiment::init_data_log(){
     tmpFile = "/tmp/btXXXXXX";
-	if (mkstemp(const_cast<char *>(tmpFile.c_str())) == -1) {
+	if (mkstemp(tmpFile) == -1) {
 		printf("ERROR: Couldn't create temporary file!\n");
 		exit(1);
 	}
+    std::cout << "tmpFile created" << std::endl;
     time = new systems::Ramp(senses->getPM()->getExecutionManager(), 1.0);
+    std::cout << "time created" << std::endl;
+	
+    tg = new systems::TupleGrouper<double, jp_type, jv_type, jt_type, Hand::cp_type, Eigen::Quaterniond>;
+    std::cout << "tg created" << std::endl;
+	connect(time->output, tg->getInput<0>());
+	connect(senses->getWAM()->jpOutput, tg->getInput<1>());
+	connect(senses->getWAM()->jvOutput, tg->getInput<2>());
+	connect(senses->getWAM()->jtSum.output, tg->getInput<3>());
+	connect(senses->getWAM()->toolPosition.output, tg->getInput<4>());
+	connect(senses->getWAM()->toolOrientation.output, tg->getInput<5>());
+    std::cout << "tg connected" << std::endl;
+
+	typedef boost::tuple<double, jp_type, jv_type, jt_type, Hand::cp_type, Eigen::Quaterniond> tuple_type;
+	const size_t PERIOD_MULTIPLIER = 1;
+	logger = new systems::PeriodicDataLogger<tuple_type>(
+			senses->getPM()->getExecutionManager(),
+			new log::RealTimeWriter<tuple_type>(tmpFile, PERIOD_MULTIPLIER * senses->getPM()->getExecutionManager()->getPeriod()),
+			PERIOD_MULTIPLIER);
+
+    std::cout << "Logging initialized" << std::endl;
+}
+void Experiment::start_data_log(){
+    time->start();
+	connect(tg->output, logger->input);
+	printf("Logging started.\n");
+}
+
+void Experiment::stop_data_log(){
+	logger->closeLog();
+	printf("Logging stopped.\n");
+	log::Reader<tuple_type> lr(tmpFile);
+    char outfile[] = "data/datalog.csv";
+	lr.exportCSV(outfile);
+	printf("Output written to %s.\n", outfile);
+	std::remove(tmpFile);
+}
+
+void Experiment::run(){
+	//datasemastop = false;
+	//boost::thread* dataCollectionThread = NULL;
+	/*if(flag_collect_data){
+		dataCollectionThread = new boost::thread(dataCollect, hand, fts, wam, pm, exp_id, expshape);
+	}
+    if(!is_initialized){
+        std::cout << "experiment not yet initialized...aborting" << std::endl;
+        return;
+    }
+    else{*/
+        Experiment* exp = get_experiment();
+        std::cout << "got it" << std::endl;
+        exp->set_num_runs(num_runs);
+        init_data_log();
+        start_data_log();
+        exp->run();
+        stop_data_log();
+        //run!!
+        //boost::thread* experimentThread;
+        //expsemastop = false;
+        //experimentThread = new boost::thread(
+        //    runExperiment, EXPERIMENT_KEYS(exp_id));
+        //waitForEnter();
+        //expsemastop = true;
+    //}
+    ////`std::cout << "Experiment " << experiment_keys[int(exp_id)];
 	
     tg = new systems::TupleGrouper<LOG_DATA_TYPES>;
 	connect(time->output, tg->getInput<0>());

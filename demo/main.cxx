@@ -210,7 +210,7 @@ int wam_main(int argc, char** argv, ProductManager& pm, systems::Wam<DOF>& wam) 
 
                 wam.moveHome();
                 printf("\n\n");
-            pm.getSafetyModule()->waitForMode(SafetyModule::IDLE);
+                pm.getSafetyModule()->waitForMode(SafetyModule::IDLE);
                 break;
             }
             default:
