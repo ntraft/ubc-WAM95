@@ -30,11 +30,10 @@ using namespace barrett;
 using systems::connect;
 using detail::waitForEnter;
 
-static int loop_count = 0;
 
 //Function defns
 
-void data_collect(Hand* hand, ForceTorqueSensor* fts, void* wamin, ProductManager* pm);
+void data_collect(Hand* hand, ForceTorqueSensor* fts, void* wamin, ProductManager* pm, int* loop_count);
 
 /*void init_stream(std::string trajectory_name);
 void loop_stream();*/

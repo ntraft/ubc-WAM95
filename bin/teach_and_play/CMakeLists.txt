@@ -22,5 +22,11 @@ target_link_libraries(play ${BARRETT_LIBRARIES} boost_system boost_filesystem)
 target_link_libraries(play ${BARRETT_LIBRARIES} ${CURSES_LIBRARIES})
 target_link_libraries(play data_stream)
 
+add_executable(loop loop.cpp)
+target_link_libraries(loop ${BARRETT_LIBRARIES} boost_system boost_filesystem)
+target_link_libraries(loop ${BARRETT_LIBRARIES} ${CURSES_LIBRARIES})
+target_link_libraries(loop data_stream)
+
+
 add_executable(bt-wam-ccg calibrate_control_gains.cpp)
 target_link_libraries(bt-wam-ccg ${BARRETT_LIBRARIES})
