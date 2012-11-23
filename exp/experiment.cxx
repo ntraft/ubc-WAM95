@@ -80,11 +80,7 @@ Experiment* Experiment::get_experiment(){
 		case BHTRAPEZOIDAL:{    return new BHTorque(controller, senses);}
 		case SIMPLESHAPES:{     return new BHTorque(controller, senses);}
 		case ACTIVEPROBING:{    return new BHTorque(controller, senses);}
-<<<<<<< HEAD
 		case CARTESIANRASTER:{  return 0;/*new CartesianRaster(controller, senses);*/}
-=======
-		case CARTESIANRASTER:{  return new BHTorque(controller, senses);}
->>>>>>> 1c56da562cfc60bca87c4a0bb71c5525a1749d6b
 		case FLIP:{             return new FlipTilt(controller, senses);}
 		//case HOLDPOSITION:{  return new HoldPosition(controller, senses);}
 		//case SYSTEMSINTRO:{  return new SystemsIntro(controller, senses);}
@@ -127,7 +123,7 @@ void Experiment::teach_pose(int seqnum){
 
 void Experiment::init_data_log(){
     tmpFile = "/tmp/btXXXXXX";
-	if (mkstemp(tmpFile) == -1) {
+	if (mkstemp((char*)tmpFile.c_str()) == -1) {
 		printf("ERROR: Couldn't create temporary file!\n");
 		exit(1);
 	}
@@ -149,7 +145,7 @@ void Experiment::init_data_log(){
 	const size_t PERIOD_MULTIPLIER = 1;
 	logger = new systems::PeriodicDataLogger<tuple_type>(
 			senses->getPM()->getExecutionManager(),
-			new log::RealTimeWriter<tuple_type>(tmpFile, PERIOD_MULTIPLIER * senses->getPM()->getExecutionManager()->getPeriod()),
+			new log::RealTimeWriter<tuple_type>((char*)tmpFile.c_str(), PERIOD_MULTIPLIER * senses->getPM()->getExecutionManager()->getPeriod()),
 			PERIOD_MULTIPLIER);
 
     std::cout << "Logging initialized" << std::endl;
@@ -160,16 +156,14 @@ void Experiment::start_data_log(){
 	printf("Logging started.\n");
 }
 
-void Experiment::stop_data_log(){
-	logger->closeLog();
-	printf("Logging stopped.\n");
-	log::Reader<tuple_type> lr(tmpFile);
-    char outfile[] = "data/datalog.csv";
-	lr.exportCSV(outfile);
-	printf("Output written to %s.\n", outfile);
-	std::remove(tmpFile);
-}
-
+/*void Experiment::run(){
+    Experiment* exp = get_experiment();
+    exp->set_num_runs(num_runs);
+    init_data_log();
+    start_data_log();
+    exp->run();
+    stop_data_log();
+}*/
 void Experiment::run(){
 	//datasemastop = false;
 	//boost::thread* dataCollectionThread = NULL;
@@ -214,11 +208,7 @@ void Experiment::run(){
 			PERIOD_MULTIPLIER);
 }
 
-void Experiment::start_data_log(){
-    time->start();
-	connect(tg->output, logger->input);
-	printf("Logging started.\n");
-}
+
 
 void Experiment::stop_data_log(){
 	logger->closeLog();
@@ -230,14 +220,6 @@ void Experiment::stop_data_log(){
 	std::remove(tmpFile.c_str());
 }
 
-void Experiment::run(){
-    Experiment* exp = get_experiment();
-    exp->set_num_runs(num_runs);
-    init_data_log();
-    start_data_log();
-    exp->run();
-    stop_data_log();
-}
 
 void Experiment::init(std::string args){
     bool is_initialized = true;
