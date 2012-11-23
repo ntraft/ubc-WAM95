@@ -28,7 +28,7 @@
 
 using namespace barrett;
 using systems::connect;
-using detail::waitForEnter;
+using barrett::detail::waitForEnter;
 
 
 //Function defns

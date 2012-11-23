@@ -14,8 +14,8 @@
 #include "control.h"
 #include "experiment.h"
 #include "action.h"
-#include "teach.h"
-#include "play.h"
+//#include "teach.h"
+//#include "play.h"
 
 std::vector<std::string> autoCmds;
 std::string line;
@@ -100,7 +100,7 @@ int wam_main(int argc, char** argv, ProductManager& pm, systems::Wam<DOF>& wam) 
             case '1': experiment->teach_pose(0); break;
             case '2': experiment->teach_pose(1); break;
             case '3': senses->getWAM()->gravityCompensate(); break;
-            case '4': {
+            /*case '4': {
                 std::string filename(line.substr(2));
 
                 Teach<DOF> teach(wam, pm, filename);
@@ -212,7 +212,7 @@ int wam_main(int argc, char** argv, ProductManager& pm, systems::Wam<DOF>& wam) 
                 printf("\n\n");
                 pm.getSafetyModule()->waitForMode(SafetyModule::IDLE);
                 break;
-            }
+            }*/
             default:
                 unsigned char in = atoi(line.c_str());
                 controller->hand_command(in);
@@ -235,8 +235,8 @@ int wam_main(int argc, char** argv, ProductManager& pm, systems::Wam<DOF>& wam) 
                 printf("    '1' to record WAM bottom joint angles\n");
                 printf("    '2' to record WAM top joint angles\n");
                 printf("    '3' to compensate for Gravity with WAM\n");
-                printf("    '4' to record a trajectory\n");
-                printf("    '5' to play back a recorded trajectory\n");
+                //printf("    '4' to record a trajectory\n");
+                //printf("    '5' to play back a recorded trajectory\n");
                 break;
 		}
 	}

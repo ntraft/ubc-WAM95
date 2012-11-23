@@ -1,201 +1,34 @@
-/*
- * play.cpp
- *
- *  Created on: Sept 26, 2012
- *      Author: Kyle Maroney
- */
-#include <unistd.h> //for readlink
-#include <string>
-#include <boost/tuple/tuple.hpp>
-#include <boost/ref.hpp>
-#include <boost/bind.hpp>
-#include <boost/thread.hpp>
-#include <boost/filesystem.hpp>
-#include <boost/lexical_cast.hpp>
-#include <boost/tokenizer.hpp>
-#include <boost/filesystem.hpp>  //for create_directories
-#include <libconfig.h++>
-#include <Eigen/Core>
-
-#include <barrett/exception.h>
-#include <barrett/units.h>
-#include <barrett/systems.h>
-#include <barrett/products/product_manager.h>
-#define BARRETT_SMF_VALIDATE_ARGS
-#include <barrett/standard_main_function.h>
-
-#include "control_mode_switcher.h"
-
 #include <iostream>  // For std::cin
 #include <string>  // For std::string and std::getline()
 #include <cstdlib>  // For std::atexit()
+#include <unistd.h>  // For usleep() & readlink
+#include <string>
 
-#include <unistd.h>  // For usleep()
-
-// The ncurses library allows us to write text to any location on the screen
-#include <curses.h>
-
-#include <barrett/log.h>
-#include <barrett/math.h>  // For barrett::math::saturate()
-#include <barrett/units.h>
-#include <barrett/systems.h>
-#include <barrett/products/product_manager.h>
-
-#include <barrett/standard_main_function.h>
+#include "stdheader.h"
 
 #include "data_stream.h" //for sensor data stream io
+#include "hand_system.cxx" 
+#include "display.cxx" 
 
-
-using namespace barrett;
-using detail::waitForEnter;
+using barrett::detail::waitForEnter;
 
 enum STATE {
 	PLAYING, STOPPED, PAUSED, QUIT
 } curState = STOPPED, lastState = STOPPED;
 
-char* ctrlMode = NULL;
-bool vcMode = false;
-
 static int loop_count = 0;
 
-//systems::TupleGrouper<double, jp_type, jv_type, jt_type, cp_type, Eigen::Quaterniond> tg;
+//cast integer to string
+std::string itoa(int i){std::string a = boost::lexical_cast<std::string>(i);return a;}
 
-
-// Functions that help display data from the Hand's (optional) tactile sensors.
-// Note that the palm tactile sensor has a unique cell layout that these
-// functions do not print correctly.
-const int TACT_CELL_HEIGHT = 3;
-const int TACT_CELL_WIDTH = 6;
-const int TACT_BOARD_ROWS = 8;
-const int TACT_BOARD_COLS = 3;
-const int TACT_BOARD_STRIDE = TACT_BOARD_COLS * TACT_CELL_WIDTH + 2;
-void drawBoard(WINDOW *win, int starty, int startx, int rows, int cols,
-		int tileHeight, int tileWidth);
-void graphPressures(WINDOW *win, int starty, int startx,
-		const TactilePuck::v_type& pressures);
-
-void drawBoard(WINDOW *win, int starty, int startx, int rows, int cols,
-		int tileHeight, int tileWidth) {
-	int endy, endx, i, j;
-
-	endy = starty + rows * tileHeight;
-	endx = startx + cols * tileWidth;
-
-	for (j = starty; j <= endy; j += tileHeight)
-		for (i = startx; i <= endx; ++i)
-			mvwaddch(win, j, i, ACS_HLINE);
-	for (i = startx; i <= endx; i += tileWidth)
-		for (j = starty; j <= endy; ++j)
-			mvwaddch(win, j, i, ACS_VLINE);
-	mvwaddch(win, starty, startx, ACS_ULCORNER);
-	mvwaddch(win, endy, startx, ACS_LLCORNER);
-	mvwaddch(win, starty, endx, ACS_URCORNER);
-	mvwaddch(win, endy, endx, ACS_LRCORNER);
-	for (j = starty + tileHeight; j <= endy - tileHeight; j += tileHeight) {
-		mvwaddch(win, j, startx, ACS_LTEE);
-		mvwaddch(win, j, endx, ACS_RTEE);
-		for (i = startx + tileWidth; i <= endx - tileWidth; i += tileWidth)
-			mvwaddch(win, j, i, ACS_PLUS);
-	}
-	for (i = startx + tileWidth; i <= endx - tileWidth; i += tileWidth) {
-		mvwaddch(win, starty, i, ACS_TTEE);
-		mvwaddch(win, endy, i, ACS_BTEE);
-	}
-}
-
-void graphCell(WINDOW *win, int starty, int startx, double pressure) {
-	int i, chunk;
-	char c;
-
-	int value = (int)(pressure * 256.0) / 102;  // integer division
-//	int value = (int)(pressure * 256.0) / 50; // integer division
-	for (i = 4; i >= 0; --i) {
-		chunk = (value <= 7) ? value : 7;
-		value -= chunk;
-
-		switch (chunk) {
-		default:  c = '#'; break;
-		case 2:   c = '~'; break;
-		case 1:   c = '-'; break;
-		case 0:   c = '_'; break;
-		}
-		mvwprintw(win, starty + 1, startx + i, "%c", c);
-
-		switch (chunk - 4) {
-		case 3:   c = '#'; break;
-		case 2:   c = '~'; break;
-		case 1:   c = '-'; break;
-		case 0:   c = '_'; break;
-		default:  c = ' '; break;
-		}
-		mvwprintw(win, starty, startx + i, "%c", c);
-	}
-}
-
-void graphPressures(WINDOW *win, int starty, int startx,
-		const TactilePuck::v_type& pressures) {
-	for (int i = 0; i < pressures.size(); ++i) {
-		graphCell(win,
-				starty + 1 + TACT_CELL_HEIGHT *
-						(TACT_BOARD_ROWS - 1 - (i / 3 /* integer division */)),
-				startx + 1 + TACT_CELL_WIDTH * (i % TACT_BOARD_COLS),
-				pressures[i]);
-	}
-}
-
-
-
-
-bool validate_args(int argc, char** argv) {
-	switch (argc) {
-	case 2:
-		if (boost::filesystem::exists(argv[1])) {
-			printf("\nTrajectory to be played in current control mode: %s\n\n",
-					argv[1]);
-			return true;
-			break;
-		} else {
-			printf("\nTrajectory not found in location specified: %s\n\n",
-					argv[1]);
-			return false;
-			break;
-		}
-	case 3:
-		ctrlMode = argv[2];
-		if (boost::filesystem::exists(argv[1])
-				&& (strcmp(ctrlMode, "cc") == 0 || strcmp(ctrlMode, "-cc") == 0
-						|| strcmp(ctrlMode, "vc") == 0
-						|| strcmp(ctrlMode, "-vc") == 0)) {
-			printf(
-					"\nTrajectory to be played in %s mode: %s\n\n",
-					strcmp(ctrlMode, "vc") == 0
-							|| strcmp(ctrlMode, "-vc") == 0 ?
-							"voltage control" : "current control", argv[1]);
-			if (strcmp(ctrlMode, "vc") == 0 || strcmp(ctrlMode, "-vc") == 0)
-				vcMode = true;
-			return true;
-			break;
-		} else {
-			printf("\nTrajectory not found in location specified: %s\n\n",
-					argv[1]);
-			return false;
-			break;
-		}
-	default:
-		printf("Usage: %s <path/to/trajectory> [<Control Mode (cc or vc)>]\n",
-				argv[0]);
-		return false;
-		break;
-	}
-}
-
-//Play Class
+//RTLoop Class
 template<size_t DOF>
-class Play {
+class RTLoop {
 	BARRETT_UNITS_TEMPLATE_TYPEDEFS(DOF);
 protected:
 	systems::Wam<DOF>& wam;
 	Hand* hand;
+    HandSystem* hand_system; //for realtime data logging of hand sensors
 	ProductManager& pm;
 	std::string playName;
 	int inputType;
@@ -221,8 +54,10 @@ protected:
 	systems::TupleGrouper<cp_type, Eigen::Quaterniond> poseTg;
 	    
     //realtime data logging
-    typedef boost::tuple<double, jp_type, jv_type, jt_type, cp_type, Eigen::Quaterniond> tuple_type;
-	systems::TupleGrouper<double, jp_type, jv_type, jt_type, cp_type, Eigen::Quaterniond> tg;
+    //typedef boost::tuple<double, jp_type, jv_type, jt_type, cp_type, Eigen::Quaterniond> tuple_type;
+	//systems::TupleGrouper<double, jp_type, jv_type, jt_type, cp_type, Eigen::Quaterniond> tg;
+    typedef boost::tuple<double, jp_type, jv_type, jt_type, cp_type, Eigen::Quaterniond, double> tuple_type;
+	systems::TupleGrouper<double, jp_type, jv_type, jt_type, cp_type, Eigen::Quaterniond, double> tg;
     std::string data_log_headers;
     systems::PeriodicDataLogger<tuple_type>* logger;
     std::vector<std::string> tmp_filenames;
@@ -231,7 +66,7 @@ protected:
 public:
 	int dataSize;
 	bool loop;
-	Play(systems::Wam<DOF>& wam_, ProductManager& pm_, std::string filename_,
+	RTLoop(systems::Wam<DOF>& wam_, ProductManager& pm_, std::string filename_,
 			const libconfig::Setting& setting_) :
 			wam(wam_), hand(NULL), pm(pm_), playName(filename_), inputType(0), setting(
 					setting_), cms(NULL), cpVec(NULL), qVec(NULL), jpSpline(
@@ -247,40 +82,26 @@ public:
                     ",cart_pos_0,cart_pos_1,cart_pos_2,cart_pos_3"
                     ",cart_ori_0,cart_ori_1,cart_ori_2,cart_ori_3";
     }
+	bool init();
+	void displayEntryPoint();
+	void moveToStart();
+	void startPlayback();
+	void pausePlayback();
+	bool playbackActive();
+	void disconnectSystems();
+	void reconnectSystems();
 	void init_data_logger();
-	bool
-	init();
-	~Play() {
-	}
-	void
-	displayEntryPoint();
-	void
-	moveToStart();
-	void
-	startPlayback();
-	void
-	pausePlayback();
-	bool
-	playbackActive();
-	void
-	disconnectSystems();
-	void
-	reconnectSystems();
-    void collect_data_stream();
     void output_data_stream();
 private:
-	DISALLOW_COPY_AND_ASSIGN(Play);
+	DISALLOW_COPY_AND_ASSIGN(RTLoop);
 public:
 	EIGEN_MAKE_ALIGNED_OPERATOR_NEW
 }
 ;
 
-
-
-
 // Initialization - Gravity compensating, setting safety limits, parsing input file and creating trajectories
 template<size_t DOF>
-bool Play<DOF>::init() {
+bool RTLoop<DOF>::init() {
 	// Turn on Gravity Compensation
 	wam.gravityCompensate(true);
     // Is a Hand attached?
@@ -290,6 +111,9 @@ bool Play<DOF>::init() {
 		//printf(">>> Press [Enter] to initialize Hand. (Make sure it has room!)");
 		//waitForEnter();
 		//hand->initialize();
+        
+        //hand system deals with realtime sensor reading
+        hand_system = new HandSystem(pm.getExecutionManager(), hand);
 	}
 	// Modify the WAM Safety Limits
 	pm.getSafetyModule()->setTorqueLimit(3.0);
@@ -297,11 +121,9 @@ bool Play<DOF>::init() {
 	// Create our control mode switcher to go between current control mode and voltage control mode
 	cms = new ControlModeSwitcher<DOF>(pm, wam,
 			setting["control_mode_switcher"]);
-
 	//Create stream from input file
 	std::ifstream fs(playName.c_str());
 	std::string line;
-
 	// Check to see the data type specified on the first line (jp_type or pose_type)
 	// this will inform us if we are tracking 4DOF WAM Joint Angles, 7DOF WAM Joint Angles, or WAM Poses
 	std::getline(fs, line);
@@ -316,7 +138,6 @@ bool Play<DOF>::init() {
 				Eigen::aligned_allocator<input_cp_type> >();
 		qVec = new std::vector<input_quat_type,
 				Eigen::aligned_allocator<input_quat_type> >();
-
 		float fLine[8];
 		input_cp_type cpSamp;
 		input_quat_type qSamp;
@@ -387,12 +208,10 @@ bool Play<DOF>::init() {
 		btsleep(1.5);
 		return false;
 	}
-
 	//Close the file
 	fs.close();
 	printf("\nFile Contains data in the form of: %s\n\n",
 			inputType == 0 ? "jp_type" : "pose_type");
-
 	// Set our control mode
 	if (vcMode == 1) {
 		printf("Switching system to voltage control mode\n\n");
@@ -403,61 +222,31 @@ bool Play<DOF>::init() {
 		printf("Verifying system is in current control mode\n\n");
 		cms->currentControl();
 	}
-
     fflush(stdout);
-
 	pm.getExecutionManager()->startManaging(time); //starting time management
 	return true;
 }
-
 // This function will run in a different thread and control displaying to the screen and user input
 template<size_t DOF>
-void Play<DOF>::displayEntryPoint() {
-
-    // Is an FTS attached?
+void RTLoop<DOF>::displayEntryPoint() {
 	ForceTorqueSensor* fts = NULL;
 	if (pm.foundForceTorqueSensor()) {
 		fts = pm.getForceTorqueSensor();
 		fts->tare();
 	}   
-    
 	std::vector<TactilePuck*> tps;
-    
-    // Some hand variables allow for switching between open and close positions
 	Hand::jp_type currentPos(0.0);
 	Hand::jp_type nextPos(M_PI);
 	nextPos[3] = 0;
-
-/* Instructions displayed to screen.
-	printf("\n");
-	printf("Commands:\n");
-	printf("  p    Play\n");
-	printf("  i    Pause\n");
-	printf("  s    Stop\n");
-	printf("  l    Loop\n");
-	printf("  q    Quit\n");
-	printf("  At any time, press [Enter] to open or close the Hand.\n");
-	printf("\n");
-
-	std::string line;*/
-
-    // Set up the ncurses environment
 	initscr();
 	curs_set(0);
 	noecho();
 	timeout(0);
-
-	// Make sure we cleanup after ncurses when the program exits
 	std::atexit((void (*)())endwin);
-
-
-
-	// Set up the static text on the screen
 	int wamY = 0, wamX = 0;
 	int ftsY = 0, ftsX = 0;
 	int handY = 0, handX = 0;
 	int line = 0;
-
 	mvprintw(line++,0, "WAM");
 	mvprintw(line++,0, "     Joint Positions (rad): ");
 	getyx(stdscr, wamY, wamX);
@@ -466,7 +255,6 @@ void Play<DOF>::displayEntryPoint() {
 	mvprintw(line++,0, "         Tool Position (m): ");
 	mvprintw(line++,0, "   Tool Orientation (quat): ");
 	line++;
-
 	if (fts != NULL) {
 		mvprintw(line++,0, "F/T Sensor");
 		mvprintw(line++,0, "             Force (N): ");
@@ -475,7 +263,6 @@ void Play<DOF>::displayEntryPoint() {
 		mvprintw(line++,0, "  Acceleration (m/s^2): ");
 		line++;
 	}
-
 	if (hand != NULL) {
 		mvprintw(line++,0, "Hand");
 		mvprintw(line++,0, "      Inner Position (rad): ");
@@ -499,85 +286,41 @@ void Play<DOF>::displayEntryPoint() {
 		}
 		line++;
 	}
-
-
-	// Display loop!
-	jp_type jp;
-	jv_type jv;
-	jt_type jt;
-	cp_type cp;
-	Eigen::Quaterniond to;
-	math::Matrix<6,DOF> J;
-
-	cf_type cf;
-	ct_type ct;
-	ca_type ca;
-
-	Hand::jp_type hjp;
-
-	//while (true) {
-
-
-
-
-	// Fall out of the loop once the user Shift-idles
+	jp_type jp;jv_type jv;jt_type jt;cp_type cp;Eigen::Quaterniond to;math::Matrix<6,DOF> J;cf_type cf;ct_type ct;ca_type ca;Hand::jp_type hjp;
 	while (pm.getSafetyModule()->getMode() == SafetyModule::ACTIVE) {
-		// WAM
 		line = wamY;
-
-		// math::saturate() prevents the absolute value of the joint positions
-		// from exceeding 9.9999. This puts an upper limit on the length of the
-		// string that gets printed to the screen below. We do this to make sure
-		// that the string will fit properly on the screen.
 		jp = math::saturate(wam.getJointPositions(), 9.999);
 		mvprintw(line++,wamX, "[%6.3f", jp[0]);
 		for (size_t i = 1; i < DOF; ++i) {
-			printw(", %6.3f", jp[i]);
-		}
+			printw(", %6.3f", jp[i]);}
 		printw("]");
-
 		jv = math::saturate(wam.getJointVelocities(), 9.999);
 		mvprintw(line++,wamX, "[%6.3f", jv[0]);
 		for (size_t i = 1; i < DOF; ++i) {
-			printw(", %6.3f", jv[i]);
-		}
+			printw(", %6.3f", jv[i]);}
 		printw("]");
-
 		jt = math::saturate(wam.getJointTorques(), 99.99);
 		mvprintw(line++,wamX, "[%6.2f", jt[0]);
 		for (size_t i = 1; i < DOF; ++i) {
-			printw(", %6.2f", jt[i]);
-		}
+			printw(", %6.2f", jt[i]);}
 		printw("]");
-
 		cp = math::saturate(wam.getToolPosition(), 9.999);
     	mvprintw(line++,wamX, "[%6.3f, %6.3f, %6.3f]", cp[0], cp[1], cp[2]);
-
 		to = wam.getToolOrientation();  // We work only with unit quaternions. No saturation necessary.
     	mvprintw(line++,wamX, "%+7.4f %+7.4fi %+7.4fj %+7.4fk", to.w(), to.x(), to.y(), to.z());
-
-
-		// FTS
 		if (fts != NULL) {
 			line = ftsY;
-
             fts->update();
             cf = math::saturate(fts->getForce(), 99.99);
         	mvprintw(line++,ftsX, "[%6.2f, %6.2f, %6.2f]", cf[0], cf[1], cf[2]);
             ct = math::saturate(fts->getTorque(), 9.999);
         	mvprintw(line++,ftsX, "[%6.3f, %6.3f, %6.3f]", ct[0], ct[1], ct[2]);
-
         	fts->updateAccel();
             ca = math::saturate(fts->getAccel(), 99.99);
-        	mvprintw(line++,ftsX, "[%6.2f, %6.2f, %6.2f]", ca[0], ca[1], ca[2]);
-		}
-
-
-		// Hand
+        	mvprintw(line++,ftsX, "[%6.2f, %6.2f, %6.2f]", ca[0], ca[1], ca[2]);}
 		if (hand != NULL) {
 			line = handY;
 			hand->update();  // Update all sensors
-
 			hjp = math::saturate(hand->getInnerLinkPosition(), 9.999);
 			mvprintw(line++,handX, "[%6.3f, %6.3f, %6.3f, %6.3f]",
 					hjp[0], hjp[1], hjp[2], hjp[3]);
@@ -590,68 +333,17 @@ void Play<DOF>::displayEntryPoint() {
 						hand->getFingertipTorque()[0],
 						hand->getFingertipTorque()[1],
 						hand->getFingertipTorque()[2],
-						hand->getFingertipTorque()[3]);
-			}
-
+						hand->getFingertipTorque()[3]);}
 			line += 2;
 			if (hand->hasTactSensors()) {
 				for (size_t i = 0; i < tps.size(); ++i) {
 					graphPressures(stdscr, line, i * TACT_BOARD_STRIDE,
-							tps[i]->getFullData());
-				}
-			}
-		}
-
-
+							tps[i]->getFullData());}}}
 		refresh();  // Ask ncurses to display the new text
-		usleep(100000);  // Slow the loop rate down to roughly 10 Hz
-	//}
-
-        /*
-		// Continuously parse our line input
-		printf(">> ");
-		std::getline(std::cin, line);
-
-		if (line.size() == 0) { // Enter press recognized without any input
-			// If hand is present, open or close accordingly
-			if (hand != NULL) {
-				hand->trapezoidalMove(nextPos, false);
-				std::swap(currentPos, nextPos);
-			}
-		} else { // User input - Set State
-			switch (line[0]) {
-			case 'p':
-				curState = PLAYING;
-				break;
-			case 'i':
-				curState = PAUSED;
-				break;
-			case 's':
-				loop = false;
-				curState = STOPPED;
-				break;
-			case 'l':
-				loop = true;
-				curState = PLAYING;
-				break;
-			case 'q':
-				loop = false;
-				cms->currentControl();
-				curState = QUIT;
-				break;
-			default:
-				break;
-			}
-		}*/
-        //loop = true;
-		//curState = PLAYING;
-		//break;
-	}
-}
-
+		usleep(100000);}}
 // Function to evaluate and move to the first pose in the trajectory
 template<size_t DOF>
-void Play<DOF>::moveToStart() {
+void RTLoop<DOF>::moveToStart() {
 	if (inputType == 0) {
 		wam.moveTo(jpSpline->eval(jpSpline->initialS()), true);
 	} else
@@ -659,28 +351,16 @@ void Play<DOF>::moveToStart() {
 				boost::make_tuple(cpSpline->eval(cpSpline->initialS()),
 						qSpline->eval(qSpline->initialS())));
 }
-
-template<size_t DOF>
-void Play<DOF>::startPlayback() {
-	time.start();
-}
-
-template<size_t DOF>
-void Play<DOF>::pausePlayback() {
-	time.stop();
-}
-
-template<size_t DOF>
-bool Play<DOF>::playbackActive() {
+template<size_t DOF> void RTLoop<DOF>::startPlayback() {time.start();}
+template<size_t DOF> void RTLoop<DOF>::pausePlayback() {time.stop();}
+template<size_t DOF> bool RTLoop<DOF>::playbackActive() {
 	if (inputType == 0)
 		return (jpTrajectory->input.getValue() < jpSpline->finalS());
 	else {
 		return (cpTrajectory->input.getValue() < cpSpline->finalS());
 	}
 }
-
-template<size_t DOF>
-void Play<DOF>::disconnectSystems() {
+template<size_t DOF> void RTLoop<DOF>::disconnectSystems() {
 	disconnect(wam.input);
     disconnect(logger->input);
     disconnect(tg.template getInput<0>());
@@ -689,16 +369,42 @@ void Play<DOF>::disconnectSystems() {
 	disconnect(tg.template getInput<3>());
 	disconnect(tg.template getInput<4>());
 	disconnect(tg.template getInput<5>());
+	disconnect(tg.template getInput<6>());
     wam.idle();
 	time.stop();
 	time.setOutput(0.0);
 }
-
 template<size_t DOF>
-void Play<DOF>::init_data_logger(){
+void RTLoop<DOF>::reconnectSystems(){
+	if (inputType == 0) {
+		systems::forceConnect(time.output, jpTrajectory->input);
+		wam.trackReferenceSignal(jpTrajectory->output);
+	} else {
+		systems::forceConnect(time.output, cpTrajectory->input);
+		systems::forceConnect(time.output, qTrajectory->input);
+		systems::forceConnect(cpTrajectory->output, poseTg.getInput<0>());
+		systems::forceConnect(qTrajectory->output, poseTg.getInput<1>());
+		wam.trackReferenceSignal(poseTg.output);
+	}
+	systems::forceConnect(time.output,               tg.template getInput<0>());
+	systems::forceConnect(wam.jpOutput,              tg.template getInput<1>());
+	systems::forceConnect(wam.jvOutput,              tg.template getInput<2>());
+	systems::forceConnect(wam.jtSum.output,          tg.template getInput<3>());
+	systems::forceConnect(wam.toolPosition.output,   tg.template getInput<4>());
+	systems::forceConnect(wam.toolOrientation.output,tg.template getInput<5>());
+    systems::forceConnect(hand_system->output,       tg.template getInput<6>());
+    //systems::forceConnect(time.output,       tg.template getInput<6>());
+    systems::forceConnect(tg.output, logger->input);
+	time.start();
+	printf("Logging started.\n");
+}
+
+//gets called at the start of each loop
+template<size_t DOF> void RTLoop<DOF>::init_data_logger(){
     //set up realtime data logging
     char tmp_filename_template[] = "/tmp/btXXXXXX";
     int tmp_file_descriptor;
+
     
 	if ((tmp_file_descriptor = mkstemp(tmp_filename_template)) == -1) {
 		printf("ERROR: Couldn't create temporary file!\n");
@@ -719,43 +425,9 @@ void Play<DOF>::init_data_logger(){
 			new log::RealTimeWriter<tuple_type>((char*)tmp_filename.c_str(), PERIOD_MULTIPLIER * pm.getExecutionManager()->getPeriod()),
 			PERIOD_MULTIPLIER);
 }
-
-template<size_t DOF>
-void Play<DOF>::reconnectSystems() {
-	if (inputType == 0) {
-		systems::forceConnect(time.output, jpTrajectory->input);
-		wam.trackReferenceSignal(jpTrajectory->output);
-	} else {
-		systems::forceConnect(time.output, cpTrajectory->input);
-		systems::forceConnect(time.output, qTrajectory->input);
-		systems::forceConnect(cpTrajectory->output, poseTg.getInput<0>());
-		systems::forceConnect(qTrajectory->output, poseTg.getInput<1>());
-		wam.trackReferenceSignal(poseTg.output);
-	}
-	systems::forceConnect(time.output,               tg.template getInput<0>());
-	systems::forceConnect(wam.jpOutput,              tg.template getInput<1>());
-	systems::forceConnect(wam.jvOutput,              tg.template getInput<2>());
-	systems::forceConnect(wam.jtSum.output,          tg.template getInput<3>());
-	systems::forceConnect(wam.toolPosition.output,   tg.template getInput<4>());
-	systems::forceConnect(wam.toolOrientation.output,tg.template getInput<5>());
-    systems::forceConnect(tg.output, logger->input);
-	time.start();
-	printf("Logging started.\n");
-}
-
-template<size_t DOF>
-void Play<DOF>::collect_data_stream(){
-    boost::thread data_stream(&data_collect,hand,pm.getForceTorqueSensor(),(void*)&wam,&pm,&loop_count);
-}
-
-std::string itoa(int i){
-    std::string a = boost::lexical_cast<std::string>(i);
-    return a;
-}
-
 //export to csv files
 template<size_t DOF>
-void Play<DOF>::output_data_stream(){
+void RTLoop<DOF>::output_data_stream(){
     logger->closeLog(); //clost outstanding log
     //save headers for data log of entire trajectory
     std::string log_name = playName.substr(9,playName.length()-4-9); //strip recorded/ and .csv from playName
@@ -763,7 +435,6 @@ void Play<DOF>::output_data_stream(){
     std::ofstream out(header_filename.c_str());
     out << data_log_headers << std::endl;
     out.close();
-    
     int counter = 0;
     std::vector<std::string>::iterator tmp_filename_it;	
     for (tmp_filename_it=tmp_filenames.begin(); tmp_filename_it < tmp_filenames.end(); tmp_filename_it++){
@@ -777,13 +448,11 @@ void Play<DOF>::output_data_stream(){
         std::cout <<  "All data logs saved successfully!" << std::endl;
 }
 
-template<size_t DOF>
-int wam_main(int argc, char** argv, ProductManager& pm,
+template<size_t DOF> int wam_main(int argc, char** argv, ProductManager& pm,
 		systems::Wam<DOF>& wam) {
 	BARRETT_UNITS_TEMPLATE_TYPEDEFS(DOF);
 	std::string filename(argv[1]);
-
-// Load our vc_calibration file.
+    // Load our vc_calibration file.
 	libconfig::Config config;
 	std::string calibration_file;
 	if (DOF == 4)
@@ -793,12 +462,12 @@ int wam_main(int argc, char** argv, ProductManager& pm,
 	config.readFile(calibration_file.c_str());
 	config.getRoot();
 
-	Play<DOF> play(wam, pm, filename, config.getRoot());
+	RTLoop<DOF> play(wam, pm, filename, config.getRoot());
 
 	if (!play.init())
 		return 1;
 
-	//boost::thread displayThread(&Play<DOF>::displayEntryPoint, &play);
+	//boost::thread displayThread(&RTLoop<DOF>::displayEntryPoint, &play);
 
 	bool playing = true;
     //bool collecting_data = false;

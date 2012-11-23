@@ -53,8 +53,11 @@
 // non-abstract Systems
 #include <barrett/systems.h>
 
+#include "stdheader.h"
+
 
 using namespace barrett;
+using namespace systems;
 
 
 // A System that outputs four fingertip_torque values and four tactile pressure values 
@@ -74,11 +77,12 @@ public:
 	// Every System has a human readable name. It's good practice to provide an
 	// appropriate default. Notice that outputValue is associated with output
 	// via output's constructor.
-	HandSystem(ExecutionManager* em,
-            const std::vector<double>& coefficients,
+	HandSystem(ExecutionManager* em, Hand* hand,
 			const std::string& sysName = "HandSystem") :
-		systems::System(sysName), input(this), output(this, &outputValue),
-		coeff(coefficients) {
+		systems::System(sysName), input(this), output(this, &outputValue)
+		{
+            std::cout << "created hand system" << std::endl;
+            result = 1.2345;
             if (em != NULL) {
                 em->startManaging(*this);
             }
@@ -91,7 +95,7 @@ public:
 	// to interact with it from Thread A while it's in the process of being
 	// destroyed in Thread B. If you forget this, you may occasionally see your
 	// program crash with the message: "Pure virtual function called".
-	virtual ~PolynomialEvaluator() { mandatoryCleanUp(); }
+	virtual ~HandSystem() { mandatoryCleanUp(); }
 
 protected:
 	double result;
@@ -101,30 +105,31 @@ protected:
 	virtual void operate() {
 		const double& x = input.getValue();  // Pull data from the input
 		
-         
+        std::cout << "operate" << std::endl;
+        result = 1.2345;  
 
         outputValue->setData(&result);  // Push data into the output
 	}
 };
 
-
-int main() {
+/*
+int mainline() {
 	// Make vector of coefficients
 	double coeffArray[] = { 1.0, 2.0, 3.0 };
 	std::vector<double> coeff(coeffArray,
 			coeffArray + sizeof(coeffArray) / sizeof(double));
 
 	// Create execution manager
-	systems::RealTimeExecutionManager mem;
+	systems::ManualExecutionManager mem;
 
 	// Instantiate Systems
 	systems::ExposedOutput<double> eoSys;
-	PolynomialEvaluator peSys(coeff);
+	//PolynomialEvaluator peSys(coeff);
 	systems::PrintToStream<double> printSys(&mem, "Result: ");
 
 	// Make connections between Systems
-	systems::connect(eoSys.output, peSys.input);
-	systems::connect(peSys.output, printSys.input);
+	//systems::connect(eoSys.output, peSys.input);
+	//systems::connect(peSys.output, printSys.input);
 
 
     // Push data into peSys' input and run an execution cycle,
@@ -142,4 +147,4 @@ int main() {
 	
 
 	return 0;
-}
+}*/
