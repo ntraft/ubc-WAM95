@@ -67,25 +67,21 @@ class HandSystem : public systems::System {
 // Marked as "public" because Inputs and Output are (except in special cases)
 // part of a System's public interface.
 public:		Input<double> input;
-public:		Output<double> output;
+public:		Output<Hand::jp_type > output;
 
 // Marked as "protected" because this object lets us change the value of an
 // Output, which should only be allowed from within this System.
-protected:	Output<double>::Value* outputValue;
+protected:	Output<Hand::jp_type >::Value* outputValue;
+protected:  Hand* hand;
 
 public:
 	// Every System has a human readable name. It's good practice to provide an
 	// appropriate default. Notice that outputValue is associated with output
 	// via output's constructor.
-	HandSystem(ExecutionManager* em, Hand* hand,
+	HandSystem(ExecutionManager* em, Hand* _hand,
 			const std::string& sysName = "HandSystem") :
-		systems::System(sysName), input(this), output(this, &outputValue)
+		systems::System(sysName), input(this), output(this, &outputValue), hand(_hand)
 		{
-            std::cout << "created hand system" << std::endl;
-            result = 1.2345;
-            if (em != NULL) {
-                em->startManaging(*this);
-            }
         }
 
 	// Every System is required to call System::mandatoryCleanUp() in its
@@ -98,17 +94,23 @@ public:
 	virtual ~HandSystem() { mandatoryCleanUp(); }
 
 protected:
-	double result;
+    Hand::jp_type fingertip_torque_readings;
 
 	// Implement System::operate(). The operate() function must be declared with
 	// the "protected" access specifier.
 	virtual void operate() {
 		const double& x = input.getValue();  // Pull data from the input
-		
-        std::cout << "operate" << std::endl;
-        result = 1.2345;  
+        hand->update(Hand::S_FINGERTIP_TORQUE);
+        std::vector<int> vec_readings =  hand->getFingertipTorque();
 
-        outputValue->setData(&result);  // Push data into the output
+        //std::cout << vec_readings[1];
+
+        fingertip_torque_readings[0] = vec_readings[0]; 
+        fingertip_torque_readings[1] = vec_readings[1]; 
+        fingertip_torque_readings[2] = vec_readings[2]; 
+        fingertip_torque_readings[3] = vec_readings[3]; 
+
+        outputValue->setData(&fingertip_torque_readings);  // Push data into the output
 	}
 };
 

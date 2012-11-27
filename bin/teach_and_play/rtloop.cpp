@@ -56,8 +56,8 @@ protected:
     //realtime data logging
     //typedef boost::tuple<double, jp_type, jv_type, jt_type, cp_type, Eigen::Quaterniond> tuple_type;
 	//systems::TupleGrouper<double, jp_type, jv_type, jt_type, cp_type, Eigen::Quaterniond> tg;
-    typedef boost::tuple<double, jp_type, jv_type, jt_type, cp_type, Eigen::Quaterniond, double> tuple_type;
-	systems::TupleGrouper<double, jp_type, jv_type, jt_type, cp_type, Eigen::Quaterniond, double> tg;
+    typedef boost::tuple<double, jp_type, jv_type, jt_type, cp_type, Eigen::Quaterniond, Hand::jp_type > tuple_type;
+	systems::TupleGrouper<double, jp_type, jv_type, jt_type, cp_type, Eigen::Quaterniond, Hand::jp_type > tg;
     std::string data_log_headers;
     systems::PeriodicDataLogger<tuple_type>* logger;
     std::vector<std::string> tmp_filenames;
@@ -110,7 +110,7 @@ bool RTLoop<DOF>::init() {
 		hand = pm.getHand();
 		//printf(">>> Press [Enter] to initialize Hand. (Make sure it has room!)");
 		//waitForEnter();
-		//hand->initialize();
+		hand->initialize();
         
         //hand system deals with realtime sensor reading
         hand_system = new HandSystem(pm.getExecutionManager(), hand);
@@ -386,6 +386,7 @@ void RTLoop<DOF>::reconnectSystems(){
 		systems::forceConnect(qTrajectory->output, poseTg.getInput<1>());
 		wam.trackReferenceSignal(poseTg.output);
 	}
+    systems::forceConnect(time.output,               hand_system->input);
 	systems::forceConnect(time.output,               tg.template getInput<0>());
 	systems::forceConnect(wam.jpOutput,              tg.template getInput<1>());
 	systems::forceConnect(wam.jvOutput,              tg.template getInput<2>());
