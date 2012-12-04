@@ -47,8 +47,8 @@ protected:
 
         jp_out = jp_in + jp_offsets;
 
-        if(rand() % 500 == 0)
-            jp_offsets[0] += 0.01;
+        //if(rand() % 500 == 0)
+        //    jp_offsets[0] += 0.01;
         
         outputValue->setData(&jp_out);  // Push data into the output
 	}

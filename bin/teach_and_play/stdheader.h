@@ -1,7 +1,6 @@
 #ifndef STDHEADER_H_
 #define STDHEADER_H_
 
-
 //system includes
 #include <stdexcept>
 #include <syslog.h>
@@ -55,6 +54,9 @@
 #define ZERO_FINGERTIP_TORQUE_THRESHOLD 2000    //required threshold to be considered non-noise reading
 #define ZERO_TACTILE_THRESHOLD 0.5      //required threshold to be considered non-noise reading
 #define BARRETT_SMF_VALIDATE_ARGS
+
+//#define EIGEN_DONT_VECTORIZE 
+//#define EIGEN_DISABLE_UNALIGNED_ARRAY_ASSERT
 
 using namespace barrett;
 using namespace systems;

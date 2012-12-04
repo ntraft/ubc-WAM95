@@ -128,3 +128,121 @@ bool validate_args(int argc, char** argv) {
 		break;
 	}
 }
+/*
+// This function will run in a different thread and control displaying to the screen and user input
+void displayEntryPoint(ProductManager* pm,Wam<DIMENSION>* wam) {
+	ForceTorqueSensor* fts = NULL;
+	if (pm.foundForceTorqueSensor()) {
+		fts = pm.getForceTorqueSensor();
+		fts->tare();
+	}
+    Hand = pm->getHand(); 
+	std::vector<TactilePuck*> tps;
+	Hand::jp_type currentPos(0.0);
+	Hand::jp_type nextPos(M_PI);
+	nextPos[3] = 0;
+	initscr();
+	curs_set(0);
+	noecho();
+	timeout(0);
+	std::atexit((void (*)())endwin);
+	int wamY = 0, wamX = 0;
+	int ftsY = 0, ftsX = 0;
+	int handY = 0, handX = 0;
+	int line = 0;
+	mvprintw(line++,0, "WAM");
+	mvprintw(line++,0, "     Joint Positions (rad): ");
+	getyx(stdscr, wamY, wamX);
+	mvprintw(line++,0, "  Joint Velocities (rad/s): ");
+	mvprintw(line++,0, "       Joint Torques (N*m): ");
+	mvprintw(line++,0, "         Tool Position (m): ");
+	mvprintw(line++,0, "   Tool Orientation (quat): ");
+	line++;
+	if (fts != NULL) {
+		mvprintw(line++,0, "F/T Sensor");
+		mvprintw(line++,0, "             Force (N): ");
+		getyx(stdscr, ftsY, ftsX);
+		mvprintw(line++,0, "          Torque (N*m): ");
+		mvprintw(line++,0, "  Acceleration (m/s^2): ");
+		line++;
+	}
+	if (hand != NULL) {
+		mvprintw(line++,0, "Hand");
+		mvprintw(line++,0, "      Inner Position (rad): ");
+		getyx(stdscr, handY, handX);
+		mvprintw(line++,0, "      Outer Position (rad): ");
+		mvprintw(line++,0, "  Fingertip Torque sensors: ");
+		if ( !hand->hasFingertipTorqueSensors() ) {
+			printw(" n/a");
+		}
+		mvprintw(line++,0, "           Tactile sensors: ");
+		if (hand->hasTactSensors()) {
+			tps = hand->getTactilePucks();
+			for (size_t i = 0; i < tps.size(); ++i) {
+				drawBoard(stdscr,
+						line, i * TACT_BOARD_STRIDE,
+						TACT_BOARD_ROWS, TACT_BOARD_COLS,
+						TACT_CELL_HEIGHT, TACT_CELL_WIDTH);
+			}
+		} else {
+			printw(" n/a");
+		}
+		line++;
+	}
+	jp_type jp;jv_type jv;jt_type jt;cp_type cp;Eigen::Quaterniond to;math::Matrix<6,DIMENSION> J;cf_type cf;ct_type ct;ca_type ca;Hand::jp_type hjp;
+	while (pm.getSafetyModule()->getMode() == SafetyModule::ACTIVE) {
+		line = wamY;
+		jp = math::saturate(wam->getJointPositions(), 9.999);
+		mvprintw(line++,wamX, "[%6.3f", jp[0]);
+		for (size_t i = 1; i < DIMENSION; ++i) {
+			printw(", %6.3f", jp[i]);}
+		printw("]");
+		jv = math::saturate(wam->getJointVelocities(), 9.999);
+		mvprintw(line++,wamX, "[%6.3f", jv[0]);
+		for (size_t i = 1; i < DIMENSION; ++i) {
+			printw(", %6.3f", jv[i]);}
+		printw("]");
+		jt = math::saturate(wam->getJointTorques(), 99.99);
+		mvprintw(line++,wamX, "[%6.2f", jt[0]);
+		for (size_t i = 1; i < DIMENSION; ++i) {
+			printw(", %6.2f", jt[i]);}
+		printw("]");
+		cp = math::saturate(wam->getToolPosition(), 9.999);
+    	mvprintw(line++,wamX, "[%6.3f, %6.3f, %6.3f]", cp[0], cp[1], cp[2]);
+		to = wam->getToolOrientation();  // We work only with unit quaternions. No saturation necessary.
+    	mvprintw(line++,wamX, "%+7.4f %+7.4fi %+7.4fj %+7.4fk", to.w(), to.x(), to.y(), to.z());
+		if (fts != NULL) {
+			line = ftsY;
+            fts->update();
+            cf = math::saturate(fts->getForce(), 99.99);
+        	mvprintw(line++,ftsX, "[%6.2f, %6.2f, %6.2f]", cf[0], cf[1], cf[2]);
+            ct = math::saturate(fts->getTorque(), 9.999);
+        	mvprintw(line++,ftsX, "[%6.3f, %6.3f, %6.3f]", ct[0], ct[1], ct[2]);
+        	fts->updateAccel();
+            ca = math::saturate(fts->getAccel(), 99.99);
+        	mvprintw(line++,ftsX, "[%6.2f, %6.2f, %6.2f]", ca[0], ca[1], ca[2]);}
+		if (hand != NULL) {
+			line = handY;
+			hand->update();  // Update all sensors
+			hjp = math::saturate(hand->getInnerLinkPosition(), 9.999);
+			mvprintw(line++,handX, "[%6.3f, %6.3f, %6.3f, %6.3f]",
+					hjp[0], hjp[1], hjp[2], hjp[3]);
+			hjp = math::saturate(hand->getOuterLinkPosition(), 9.999);
+			mvprintw(line++,handX, "[%6.3f, %6.3f, %6.3f, %6.3f]",
+					hjp[0], hjp[1], hjp[2], hjp[3]);
+
+			if (hand->hasFingertipTorqueSensors()) {
+				mvprintw(line,handX, "[%4d, %4d, %4d, %4d]",
+						hand->getFingertipTorque()[0],
+						hand->getFingertipTorque()[1],
+						hand->getFingertipTorque()[2],
+						hand->getFingertipTorque()[3]);}
+			line += 2;
+			if (hand->hasTactSensors()) {
+				for (size_t i = 0; i < tps.size(); ++i) {
+					graphPressures(stdscr, line, i * TACT_BOARD_STRIDE,
+							tps[i]->getFullData());}}}
+		refresh();  // Ask ncurses to display the new text
+		usleep(100000);}}*/
+// Function to evaluate and move to the first pose in the trajectory
+

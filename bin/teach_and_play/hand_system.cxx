@@ -63,90 +63,98 @@ using namespace systems;
 // A System that outputs four fingertip_torque values and four tactile pressure values 
 // each tactile pressure value is the summation of individual sensors on the pad
 class HandSystem : public systems::System {
+
+	typedef boost::tuple<Hand::jp_type, Hand::jp_type> input_ft_type;
+
 // IO
 // Marked as "public" because Inputs and Output are (except in special cases)
-// part of a System's public interface.
-public:		Input<double> input;
-public:		Output<Hand::jp_type > output;
+// part of a System's public interface
+public:		Input<Hand::jp_type> mean_input;
+public:		Input<Hand::jp_type> std_input;
+public:		Output<Hand::jp_type> output;
+public:     float time_count;
 
-// Marked as "protected" because this object lets us change the value of an
-// Output, which should only be allowed from within this System.
-protected:	Output<Hand::jp_type >::Value* outputValue;
+protected:	Output<Hand::jp_type>::Value* outputValue;
 protected:  Hand* hand;
+protected:  bool* problem;
+protected:  int problem_count;
+protected:  stringstream* debug;
 
 public:
-	// Every System has a human readable name. It's good practice to provide an
-	// appropriate default. Notice that outputValue is associated with output
-	// via output's constructor.
-	HandSystem(ExecutionManager* em, Hand* _hand,
-			const std::string& sysName = "HandSystem") :
-		systems::System(sysName), input(this), output(this, &outputValue), hand(_hand)
+	HandSystem(Hand* _hand, bool* _problem, std::stringstream* _debug, const std::string& sysName = "HandSystem") :
+		systems::System(sysName), mean_input(this), std_input(this), output(this, &outputValue), hand(_hand), problem(_problem), debug(_debug)
 		{
+            time_count = 0;
+            problem_count = 0;
+            //cout << "hand_system instantiated" << endl;
         }
 
-	// Every System is required to call System::mandatoryCleanUp() in its
-	// destructor, preferably as early as possible. It's common for libbarrett
-	// to be used in a multi-threaded environment. This function cleans up all
-	// of libbarrett's references to this System so that the library won't try
-	// to interact with it from Thread A while it's in the process of being
-	// destroyed in Thread B. If you forget this, you may occasionally see your
-	// program crash with the message: "Pure virtual function called".
 	virtual ~HandSystem() { mandatoryCleanUp(); }
 
 protected:
     Hand::jp_type fingertip_torque_readings;
 
-	// Implement System::operate(). The operate() function must be declared with
-	// the "protected" access specifier.
 	virtual void operate() {
-		const double& x = input.getValue();  // Pull data from the input
+        
+		const Hand::jp_type& expected_mean = mean_input.getValue(); // Pull data from the input
+		const Hand::jp_type& expected_std  = std_input.getValue();  // Pull data from the input
+        
         hand->update(Hand::S_FINGERTIP_TORQUE);
         std::vector<int> vec_readings =  hand->getFingertipTorque();
+        
+        int num_sigmas = 4;
 
-        //std::cout << vec_readings[1];
+        time_count += 0.002;  //500 Hz
 
-        fingertip_torque_readings[0] = vec_readings[0]; 
-        fingertip_torque_readings[1] = vec_readings[1]; 
-        fingertip_torque_readings[2] = vec_readings[2]; 
-        fingertip_torque_readings[3] = vec_readings[3]; 
+        float contact_threshold = 1950;
+        
+        float mean     = expected_mean[0];
+        float std_up   = mean + num_sigmas * expected_std[0];
+        float std_down = mean - num_sigmas * expected_std[0];
+        float val      = vec_readings[0];
 
+        string sep = " ";
+        string vm = "~";
+
+        bool should_contact = expected_mean[0] > contact_threshold;
+        bool is_contact     = fingertip_torque_readings[0] > contact_threshold;
+
+        //if time_count is an integer 
+        //if(ceil(time_count*500) == time_count*500){
+        //}
+        for(int i = 0; i < 1; i++){ //finger 1 only
+            fingertip_torque_readings[i] = vec_readings[i]; 
+            if( should_contact &&
+                (fingertip_torque_readings[i] > std_up || fingertip_torque_readings[i] < std_down)){
+                problem_count += 1;
+                if(problem_count > 35){
+                    *problem = true;
+                    problem_count = 0;
+                }
+                /*
+                debug->str("");
+                *debug << time_count << ": ";
+
+                if(val < std_down)
+                    *debug << vm<<val<<vm   << sep << std_down      << sep << mean          << sep << std_up;
+                else if(val < mean)
+                    *debug << std_down      << sep << vm<<val<<vm   << sep << mean          << sep << std_up;
+                else if(val < std_up)
+                    *debug << std_down      << sep << mean          << sep << vm<<val<<vm   << sep << std_up;
+                else//if(val < std_down)
+                    *debug << std_down      << sep << mean          << sep << std_up        << sep << vm<<val<<vm;
+                *problem = true;
+
+                *debug << endl;
+                */
+            }
+        }
         outputValue->setData(&fingertip_torque_readings);  // Push data into the output
 	}
 };
+/*cout << i << endl;
+cout << expected_mean[i] + num_sigmas*expected_std[i] << endl;
+cout << fingertip_torque_readings[i] << endl;
+cout << expected_mean[i] - num_sigmas*expected_std[i] << endl;
+cout << endl;*/
 
-/*
-int mainline() {
-	// Make vector of coefficients
-	double coeffArray[] = { 1.0, 2.0, 3.0 };
-	std::vector<double> coeff(coeffArray,
-			coeffArray + sizeof(coeffArray) / sizeof(double));
-
-	// Create execution manager
-	systems::ManualExecutionManager mem;
-
-	// Instantiate Systems
-	systems::ExposedOutput<double> eoSys;
-	//PolynomialEvaluator peSys(coeff);
-	systems::PrintToStream<double> printSys(&mem, "Result: ");
-
-	// Make connections between Systems
-	//systems::connect(eoSys.output, peSys.input);
-	//systems::connect(peSys.output, printSys.input);
-
-
-    // Push data into peSys' input and run an execution cycle,
-	// causing peSys::operate() to be called
-	eoSys.setValue(-1.0);
-	//mem.runExecutionCycle();
-	eoSys.setValue(-0.5);
-	//mem.runExecutionCycle();
-	eoSys.setValue(0.0);
-	//mem.runExecutionCycle();
-	eoSys.setValue(0.5);
-	//mem.runExecutionCycle();
-	eoSys.setValue(1.0);
-	//mem.runExecutionCycle();
-	
-
-	return 0;
-}*/

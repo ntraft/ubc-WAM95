@@ -8,7 +8,10 @@
 
 #include "data_stream.h" //for sensor data stream io
 #include "hand_system.cxx" 
+#include "wam_system.cxx" 
 #include "display.cxx" 
+#include "control_mode_switcher.h"
+#include <barrett/standard_main_function.h>
 
 using barrett::detail::waitForEnter;
 
@@ -26,27 +29,36 @@ template<size_t DOF>
 class RTLoop {
 	BARRETT_UNITS_TEMPLATE_TYPEDEFS(DOF);
 protected:
-	systems::Wam<DOF>& wam;
+	systems::Wam<DIMENSION>* wam;
 	Hand* hand;
     HandSystem* hand_system; //for realtime data logging of hand sensors
+    WamSystem* wam_system; //for realtime manipulation of wam trajectory
 	ProductManager& pm;
 	std::string playName;
 	int inputType;
 	const libconfig::Setting& setting;
 	libconfig::Config config;
-	typedef boost::tuple<double, jp_type> input_jp_type;
-	typedef boost::tuple<double, cp_type> input_cp_type;
-	typedef boost::tuple<double, Eigen::Quaterniond> input_quat_type;
+	typedef boost::tuple<double, systems::Wam<DIMENSION>::jp_type> input_jp_type;
+	typedef boost::tuple<double, systems::Wam<DIMENSION>::jv_type> input_jv_type;
+	typedef boost::tuple<double, systems::Wam<DIMENSION>::jt_type> input_jt_type;
+	typedef boost::tuple<double, cp_type>                          input_cp_type;
+	typedef boost::tuple<double, Eigen::Quaterniond>               input_qd_type;
+	typedef boost::tuple<double, Hand::jp_type>                    input_ft_type;
+	typedef boost::tuple<double, cp_type>                          input_cf_type;
+	typedef boost::tuple<double, cp_type>                          input_ct_type;
 
     std::string tmpStr, saveName, fileOut;
 
-	ControlModeSwitcher<DOF>* cms;
+	ControlModeSwitcher<DIMENSION>* cms;
 	std::vector<input_cp_type, Eigen::aligned_allocator<input_cp_type> >* cpVec;
-	std::vector<input_quat_type, Eigen::aligned_allocator<input_quat_type> >* qVec;
-	math::Spline<jp_type>* jpSpline;
+	std::vector<input_qd_type, Eigen::aligned_allocator<input_qd_type> >* qVec;
+	
+    math::Spline<systems::Wam<DIMENSION>::jp_type>* jpSpline;
 	math::Spline<cp_type>* cpSpline;
 	math::Spline<Eigen::Quaterniond>* qSpline;
-	systems::Callback<double, jp_type>* jpTrajectory;
+	
+    systems::Callback<double, systems::Wam<DIMENSION>::jp_type>* jpTrajectory;
+		//jpTrajectory = new systems::Callback<double, systems::Wam<DIMENSION>::jp_type>(boost::ref(*jpSpline));
 	systems::Callback<double, cp_type>* cpTrajectory;
 	systems::Callback<double, Eigen::Quaterniond>* qTrajectory;
     
@@ -54,19 +66,72 @@ protected:
 	systems::TupleGrouper<cp_type, Eigen::Quaterniond> poseTg;
 	    
     //realtime data logging
-    //typedef boost::tuple<double, jp_type, jv_type, jt_type, cp_type, Eigen::Quaterniond> tuple_type;
+    //typedef boost::tuple<double, jp_type, jv_type, jt_type, cp_type, Eigen::Quaterniond> input_stream_type;
 	//systems::TupleGrouper<double, jp_type, jv_type, jt_type, cp_type, Eigen::Quaterniond> tg;
-    typedef boost::tuple<double, jp_type, jv_type, jt_type, cp_type, Eigen::Quaterniond, Hand::jp_type > tuple_type;
-	systems::TupleGrouper<double, jp_type, jv_type, jt_type, cp_type, Eigen::Quaterniond, Hand::jp_type > tg;
+    
+    typedef boost::tuple<double, 
+            systems::Wam<DIMENSION>::jp_type, 
+            systems::Wam<DIMENSION>::jv_type, 
+            systems::Wam<DIMENSION>::jt_type, 
+            cp_type, 
+            Eigen::Quaterniond, 
+            Hand::jp_type,
+            cp_type,
+            cp_type > input_stream_type;
+	
+    systems::TupleGrouper<double, 
+        systems::Wam<DIMENSION>::jp_type, 
+        systems::Wam<DIMENSION>::jv_type, 
+        systems::Wam<DIMENSION>::jt_type, 
+        cp_type, 
+        Eigen::Quaterniond, 
+        Hand::jp_type, 
+        cp_type,
+        cp_type > tg;
+
+    const static int STREAM_SIZE = 1+7+7+7+3+4+4+3+3;
+
     std::string data_log_headers;
-    systems::PeriodicDataLogger<tuple_type>* logger;
+    systems::PeriodicDataLogger<input_stream_type>* logger;
     std::vector<std::string> tmp_filenames;
     std::string log_prefix;
     
+	math::Spline<Wam<DIMENSION>::jp_type>* stream_jp_spline;
+	math::Spline<Wam<DIMENSION>::jv_type>* stream_jv_spline;
+	math::Spline<Wam<DIMENSION>::jt_type>* stream_jt_spline;
+	math::Spline<cp_type>*                 stream_cp_spline;
+	math::Spline<Eigen::Quaterniond>*      stream_qd_spline;
+	math::Spline<Hand::jp_type>*           stream_ft_spline;
+	math::Spline<cp_type>*                 stream_cf_spline;
+	math::Spline<cp_type>*                 stream_ct_spline;
+
+    systems::Callback<double, Wam<DIMENSION>::jp_type>* stream_jp_mean_trajectory;
+    systems::Callback<double, Wam<DIMENSION>::jv_type>* stream_jv_mean_trajectory;
+    systems::Callback<double, Wam<DIMENSION>::jt_type>* stream_jt_mean_trajectory;
+    systems::Callback<double, cp_type>*                 stream_cp_mean_trajectory;
+    systems::Callback<double, Eigen::Quaterniond>*      stream_qd_mean_trajectory;
+    systems::Callback<double, Hand::jp_type>*           stream_ft_mean_trajectory;
+    systems::Callback<double, cp_type>*                 stream_cf_mean_trajectory;
+    systems::Callback<double, cp_type>*                 stream_ct_mean_trajectory;
+    
+    systems::Callback<double, Wam<DIMENSION>::jp_type>* stream_jp_std_trajectory;
+    systems::Callback<double, Wam<DIMENSION>::jv_type>* stream_jv_std_trajectory;
+    systems::Callback<double, Wam<DIMENSION>::jt_type>* stream_jt_std_trajectory;
+    systems::Callback<double, cp_type>*                 stream_cp_std_trajectory;
+    systems::Callback<double, Eigen::Quaterniond>*      stream_qd_std_trajectory;
+    systems::Callback<double, Hand::jp_type>*           stream_ft_std_trajectory;
+    systems::Callback<double, cp_type>*                 stream_cf_std_trajectory;
+    systems::Callback<double, cp_type>*                 stream_ct_std_trajectory;
+
+    
+    //systems::Callback<double, systems::Wam<DIMENSION>::jp_type>* jpTrajectory;
+	//	jpTrajectory = new systems::Callback<double, systems::Wam<DIMENSION>::jp_type>(boost::ref(*jpSpline));
 public:
 	int dataSize;
 	bool loop;
-	RTLoop(systems::Wam<DOF>& wam_, ProductManager& pm_, std::string filename_,
+    bool problem;
+    stringstream hand_debug;
+	RTLoop(systems::Wam<DIMENSION>* wam_, ProductManager& pm_, std::string filename_,
 			const libconfig::Setting& setting_) :
 			wam(wam_), hand(NULL), pm(pm_), playName(filename_), inputType(0), setting(
 					setting_), cms(NULL), cpVec(NULL), qVec(NULL), jpSpline(
@@ -80,10 +145,12 @@ public:
                     ",joint_vel_0,joint_vel_1,joint_vel_2,joint_vel_3,joint_vel_4,joint_vel_5,joint_vel_6,joint_vel_7"
                     ",joint_tor_0,joint_tor_1,joint_tor_2,joint_tor_3,joint_tor_4,joint_tor_5,joint_tor_6,joint_tor_7"
                     ",cart_pos_0,cart_pos_1,cart_pos_2,cart_pos_3"
-                    ",cart_ori_0,cart_ori_1,cart_ori_2,cart_ori_3";
+                    ",cart_ori_0,cart_ori_1,cart_ori_2,cart_ori_3"
+                    ",ft_torque_0,ft_torque_1,ft_torque_2,ft_torque_3"
+                    ;
     }
 	bool init();
-	void displayEntryPoint();
+	//void displayEntryPoint();
 	void moveToStart();
 	void startPlayback();
 	void pausePlayback();
@@ -92,40 +159,41 @@ public:
 	void reconnectSystems();
 	void init_data_logger();
     void output_data_stream();
+    void load_data_stream(bool);
 private:
 	DISALLOW_COPY_AND_ASSIGN(RTLoop);
 public:
 	EIGEN_MAKE_ALIGNED_OPERATOR_NEW
-}
-;
+};
 
 // Initialization - Gravity compensating, setting safety limits, parsing input file and creating trajectories
 template<size_t DOF>
 bool RTLoop<DOF>::init() {
 	// Turn on Gravity Compensation
-	wam.gravityCompensate(true);
+	wam->gravityCompensate(true);
     // Is a Hand attached?
 	//Hand* hand = NULL;
 	if (pm.foundHand()) {
 		hand = pm.getHand();
 		//printf(">>> Press [Enter] to initialize Hand. (Make sure it has room!)");
 		//waitForEnter();
-		hand->initialize();
+		//hand->initialize();
         
         //hand system deals with realtime sensor reading
-        hand_system = new HandSystem(pm.getExecutionManager(), hand);
+        hand_system = new HandSystem(hand,&problem,&hand_debug);
+        wam_system = new WamSystem((systems::Wam<DIMENSION>*)&wam);
 	}
 	// Modify the WAM Safety Limits
 	pm.getSafetyModule()->setTorqueLimit(3.0);
 	pm.getSafetyModule()->setVelocityLimit(1.5);
 	// Create our control mode switcher to go between current control mode and voltage control mode
-	cms = new ControlModeSwitcher<DOF>(pm, wam,
+	cms = new ControlModeSwitcher<DIMENSION>(pm, *wam,
 			setting["control_mode_switcher"]);
 	//Create stream from input file
 	std::ifstream fs(playName.c_str());
 	std::string line;
 	// Check to see the data type specified on the first line (jp_type or pose_type)
-	// this will inform us if we are tracking 4DOF WAM Joint Angles, 7DOF WAM Joint Angles, or WAM Poses
+	// this will inform us if we are tracking 4DIMENSION WAM Joint Angles, 7DIMENSION WAM Joint Angles, or WAM Poses
 	std::getline(fs, line);
 	// Using a boost tokenizer to parse the data of the file into our vector.
 	boost::char_separator<char> sep(",");
@@ -136,11 +204,11 @@ bool RTLoop<DOF>::init() {
 		inputType = 1;
 		cpVec = new std::vector<input_cp_type,
 				Eigen::aligned_allocator<input_cp_type> >();
-		qVec = new std::vector<input_quat_type,
-				Eigen::aligned_allocator<input_quat_type> >();
+		qVec = new std::vector<input_qd_type,
+				Eigen::aligned_allocator<input_qd_type> >();
 		float fLine[8];
 		input_cp_type cpSamp;
-		input_quat_type qSamp;
+		input_qd_type qSamp;
 		while (true) {
 			std::getline(fs, line);
 			if (!fs.good())
@@ -175,7 +243,7 @@ bool RTLoop<DOF>::init() {
 	} else if (strcmp(line.c_str(), "jp_type") == 0) {
 		// Create our spline and trajectory if the first line of the parsed file informs us of a jp_type
 		std::vector<input_jp_type, Eigen::aligned_allocator<input_jp_type> > jp_vec;
-		float fLine[DOF + 1];
+		float fLine[8];
 		input_jp_type samp;
 		while (true) {
 			std::getline(fs, line);
@@ -197,10 +265,9 @@ bool RTLoop<DOF>::init() {
 			jp_vec.push_back(samp);
 		}
 		// Create our splines between points
-		jpSpline = new math::Spline<jp_type>(jp_vec);
+		jpSpline = new math::Spline<systems::Wam<DIMENSION>::jp_type>(jp_vec);
 		// Create our trajectory
-		jpTrajectory = new systems::Callback<double, jp_type>(
-				boost::ref(*jpSpline));
+		jpTrajectory = new systems::Callback<double, systems::Wam<DIMENSION>::jp_type>(boost::ref(*jpSpline));
 	} else {
 		// The first line does not contain "jp_type or pose_type" return false and exit.
 		printf(
@@ -208,8 +275,13 @@ bool RTLoop<DOF>::init() {
 		btsleep(1.5);
 		return false;
 	}
-	//Close the file
+	
+    //Close the file
 	fs.close();
+
+    load_data_stream(true);
+    load_data_stream(false);
+
 	printf("\nFile Contains data in the form of: %s\n\n",
 			inputType == 0 ? "jp_type" : "pose_type");
 	// Set our control mode
@@ -226,128 +298,12 @@ bool RTLoop<DOF>::init() {
 	pm.getExecutionManager()->startManaging(time); //starting time management
 	return true;
 }
-// This function will run in a different thread and control displaying to the screen and user input
-template<size_t DOF>
-void RTLoop<DOF>::displayEntryPoint() {
-	ForceTorqueSensor* fts = NULL;
-	if (pm.foundForceTorqueSensor()) {
-		fts = pm.getForceTorqueSensor();
-		fts->tare();
-	}   
-	std::vector<TactilePuck*> tps;
-	Hand::jp_type currentPos(0.0);
-	Hand::jp_type nextPos(M_PI);
-	nextPos[3] = 0;
-	initscr();
-	curs_set(0);
-	noecho();
-	timeout(0);
-	std::atexit((void (*)())endwin);
-	int wamY = 0, wamX = 0;
-	int ftsY = 0, ftsX = 0;
-	int handY = 0, handX = 0;
-	int line = 0;
-	mvprintw(line++,0, "WAM");
-	mvprintw(line++,0, "     Joint Positions (rad): ");
-	getyx(stdscr, wamY, wamX);
-	mvprintw(line++,0, "  Joint Velocities (rad/s): ");
-	mvprintw(line++,0, "       Joint Torques (N*m): ");
-	mvprintw(line++,0, "         Tool Position (m): ");
-	mvprintw(line++,0, "   Tool Orientation (quat): ");
-	line++;
-	if (fts != NULL) {
-		mvprintw(line++,0, "F/T Sensor");
-		mvprintw(line++,0, "             Force (N): ");
-		getyx(stdscr, ftsY, ftsX);
-		mvprintw(line++,0, "          Torque (N*m): ");
-		mvprintw(line++,0, "  Acceleration (m/s^2): ");
-		line++;
-	}
-	if (hand != NULL) {
-		mvprintw(line++,0, "Hand");
-		mvprintw(line++,0, "      Inner Position (rad): ");
-		getyx(stdscr, handY, handX);
-		mvprintw(line++,0, "      Outer Position (rad): ");
-		mvprintw(line++,0, "  Fingertip Torque sensors: ");
-		if ( !hand->hasFingertipTorqueSensors() ) {
-			printw(" n/a");
-		}
-		mvprintw(line++,0, "           Tactile sensors: ");
-		if (hand->hasTactSensors()) {
-			tps = hand->getTactilePucks();
-			for (size_t i = 0; i < tps.size(); ++i) {
-				drawBoard(stdscr,
-						line, i * TACT_BOARD_STRIDE,
-						TACT_BOARD_ROWS, TACT_BOARD_COLS,
-						TACT_CELL_HEIGHT, TACT_CELL_WIDTH);
-			}
-		} else {
-			printw(" n/a");
-		}
-		line++;
-	}
-	jp_type jp;jv_type jv;jt_type jt;cp_type cp;Eigen::Quaterniond to;math::Matrix<6,DOF> J;cf_type cf;ct_type ct;ca_type ca;Hand::jp_type hjp;
-	while (pm.getSafetyModule()->getMode() == SafetyModule::ACTIVE) {
-		line = wamY;
-		jp = math::saturate(wam.getJointPositions(), 9.999);
-		mvprintw(line++,wamX, "[%6.3f", jp[0]);
-		for (size_t i = 1; i < DOF; ++i) {
-			printw(", %6.3f", jp[i]);}
-		printw("]");
-		jv = math::saturate(wam.getJointVelocities(), 9.999);
-		mvprintw(line++,wamX, "[%6.3f", jv[0]);
-		for (size_t i = 1; i < DOF; ++i) {
-			printw(", %6.3f", jv[i]);}
-		printw("]");
-		jt = math::saturate(wam.getJointTorques(), 99.99);
-		mvprintw(line++,wamX, "[%6.2f", jt[0]);
-		for (size_t i = 1; i < DOF; ++i) {
-			printw(", %6.2f", jt[i]);}
-		printw("]");
-		cp = math::saturate(wam.getToolPosition(), 9.999);
-    	mvprintw(line++,wamX, "[%6.3f, %6.3f, %6.3f]", cp[0], cp[1], cp[2]);
-		to = wam.getToolOrientation();  // We work only with unit quaternions. No saturation necessary.
-    	mvprintw(line++,wamX, "%+7.4f %+7.4fi %+7.4fj %+7.4fk", to.w(), to.x(), to.y(), to.z());
-		if (fts != NULL) {
-			line = ftsY;
-            fts->update();
-            cf = math::saturate(fts->getForce(), 99.99);
-        	mvprintw(line++,ftsX, "[%6.2f, %6.2f, %6.2f]", cf[0], cf[1], cf[2]);
-            ct = math::saturate(fts->getTorque(), 9.999);
-        	mvprintw(line++,ftsX, "[%6.3f, %6.3f, %6.3f]", ct[0], ct[1], ct[2]);
-        	fts->updateAccel();
-            ca = math::saturate(fts->getAccel(), 99.99);
-        	mvprintw(line++,ftsX, "[%6.2f, %6.2f, %6.2f]", ca[0], ca[1], ca[2]);}
-		if (hand != NULL) {
-			line = handY;
-			hand->update();  // Update all sensors
-			hjp = math::saturate(hand->getInnerLinkPosition(), 9.999);
-			mvprintw(line++,handX, "[%6.3f, %6.3f, %6.3f, %6.3f]",
-					hjp[0], hjp[1], hjp[2], hjp[3]);
-			hjp = math::saturate(hand->getOuterLinkPosition(), 9.999);
-			mvprintw(line++,handX, "[%6.3f, %6.3f, %6.3f, %6.3f]",
-					hjp[0], hjp[1], hjp[2], hjp[3]);
-
-			if (hand->hasFingertipTorqueSensors()) {
-				mvprintw(line,handX, "[%4d, %4d, %4d, %4d]",
-						hand->getFingertipTorque()[0],
-						hand->getFingertipTorque()[1],
-						hand->getFingertipTorque()[2],
-						hand->getFingertipTorque()[3]);}
-			line += 2;
-			if (hand->hasTactSensors()) {
-				for (size_t i = 0; i < tps.size(); ++i) {
-					graphPressures(stdscr, line, i * TACT_BOARD_STRIDE,
-							tps[i]->getFullData());}}}
-		refresh();  // Ask ncurses to display the new text
-		usleep(100000);}}
-// Function to evaluate and move to the first pose in the trajectory
 template<size_t DOF>
 void RTLoop<DOF>::moveToStart() {
 	if (inputType == 0) {
-		wam.moveTo(jpSpline->eval(jpSpline->initialS()), true);
+		wam->moveTo(jpSpline->eval(jpSpline->initialS()), true);
 	} else
-		wam.moveTo(
+		wam->moveTo(
 				boost::make_tuple(cpSpline->eval(cpSpline->initialS()),
 						qSpline->eval(qSpline->initialS())));
 }
@@ -360,8 +316,196 @@ template<size_t DOF> bool RTLoop<DOF>::playbackActive() {
 		return (cpTrajectory->input.getValue() < cpSpline->finalS());
 	}
 }
+/*typedef boost::tuple<//double, 
+            systems::Wam<DIMENSION>::jp_type, 
+            systems::Wam<DIMENSION>::jv_type, 
+            systems::Wam<DIMENSION>::jt_type, 
+            cp_type, 
+            Eigen::Quaterniond, 
+            Hand::jp_type > input_stream_type;
+*/;
+template<size_t DOF>
+void RTLoop<DOF>::load_data_stream(bool mean){
+    
+    //Create stream from input file
+    std::ifstream* fs;
+    if(mean)
+        fs = new std::ifstream("data_streams/mean_flip_0412.csv");
+    else
+        fs = new std::ifstream("data_streams/std_flip_0412.csv");
+	std::string line;
+	typedef boost::tokenizer<boost::char_separator<char> > t_tokenizer;
+	boost::char_separator<char> sep(",");
+    
+    // Create our spline and trajectory if the first line of the parsed file informs us of a jp_type
+    std::vector<input_jp_type, Eigen::aligned_allocator<input_jp_type> > stream_jp_vec;
+    std::vector<input_jv_type, Eigen::aligned_allocator<input_jv_type> > stream_jv_vec;
+    std::vector<input_jt_type, Eigen::aligned_allocator<input_jt_type> > stream_jt_vec;
+    std::vector<input_cp_type, Eigen::aligned_allocator<input_cp_type> > stream_cp_vec;
+    std::vector<input_qd_type, Eigen::aligned_allocator<input_qd_type> > stream_qd_vec;
+    qVec = new std::vector<input_qd_type,Eigen::aligned_allocator<input_qd_type> >();
+    std::vector<input_ft_type, Eigen::aligned_allocator<input_ft_type> > stream_ft_vec;
+    
+    float fLine[STREAM_SIZE];
+    input_jp_type jp_sample;
+    input_jv_type jv_sample;
+    input_jt_type jt_sample;
+    input_cp_type cp_sample;
+    input_qd_type qd_sample;
+    input_ft_type ft_sample;
+    float count = 0.002;
+    while (true) {
+        std::getline(*fs, line);
+        if (!fs->good())
+            break;
+        int fLine_i = 0;
+        
+        t_tokenizer tok(line, sep);
+        int j = 0;
+        for (t_tokenizer::iterator beg = tok.begin(); beg != tok.end();
+                ++beg) {
+            if(j >= STREAM_SIZE-4-3-3) //only look at trailing values
+                fLine[j] = boost::lexical_cast<float>(*beg);
+            j++;
+        }
+        fLine[0] = count;
+        count += 0.002;
+
+        boost::get<0>(jp_sample) = fLine[fLine_i];
+        boost::get<0>(jv_sample) = fLine[fLine_i];
+        boost::get<0>(jt_sample) = fLine[fLine_i];
+        boost::get<0>(cp_sample) = fLine[fLine_i];
+        boost::get<0>(qd_sample) = fLine[fLine_i];
+        boost::get<0>(ft_sample) = fLine[fLine_i++];
+        
+        //cout << "got time " << fLine_i << endl;
+        //get joint pos
+        /*Wam<DIMENSION>::jp_type jp;
+        for(int i = 0; i < jp.size(); i++){
+            jp[i] = fLine[fLine_i++];
+        }
+        boost::get<1>(jp_sample) = jp;*/
+        //boost::get<1>(jp_sample) << fLine[fLine_i+0], fLine[fLine_i+1], fLine[fLine_i+2], fLine[fLine_i+3],
+        //                            fLine[fLine_i+4], fLine[fLine_i+5], fLine[fLine_i+6];
+        fLine_i+=7;
+
+        //cout << "got jp "<< fLine_i <<endl;//: " << to_string(&jp) << endl;
+        //get joint vel
+        /*Wam<DIMENSION>::jv_type jv;
+        for(int i = 0; i < jv.size(); i++){
+            jv[i] = fLine[fLine_i++];
+        }
+        boost::get<1>(jv_sample) = jv;*/
+        //boost::get<1>(jv_sample) << fLine[fLine_i+0], fLine[fLine_i+1], fLine[fLine_i+2], fLine[fLine_i+3],
+        //                            fLine[fLine_i+4], fLine[fLine_i+5], fLine[fLine_i+6];
+        fLine_i+=7;
+
+        //cout << "got jv " << fLine_i <<endl;//: " << to_string(&jp) << endl;
+        //get joint tor
+        /*Wam<DIMENSION>::jt_type jt;
+        for(int i = 0; i < jt.size(); i++){
+            jt[i] = fLine[fLine_i++];
+        }
+        boost::get<1>(jt_sample) = jt;*/
+        //boost::get<1>(jt_sample) << fLine[fLine_i+0], fLine[fLine_i+1], fLine[fLine_i+2], fLine[fLine_i+3],
+        //                            fLine[fLine_i+4], fLine[fLine_i+5], fLine[fLine_i+6];
+        fLine_i+=7;
+        //cout << "got jt "<< fLine_i <<endl;//: " << to_string(&jp) << endl;
+        //get cart pos
+        /*cp_type cp; 
+        for(int i = 0; i < cp.size(); i++){
+            cp[i] = fLine[fLine_i++];
+        }
+        boost::get<1>(cp_sample) = cp;*/
+		//boost::get<1>(cp_sample) << fLine[fLine_i+0], fLine[fLine_i+1], fLine[fLine_i+2];
+        fLine_i+=3;
+        //cout << "got cp " << fLine_i <<endl;//: " << to_string(&jp) << endl;
+        //get cart ori
+        /*Eigen::Quaterniond qd;(
+                fLine[fLine_i++],
+                fLine[fLine_i++],
+                fLine[fLine_i++],
+                fLine[fLine_i++]
+                ); */
+		//boost::get<1>(qd_sample) << fLine[fLine_i+0], fLine[fLine_i+1], fLine[fLine_i+2], fLine[fLine_i+3];
+        fLine_i+=4;
+        //cout << "got qd " << fLine_i <<endl;//: " << to_string(&jp) << endl;
+        //fLine_i+= STREAM_SIZE-1-1-4;
+        //get finger torque
+		boost::get<1>(ft_sample) << fLine[fLine_i+0], fLine[fLine_i+1], fLine[fLine_i+2], fLine[fLine_i+3];
+        //if(mean && fLine[0] > 3.1 && fLine[0] < 4.5)
+        //    cout << fLine[0] << ": " << fLine[fLine_i+0] << ", "<< fLine[fLine_i+1] << endl;
+        fLine_i+=4;
+        /*
+        for(int i = 0; i < ft.size(); i++){
+            ft[i] = fLine[fLine_i++];
+        }
+        boost::get<1>(ft_sample) = ft;*/
+        //cout << "got ft"<< fLine_i << endl;//: " << to_string(&jp) << endl;
+        //boost::get<0>(sample) = fLine[j];
+        //
+        boost::get<1>(ft_sample) << fLine[fLine_i+0], fLine[fLine_i+1], fLine[fLine_i+2];
+        //if(mean && fLine[0] > 3.1 && fLine[0] < 4.5)
+        //    cout << fLine[0] << ": " << fLine[fLine_i+0] << ", "<< fLine[fLine_i+1] << endl;
+        fLine_i+=3;
+        boost::get<1>(ft_sample) << fLine[fLine_i+0], fLine[fLine_i+1], fLine[fLine_i+2];
+        //if(mean && fLine[0] > 3.1 && fLine[0] < 4.5)
+        //    cout << fLine[0] << ": " << fLine[fLine_i+0] << ", "<< fLine[fLine_i+1] << endl;
+        fLine_i+=3;
+
+
+        stream_jp_vec.push_back(jp_sample);
+        stream_jv_vec.push_back(jv_sample);
+        stream_jt_vec.push_back(jt_sample);
+        stream_cp_vec.push_back(cp_sample);
+        stream_qd_vec.push_back(qd_sample);
+        qVec->push_back(qd_sample);
+        stream_ft_vec.push_back(ft_sample);
+    }
+    //Create our splines between points
+    stream_jp_spline = new math::Spline<Wam<DIMENSION>::jp_type>(stream_jp_vec);
+    stream_jv_spline = new math::Spline<Wam<DIMENSION>::jv_type>(stream_jv_vec);
+    stream_jt_spline = new math::Spline<Wam<DIMENSION>::jt_type>(stream_jt_vec);
+    stream_cp_spline = new math::Spline<cp_type>                (stream_cp_vec);
+    //stream_qd_spline = new math::Spline<Eigen::Quaterniond>     (*qVec)
+    //stream_qd_spline = new math::Spline<Eigen::Quaterniond>     (stream_qd_vec);
+    stream_ft_spline = new math::Spline<Hand::jp_type>          (stream_ft_vec);
+    //cout << "got spline" << endl;
+    if(mean){
+        // Create our trajectory
+        stream_jp_mean_trajectory = new systems::Callback<double, Wam<DIMENSION>::jp_type>(boost::ref(*stream_jp_spline));
+        //cout << "got jp_traj" << endl;
+        stream_jv_mean_trajectory = new systems::Callback<double, Wam<DIMENSION>::jv_type>(boost::ref(*stream_jv_spline));
+        //cout << "got jv_traj" << endl;
+        stream_jt_mean_trajectory = new systems::Callback<double, Wam<DIMENSION>::jt_type>(boost::ref(*stream_jt_spline));
+        //cout << "got jt_traj" << endl;
+        stream_cp_mean_trajectory = new systems::Callback<double, cp_type>                (boost::ref(*stream_cp_spline));
+        //cout << "got cp_traj" << endl;
+        //stream_qd_mean_trajectory = new systems::Callback<double, Eigen::Quaterniond>     (boost::ref(*stream_qd_spline));
+        //cout << "got qd_traj" << endl;
+        stream_ft_mean_trajectory = new systems::Callback<double, Hand::jp_type>          (boost::ref(*stream_ft_spline));
+        //cout << "got ft_traj" << endl;
+    }
+    else{
+        // Create our trajectory
+        stream_jp_std_trajectory = new systems::Callback<double, Wam<DIMENSION>::jp_type>(boost::ref(*stream_jp_spline));
+        //cout << "got jp_traj" << endl;
+        stream_jv_std_trajectory = new systems::Callback<double, Wam<DIMENSION>::jv_type>(boost::ref(*stream_jv_spline));
+        //cout << "got jv_traj" << endl;
+        stream_jt_std_trajectory = new systems::Callback<double, Wam<DIMENSION>::jt_type>(boost::ref(*stream_jt_spline));
+        //cout << "got jt_traj" << endl;
+        stream_cp_std_trajectory = new systems::Callback<double, cp_type>                (boost::ref(*stream_cp_spline));
+        //cout << "got cp_traj" << endl;
+        //stream_qd_std_trajectory = new systems::Callback<double, Eigen::Quaterniond>     (boost::ref(*stream_qd_spline));
+        //cout << "got qd_traj" << endl;
+        stream_ft_std_trajectory = new systems::Callback<double, Hand::jp_type>          (boost::ref(*stream_ft_spline));
+        //cout << "got ft_traj" << endl;
+    }
+	fs->close();
+}
+
 template<size_t DOF> void RTLoop<DOF>::disconnectSystems() {
-	disconnect(wam.input);
+	disconnect(wam->input);
     disconnect(logger->input);
     disconnect(tg.template getInput<0>());
 	disconnect(tg.template getInput<1>());
@@ -370,32 +514,42 @@ template<size_t DOF> void RTLoop<DOF>::disconnectSystems() {
 	disconnect(tg.template getInput<4>());
 	disconnect(tg.template getInput<5>());
 	disconnect(tg.template getInput<6>());
-    wam.idle();
+    wam->idle();
 	time.stop();
 	time.setOutput(0.0);
 }
 template<size_t DOF>
 void RTLoop<DOF>::reconnectSystems(){
+    wam_system->init();
+
 	if (inputType == 0) {
 		systems::forceConnect(time.output, jpTrajectory->input);
-		wam.trackReferenceSignal(jpTrajectory->output);
+		systems::forceConnect(jpTrajectory->output, wam_system->input);
+		wam->trackReferenceSignal(wam_system->output);
 	} else {
 		systems::forceConnect(time.output, cpTrajectory->input);
 		systems::forceConnect(time.output, qTrajectory->input);
 		systems::forceConnect(cpTrajectory->output, poseTg.getInput<0>());
 		systems::forceConnect(qTrajectory->output, poseTg.getInput<1>());
-		wam.trackReferenceSignal(poseTg.output);
+		wam->trackReferenceSignal(poseTg.output);
 	}
-    systems::forceConnect(time.output,               hand_system->input);
-	systems::forceConnect(time.output,               tg.template getInput<0>());
-	systems::forceConnect(wam.jpOutput,              tg.template getInput<1>());
-	systems::forceConnect(wam.jvOutput,              tg.template getInput<2>());
-	systems::forceConnect(wam.jtSum.output,          tg.template getInput<3>());
-	systems::forceConnect(wam.toolPosition.output,   tg.template getInput<4>());
-	systems::forceConnect(wam.toolOrientation.output,tg.template getInput<5>());
-    systems::forceConnect(hand_system->output,       tg.template getInput<6>());
+
+    systems::forceConnect(time.output, stream_ft_mean_trajectory->input);
+    systems::forceConnect(time.output, stream_ft_std_trajectory->input);
+    systems::forceConnect(stream_ft_mean_trajectory->output,hand_system->mean_input);
+    systems::forceConnect(stream_ft_std_trajectory->output,hand_system->std_input);
+	systems::forceConnect(time.output,                tg.template getInput<0>());
+	systems::forceConnect(wam->jpOutput,              tg.template getInput<1>());
+	systems::forceConnect(wam->jvOutput,              tg.template getInput<2>());
+	systems::forceConnect(wam->jtSum.output,          tg.template getInput<3>());
+	systems::forceConnect(wam->toolPosition.output,   tg.template getInput<4>());
+	systems::forceConnect(wam->toolOrientation.output,tg.template getInput<5>());
+    systems::forceConnect(hand_system->output,        tg.template getInput<6>());
+	
+    //systems::forceConnect(debug_system->output,       tg.template getInput<7>());
     //systems::forceConnect(time.output,       tg.template getInput<6>());
     systems::forceConnect(tg.output, logger->input);
+    hand_system->time_count = 0;
 	time.start();
 	printf("Logging started.\n");
 }
@@ -405,7 +559,6 @@ template<size_t DOF> void RTLoop<DOF>::init_data_logger(){
     //set up realtime data logging
     char tmp_filename_template[] = "/tmp/btXXXXXX";
     int tmp_file_descriptor;
-
     
 	if ((tmp_file_descriptor = mkstemp(tmp_filename_template)) == -1) {
 		printf("ERROR: Couldn't create temporary file!\n");
@@ -421,11 +574,12 @@ template<size_t DOF> void RTLoop<DOF>::init_data_logger(){
     if(loop_count > 0)
         logger->closeLog();
     const size_t PERIOD_MULTIPLIER = 1;
-    logger = new systems::PeriodicDataLogger<tuple_type> (
+    logger = new systems::PeriodicDataLogger<input_stream_type> (
 			pm.getExecutionManager(),
-			new log::RealTimeWriter<tuple_type>((char*)tmp_filename.c_str(), PERIOD_MULTIPLIER * pm.getExecutionManager()->getPeriod()),
+			new log::RealTimeWriter<input_stream_type>((char*)tmp_filename.c_str(), PERIOD_MULTIPLIER * pm.getExecutionManager()->getPeriod()),
 			PERIOD_MULTIPLIER);
 }
+
 //export to csv files
 template<size_t DOF>
 void RTLoop<DOF>::output_data_stream(){
@@ -441,7 +595,7 @@ void RTLoop<DOF>::output_data_stream(){
     for (tmp_filename_it=tmp_filenames.begin(); tmp_filename_it < tmp_filenames.end(); tmp_filename_it++){
         std::string tmp_filename = *tmp_filename_it;
         std::string out_filename = log_prefix+itoa(counter++)+log_name+".csv";
-        log::Reader<tuple_type> lr((tmp_filename).c_str());
+        log::Reader<input_stream_type> lr((tmp_filename).c_str());
         lr.exportCSV(out_filename.c_str()); 
         std::remove((tmp_filename).c_str());
         printf("Data log saved to the location: %s \n", out_filename.c_str());
@@ -450,13 +604,16 @@ void RTLoop<DOF>::output_data_stream(){
 }
 
 template<size_t DOF> int wam_main(int argc, char** argv, ProductManager& pm,
-		systems::Wam<DOF>& wam) {
+		systems::Wam<DOF>& wam_) {
 	BARRETT_UNITS_TEMPLATE_TYPEDEFS(DOF);
+
+    systems::Wam<DIMENSION>* wam = (systems::Wam<DIMENSION>*)(&wam_);
+
 	std::string filename(argv[1]);
     // Load our vc_calibration file.
 	libconfig::Config config;
 	std::string calibration_file;
-	if (DOF == 4)
+	if (DIMENSION == 4)
 		calibration_file = "calibration4.conf";
 	else
 		calibration_file = "calibration7.conf";
@@ -468,19 +625,29 @@ template<size_t DOF> int wam_main(int argc, char** argv, ProductManager& pm,
 	if (!play.init())
 		return 1;
 
-	//boost::thread displayThread(&RTLoop<DOF>::displayEntryPoint, &play);
+	//boost::thread displayThread(displayEntryPoint,pm,wam);
 
-	bool playing = true;
+	//bool playing = true;
     //bool collecting_data = false;
     play.loop = true;
     curState = PLAYING;
     //lastState = PLAYING;
+    
+
+    float sleep_s = 0.002;
 
 	//while (playing) {
     while(pm.getSafetyModule()->getMode() == SafetyModule::ACTIVE){
+        if(play.problem){
+            //cout << "contact!" << endl;
+            //cout << "hd: " << play.hand_debug.str() << endl;
+            cout << "uh-oh" << endl;
+            play.hand_debug.str("");
+            play.problem = false;
+        }
 		switch (curState) {
 		case QUIT:
-			playing = false;
+			//playing = false;
 			break;
 		case PLAYING:
 			switch (lastState) {
@@ -497,7 +664,7 @@ template<size_t DOF> int wam_main(int argc, char** argv, ProductManager& pm,
 				break;
 			case PLAYING:
 				if (play.playbackActive()) {
-					btsleep(0.1);
+					btsleep(sleep_s);
 					break;
 				} else if (play.loop) {
                     loop_count++;
@@ -520,7 +687,7 @@ template<size_t DOF> int wam_main(int argc, char** argv, ProductManager& pm,
 				lastState = PAUSED;
 				break;
 			case PAUSED:
-				btsleep(0.1);
+				btsleep(sleep_s);
 				break;
 			case STOPPED:
 				break;
@@ -539,7 +706,7 @@ template<size_t DOF> int wam_main(int argc, char** argv, ProductManager& pm,
 				lastState = STOPPED;
 				break;
 			case STOPPED:
-				btsleep(0.1);
+				btsleep(sleep_s);
 				break;
 			default:
 				break;
@@ -553,7 +720,7 @@ template<size_t DOF> int wam_main(int argc, char** argv, ProductManager& pm,
 	}
 	play.disconnectSystems();
     play.output_data_stream();
-	//wam.moveHome();
+	//wam->moveHome();
 	//printf("\n\n");
 	//pm.getSafetyModule()->waitForMode(SafetyModule::IDLE);
 	return 0;
