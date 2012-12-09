@@ -44,8 +44,6 @@ protected:
 	typedef boost::tuple<double, cp_type>                          input_cp_type;
 	typedef boost::tuple<double, Eigen::Quaterniond>               input_qd_type;
 	typedef boost::tuple<double, Hand::jp_type>                    input_ft_type;
-	typedef boost::tuple<double, cp_type>                          input_cf_type;
-	typedef boost::tuple<double, cp_type>                          input_ct_type;
 
     std::string tmpStr, saveName, fileOut;
 
@@ -98,8 +96,6 @@ protected:
 	math::Spline<cp_type>*                 stream_cp_spline;
 	math::Spline<Eigen::Quaterniond>*      stream_qd_spline;
 	math::Spline<Hand::jp_type>*           stream_ft_spline;
-	math::Spline<cp_type>*                 stream_cf_spline;
-	math::Spline<cp_type>*                 stream_ct_spline;
 
     systems::Callback<double, Wam<DIMENSION>::jp_type>* stream_jp_mean_trajectory;
     systems::Callback<double, Wam<DIMENSION>::jv_type>* stream_jv_mean_trajectory;
@@ -107,8 +103,6 @@ protected:
     systems::Callback<double, cp_type>*                 stream_cp_mean_trajectory;
     systems::Callback<double, Eigen::Quaterniond>*      stream_qd_mean_trajectory;
     systems::Callback<double, Hand::jp_type>*           stream_ft_mean_trajectory;
-    systems::Callback<double, cp_type>*                 stream_cf_mean_trajectory;
-    systems::Callback<double, cp_type>*                 stream_ct_mean_trajectory;
     
     systems::Callback<double, Wam<DIMENSION>::jp_type>* stream_jp_std_trajectory;
     systems::Callback<double, Wam<DIMENSION>::jv_type>* stream_jv_std_trajectory;
@@ -116,9 +110,6 @@ protected:
     systems::Callback<double, cp_type>*                 stream_cp_std_trajectory;
     systems::Callback<double, Eigen::Quaterniond>*      stream_qd_std_trajectory;
     systems::Callback<double, Hand::jp_type>*           stream_ft_std_trajectory;
-    systems::Callback<double, cp_type>*                 stream_cf_std_trajectory;
-    systems::Callback<double, cp_type>*                 stream_ct_std_trajectory;
-
     
     //systems::Callback<double, systems::Wam<DIMENSION>::jp_type>* jpTrajectory;
 	//	jpTrajectory = new systems::Callback<double, systems::Wam<DIMENSION>::jp_type>(boost::ref(*jpSpline));
@@ -165,6 +156,9 @@ public:
 // Initialization - Gravity compensating, setting safety limits, parsing input file and creating trajectories
 template<size_t DOF>
 bool RTLoop<DOF>::init() {
+
+    problem = false;
+
 	// Turn on Gravity Compensation
 	wam->gravityCompensate(true);
     // Is a Hand attached?
@@ -360,7 +354,7 @@ void RTLoop<DOF>::load_data_stream(bool mean){
         int j = 0;
         for (t_tokenizer::iterator beg = tok.begin(); beg != tok.end();
                 ++beg) {
-            if(j >= STREAM_SIZE-4) //only look at trailing values
+            if(j >= STREAM_SIZE-4-3-3) //only look at trailing values
                 fLine[j] = boost::lexical_cast<float>(*beg);
             j++;
         }
@@ -631,6 +625,8 @@ template<size_t DOF> int wam_main(int argc, char** argv, ProductManager& pm,
             cout << "uh-oh" << endl;
             play.hand_debug.str("");
             play.problem = false;
+            play.disconnectSystems();
+            lastState = STOPPED;
         }
 		switch (curState) {
 		case QUIT:

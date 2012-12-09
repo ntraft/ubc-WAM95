@@ -21,13 +21,21 @@ add_library (hand_system hand_system.cxx)
 target_link_libraries(hand_system ${BARRETT_LIBRARIES} ${CURSES_LIBRARIES})
 target_link_libraries(hand_system ${BARRETT_LIBRARIES} boost_system boost_filesystem)
 
-add_library (memory memory.cxx)
-target_link_libraries(memory ${BARRETT_LIBRARIES} ${CURSES_LIBRARIES})
-target_link_libraries(memory ${BARRETT_LIBRARIES} boost_system boost_filesystem)
+add_library (Ahand_system Ahand_system.cxx)
+target_link_libraries(Ahand_system ${BARRETT_LIBRARIES} ${CURSES_LIBRARIES})
+target_link_libraries(Ahand_system ${BARRETT_LIBRARIES} boost_system boost_filesystem)
+
+#add_library (memory memory.cxx)
+#target_link_libraries(memory ${BARRETT_LIBRARIES} ${CURSES_LIBRARIES})
+#target_link_libraries(memory ${BARRETT_LIBRARIES} boost_system boost_filesystem)
 
 add_library (wam_system wam_system.cxx)
 target_link_libraries(wam_system ${BARRETT_LIBRARIES} ${CURSES_LIBRARIES})
 target_link_libraries(wam_system ${BARRETT_LIBRARIES} boost_system boost_filesystem)
+
+add_library (Awam_system Awam_system.cxx)
+target_link_libraries(Awam_system ${BARRETT_LIBRARIES} ${CURSES_LIBRARIES})
+target_link_libraries(Awam_system ${BARRETT_LIBRARIES} boost_system boost_filesystem)
 
 add_library (data_stream data_stream.cxx)
 
@@ -49,6 +57,16 @@ add_executable(rtloop rtloop.cpp)
 target_link_libraries(rtloop ${BARRETT_LIBRARIES} boost_system boost_filesystem)
 target_link_libraries(rtloop ${BARRETT_LIBRARIES} ${CURSES_LIBRARIES})
 target_link_libraries(rtloop data_stream hand_system wam_system display utils)
+
+add_executable(SaS SaS.cpp)
+target_link_libraries(SaS ${BARRETT_LIBRARIES} boost_system boost_filesystem)
+target_link_libraries(SaS ${BARRETT_LIBRARIES} ${CURSES_LIBRARIES})
+target_link_libraries(SaS data_stream hand_system wam_system display utils)
+
+add_executable(SaA SaA.cpp)
+target_link_libraries(SaA ${BARRETT_LIBRARIES} boost_system boost_filesystem)
+target_link_libraries(SaA ${BARRETT_LIBRARIES} ${CURSES_LIBRARIES})
+target_link_libraries(SaA data_stream Ahand_system wam_system display utils)
 
 add_executable(bt-wam-ccg calibrate_control_gains.cpp)
 target_link_libraries(bt-wam-ccg ${BARRETT_LIBRARIES})
