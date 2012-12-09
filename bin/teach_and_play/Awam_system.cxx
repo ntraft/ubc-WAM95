@@ -23,12 +23,13 @@ public:		Output<systems::Wam<DIMENSION>::jp_type> output;
 
 protected:	Output<systems::Wam<DIMENSION>::jp_type>::Value* outputValue;
 protected:  systems::Wam<DIMENSION>* wam;
+protected:  bool* contact_problem;
+protected:  bool* stub_problem;
 protected:  systems::Wam<DIMENSION>::jp_type jp_offsets; //modifications to realtime motion feed
-protected:  int count;
 
 public:
-	WamSystem(systems::Wam<DIMENSION>* _wam, const std::string& sysName = "WamSystem") :
-		systems::System(sysName), input(this), output(this, &outputValue), wam(_wam){
+	WamSystem(systems::Wam<DIMENSION>* _wam, bool* _contact_problem, bool* _stub_problem, const std::string& sysName = "WamSystem") :
+		systems::System(sysName), input(this), output(this, &outputValue), wam(_wam), contact_problem(_contact_problem), stub_problem(_stub_problem){
             init();
         }
 
@@ -36,7 +37,6 @@ public:
 
     void init(){
         set_vector_values(&jp_offsets, 0, 0);
-        count = 0;
     }
 
 protected:
@@ -49,10 +49,14 @@ protected:
 
         jp_out = jp_in + jp_offsets;
 
-        count++;
+        //if(rand() % 500 == 0)
+        //    jp_offsets[5] += 0.01;
+        
+        if(*contact_problem)
+            jp_offsets[5] += 0.02;
 
-        if(count < 5)
-            jp_offsets[5] += 0.01;
+        if(*stub_problem)
+            jp_offsets[5] -= 0.02;
         
         outputValue->setData(&jp_out);  // Push data into the output
 	}

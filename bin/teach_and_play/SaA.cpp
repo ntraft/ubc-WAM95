@@ -7,8 +7,8 @@
 #include "stdheader.h"
 
 #include "data_stream.h" //for sensor data stream io
-#include "hand_system.cxx" 
-#include "wam_system.cxx" 
+#include "Ahand_system.cxx" 
+#include "Awam_system.cxx" 
 #include "display.cxx" 
 #include "control_mode_switcher.h"
 #include <barrett/standard_main_function.h>
@@ -44,8 +44,6 @@ protected:
 	typedef boost::tuple<double, cp_type>                          input_cp_type;
 	typedef boost::tuple<double, Eigen::Quaterniond>               input_qd_type;
 	typedef boost::tuple<double, Hand::jp_type>                    input_ft_type;
-	typedef boost::tuple<double, cp_type>                          input_cf_type;
-	typedef boost::tuple<double, cp_type>                          input_ct_type;
 
     std::string tmpStr, saveName, fileOut;
 
@@ -98,8 +96,6 @@ protected:
 	math::Spline<cp_type>*                 stream_cp_spline;
 	math::Spline<Eigen::Quaterniond>*      stream_qd_spline;
 	math::Spline<Hand::jp_type>*           stream_ft_spline;
-	math::Spline<cp_type>*                 stream_cf_spline;
-	math::Spline<cp_type>*                 stream_ct_spline;
 
     systems::Callback<double, Wam<DIMENSION>::jp_type>* stream_jp_mean_trajectory;
     systems::Callback<double, Wam<DIMENSION>::jv_type>* stream_jv_mean_trajectory;
@@ -107,8 +103,6 @@ protected:
     systems::Callback<double, cp_type>*                 stream_cp_mean_trajectory;
     systems::Callback<double, Eigen::Quaterniond>*      stream_qd_mean_trajectory;
     systems::Callback<double, Hand::jp_type>*           stream_ft_mean_trajectory;
-    systems::Callback<double, cp_type>*                 stream_cf_mean_trajectory;
-    systems::Callback<double, cp_type>*                 stream_ct_mean_trajectory;
     
     systems::Callback<double, Wam<DIMENSION>::jp_type>* stream_jp_std_trajectory;
     systems::Callback<double, Wam<DIMENSION>::jv_type>* stream_jv_std_trajectory;
@@ -116,9 +110,6 @@ protected:
     systems::Callback<double, cp_type>*                 stream_cp_std_trajectory;
     systems::Callback<double, Eigen::Quaterniond>*      stream_qd_std_trajectory;
     systems::Callback<double, Hand::jp_type>*           stream_ft_std_trajectory;
-    systems::Callback<double, cp_type>*                 stream_cf_std_trajectory;
-    systems::Callback<double, cp_type>*                 stream_ct_std_trajectory;
-
     
     //systems::Callback<double, systems::Wam<DIMENSION>::jp_type>* jpTrajectory;
 	//	jpTrajectory = new systems::Callback<double, systems::Wam<DIMENSION>::jp_type>(boost::ref(*jpSpline));
@@ -126,6 +117,8 @@ public:
 	int dataSize;
 	bool loop;
     bool problem;
+    bool contact_problem;
+    bool stub_problem;
     stringstream hand_debug;
 	RTLoop(systems::Wam<DIMENSION>* wam_, ProductManager& pm_, std::string filename_,
 			const libconfig::Setting& setting_) :
@@ -165,6 +158,11 @@ public:
 // Initialization - Gravity compensating, setting safety limits, parsing input file and creating trajectories
 template<size_t DOF>
 bool RTLoop<DOF>::init() {
+
+    problem = false;
+    contact_problem = false;
+    stub_problem = false;
+
 	// Turn on Gravity Compensation
 	wam->gravityCompensate(true);
     // Is a Hand attached?
@@ -176,8 +174,8 @@ bool RTLoop<DOF>::init() {
 		//hand->initialize();
         
         //hand system deals with realtime sensor reading
-        hand_system = new HandSystem(hand,&problem,&hand_debug);
-        wam_system = new WamSystem((systems::Wam<DIMENSION>*)&wam);
+        hand_system = new HandSystem(hand,&problem,&contact_problem,&stub_problem,&hand_debug);
+        wam_system = new WamSystem((systems::Wam<DIMENSION>*)&wam,&contact_problem,&stub_problem);
 	}
 	// Modify the WAM Safety Limits
 	pm.getSafetyModule()->setTorqueLimit(3.0);
@@ -360,7 +358,7 @@ void RTLoop<DOF>::load_data_stream(bool mean){
         int j = 0;
         for (t_tokenizer::iterator beg = tok.begin(); beg != tok.end();
                 ++beg) {
-            if(j >= STREAM_SIZE-4) //only look at trailing values
+            if(j >= STREAM_SIZE-4-3-3) //only look at trailing values
                 fLine[j] = boost::lexical_cast<float>(*beg);
             j++;
         }
@@ -625,10 +623,11 @@ template<size_t DOF> int wam_main(int argc, char** argv, ProductManager& pm,
 
 	//while (playing) {
     while(pm.getSafetyModule()->getMode() == SafetyModule::ACTIVE){
-        if(play.problem){
+        if(play.problem || play.stub_problem || play.contact_problem){
             //cout << "contact!" << endl;
             //cout << "hd: " << play.hand_debug.str() << endl;
-            cout << "uh-oh" << endl;
+            //cout << "uh-oh" << endl;
+            cout << play.hand_debug.str() << endl;
             play.hand_debug.str("");
             play.problem = false;
         }

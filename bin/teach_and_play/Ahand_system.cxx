@@ -77,15 +77,21 @@ public:     float time_count;
 protected:	Output<Hand::jp_type>::Value* outputValue;
 protected:  Hand* hand;
 protected:  bool* problem;
+protected:  bool* contact_problem;
+protected:  bool* stub_problem;
 protected:  int problem_count;
+protected:  int contact_problem_count;
+protected:  int stub_problem_count;
 protected:  stringstream* debug;
 
 public:
-	HandSystem(Hand* _hand, bool* _problem, std::stringstream* _debug, const std::string& sysName = "HandSystem") :
-		systems::System(sysName), mean_input(this), std_input(this), output(this, &outputValue), hand(_hand), problem(_problem),debug(_debug)
+	HandSystem(Hand* _hand, bool* _problem, bool* _contact_problem, bool* _stub_problem, std::stringstream* _debug, const std::string& sysName = "HandSystem") :
+		systems::System(sysName), mean_input(this), std_input(this), output(this, &outputValue), hand(_hand), problem(_problem), contact_problem(_contact_problem),stub_problem(_stub_problem),debug(_debug)
 		{
             time_count = 0;
             problem_count = 0;
+            contact_problem_count = 0;
+            stub_problem_count = 0;
             //cout << "hand_system instantiated" << endl;
         }
 
@@ -103,10 +109,12 @@ protected:
         std::vector<int> vec_readings =  hand->getFingertipTorque();
         
         int num_sigmas = 5;
+        int num_problems = 40;
 
         time_count += 0.002;  //500 Hz
 
         float contact_threshold = 1950;
+        float stub_threshold = 2200;
         
         float mean     = expected_mean[0];
         float std_up   = mean + num_sigmas * expected_std[0];
@@ -118,6 +126,41 @@ protected:
 
         bool should_contact = expected_mean[0] > contact_threshold;
         bool is_contact     = fingertip_torque_readings[0] > contact_threshold;
+        bool is_stubbed     = fingertip_torque_readings[0] > stub_threshold;
+
+        if(*contact_problem){
+            *contact_problem = false;
+            contact_problem_count = 0;
+        }
+        if(should_contact && !is_contact){
+            contact_problem_count++;
+            if(contact_problem_count > num_problems*0.75){
+                *contact_problem = true;
+                contact_problem_count = 0;
+                *debug << "contact_problem" << endl;
+            }
+        }
+        else{
+            contact_problem_count = 0;
+        }
+
+        if(*stub_problem){
+            *stub_problem = false;
+            stub_problem_count = 0;
+        }
+        if(is_stubbed){
+            stub_problem_count++;
+            if(stub_problem_count > num_problems*0.75){
+                *stub_problem = true;
+                stub_problem_count = 0;
+                *debug << "stub_problem" << endl;
+            }
+        }
+        else{
+            stub_problem_count = 0;
+        }
+
+        //*contact_problem = should_contact && !is_contact;
 
         //if time_count is an integer 
         //if(ceil(time_count*500) == time_count*500){
@@ -127,7 +170,7 @@ protected:
             if( should_contact &&
                 (fingertip_torque_readings[i] > std_up || fingertip_torque_readings[i] < std_down)){
                 problem_count += 1;
-                if(problem_count > 30){
+                if(problem_count > num_problems){
                     *problem = true;
                     problem_count = 0;
                 }
