@@ -1,7 +1,8 @@
 #include "active.h"
+#include "robot.h"
 
-CartesianRaster::CartesianRaster(Controller* controller, Senses* senses):
-    Active(controller, senses){
+CartesianRaster::CartesianRaster(Robot* robot):
+    Active(robot){
 }
 
 //MISTAKE: NOT CARTESIAN RASTER CODE!!
@@ -201,7 +202,7 @@ void runActiveProbing2Experiment(systems::Wam<DOF>& wam, Hand* hand, ForceTorque
 		BARRETT_SCOPED_LOCK(pm->getExecutionManager()->getMutex());
 
 		wam.idle();
-		forceConnect(toSetpoint.output, wam.toController.referenceInput);
+		forceConnect(toSetpoint.output, wam.toRobotController.referenceInput);
 		forceConnect(wam.tt2jt.output, wam.input);
 		/*
 		input.output = &output;

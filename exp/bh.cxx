@@ -3,13 +3,14 @@
 #include "utils.h"
 #include "control.h"
 #include "senses.h"
+#include "robot.h"
 
 
-BHExp::BHExp(Controller* controller, Senses* senses):Experiment(controller, senses){
+BHExp::BHExp(Robot* robot):Experiment(robot){
 }
 void BHExp::run(){
 }
-BHTorque::BHTorque(Controller* controller, Senses* senses):BHExp(controller, senses){
+BHTorque::BHTorque(Robot* robot):BHExp(robot){
 }
 
 void BHTorque::run(){

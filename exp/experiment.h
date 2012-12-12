@@ -3,7 +3,8 @@
 
 #include "stdheader.h"
 
-class Controller;
+class Robot;
+class RobotController;
 class Senses;
 
 #define LOG_DATA_TYPES double,jp_type,jv_type,jt_type,Hand::cp_type,Eigen::Quaterniond
@@ -82,8 +83,9 @@ protected:
 
     void data_collect();
     bool flag_collect_data;
-    Controller* controller;
+    RobotController* controller;
     Senses* senses;
+    Robot* robot;
     systems::Wam<DIMENSION>* wam;
     Hand* hand;
     ProductManager* pm;
@@ -121,7 +123,7 @@ protected:
 
 public:
     EIGEN_MAKE_ALIGNED_OPERATOR_NEW 
-	Experiment(Controller* controller, Senses* senses);
+	Experiment(Robot* robot);
 
     void toggle_collect_data();
     void teach_pose(int seqnum);

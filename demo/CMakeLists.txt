@@ -9,6 +9,8 @@ find_package(Curses REQUIRED)
 include_directories(${CURSES_INCLUDE_DIR})
 set (EXTRA_LIBS ${EXTRA_LIBS} ${CURSES_LIBRARIES})
 
+set (EXTRA_LIBS ${EXTRA_LIBS} boost_system boost_filesystem)
+
 # Make sure the compiler can find include header files from our library. 
 include_directories (${WAM95Ctrl_SOURCE_DIR}/lib)
 include_directories (${WAM95Ctrl_SOURCE_DIR}/exp)
@@ -22,4 +24,4 @@ add_executable (demo main.cxx)
 
 # Link the executable to dependent modules
 # Note: Order is important! place modules to the left of their respective dependents
-target_link_libraries (demo exp control senses mainline teach play utils ${EXTRA_LIBS})
+target_link_libraries (demo exp control senses teach play robot mainline utils ${EXTRA_LIBS})

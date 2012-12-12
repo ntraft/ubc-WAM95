@@ -1,5 +1,6 @@
 #include "senses.h"
 #include "stdheader.h"
+#include "robot.h"
 
 const int TACT_CELL_HEIGHT = 3;
 const int TACT_CELL_WIDTH = 6;
@@ -8,24 +9,15 @@ const int TACT_BOARD_COLS = 3;
 const int TACT_BOARD_STRIDE = TACT_BOARD_COLS * TACT_CELL_WIDTH + 2;
 
 
-Senses::Senses(ProductManager* pm, systems::Wam<DIMENSION>* wam){
-    this->pm = pm;
-    this->wam = wam;
+Senses::Senses(Robot* robot){
+    this->pm = robot->getPM();
+    this->wam = robot->getWAM();
     this->fts = pm->getForceTorqueSensor();
     this->hand = pm->getHand();
-    init_wam();
-    init_hand();
-    init_fts();
 
     module_name = "Senses";
-}
 
-void Senses::init_wam(){
-}
-void Senses::init_hand(){
-}
-void Senses::init_fts(){
-   fts->tare();
+    std::cout << "Senses initialized!" << std::endl;
 }
 
 //MAINLINE
@@ -40,37 +32,31 @@ void Senses::run(){
 }
 
 //ACCESSORS
-
-ProductManager* Senses::getPM(){return pm;}
-systems::Wam<DIMENSION>* Senses::getWAM(){return wam;}
-ForceTorqueSensor* Senses::getFTS(){return fts;}
-Hand* Senses::getHand(){return hand;}
-
 int Senses::get_fingertip_torque_value(int finger_num){
-        hand->update(Hand::S_FINGERTIP_TORQUE,true);
-        std::vector<int> fingertip_torque = hand->getFingertipTorque();
-        return fingertip_torque[finger_num];
+    hand->update(Hand::S_FINGERTIP_TORQUE,true);
+    std::vector<int> fingertip_torque = hand->getFingertipTorque();
+    return fingertip_torque[finger_num];
 }
 bool Senses::check_tactile_contact(int finger_num){
-        //std::cout << "check_tactile_contact!" << std::endl;
-        hand->update(Hand::S_TACT_FULL, true);
-        std::vector<TactilePuck*> tps;
-        tps = hand->getTactilePucks();
-        v_type finger_tact = tps[finger_num]->getFullData();
-        for(int i = 0; i < finger_tact.size(); i++){
-                //std::cout << finger_tact[i] << " > " << sensor_vars[TACT_BASE_VAL](finger_num) << "?" << std::endl;
-                if(finger_tact[i] > sensor_vars[TACT_BASE_VAL][finger_num]){
-                        return true;
-                }
-        }
-        return false;
+    //std::cout << "check_tactile_contact!" << std::endl;
+    hand->update(Hand::S_TACT_FULL, true);
+    std::vector<TactilePuck*> tps;
+    tps = hand->getTactilePucks();
+    tact_array_type finger_tact = tps[finger_num]->getFullData();
+    for(int i = 0; i < finger_tact.size(); i++){
+            //std::cout << finger_tact[i] << " > " << sensor_vars[TACT_BASE_VAL](finger_num) << "?" << std::endl;
+            if(finger_tact[i] > sensor_vars[TACT_BASE_VAL][finger_num]){
+                    return true;
+            }
+    }
+    return false;
 }
 bool Senses::check_tactile_contact(int finger_num, float threshold){
         //std::cout << "check_tactile_contact!" << std::endl;
         hand->update(Hand::S_TACT_FULL, true);
         std::vector<TactilePuck*> tps;
         tps = hand->getTactilePucks();
-        v_type finger_tact = tps[finger_num]->getFullData();
+        tact_array_type finger_tact = tps[finger_num]->getFullData();
         for(int i = 0; i < finger_tact.size(); i++){
                 if(finger_tact[i] > threshold){
                         std::cout << finger_tact[i] << " > " << threshold << std::endl;
@@ -111,7 +97,7 @@ void Senses::tare_tactile(){
         tps = hand->getTactilePucks();
         std::cout << "tare-value for tactile pad on: " << std::endl;
         for(unsigned int finger_num = 0; finger_num < tps.size(); finger_num++){
-                v_type finger_tact = tps[finger_num]->getFullData();
+                tact_array_type finger_tact = tps[finger_num]->getFullData();
                 float max = -1;
                 for(int i = 0; i < finger_tact.size(); i++){
                         if(finger_tact[i] > max){

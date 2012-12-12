@@ -3,15 +3,16 @@
 #include "utils.h"
 #include "control.h"
 #include "senses.h"
+#include "robot.h"
 
-Action::Action(Controller* controller, Senses* senses)
-: Experiment(controller, senses){
+Action::Action(Robot* robot)
+: Experiment(robot){
 }
-ActionPhase::ActionPhase(Controller* controller, Senses* senses)
-: Action(controller, senses){
+ActionPhase::ActionPhase(Robot* robot)
+: Action(robot){
 }
-SimpleShapes::SimpleShapes(Controller* controller, Senses* senses)
-: Action(controller, senses){
+SimpleShapes::SimpleShapes(Robot* robot)
+: Action(robot){
 }
 void Action::run(){
 }

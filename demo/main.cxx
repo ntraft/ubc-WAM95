@@ -11,6 +11,7 @@
 
 #include "utils.h"
 #include "senses.h"
+#include "robot.h"
 #include "control.h"
 #include "experiment.h"
 #include "action.h"
@@ -21,13 +22,14 @@ std::vector<std::string> autoCmds;
 std::string line;
 
 Experiment* experiment;
-Controller* controller;
+RobotController* controller;
 Senses* senses;
+Robot* robot;
 
 bool validate_args(int argc, char** argv) {
 	/*if (argc != 2  &&  argc != 3) {
 		printf("Usage: %s <remoteHost> [--auto]\n", argv[0]);
-		printf("  --auto : Automatically link WAMs and start Hand or Gimbals Hand Controller thread\n");
+		printf("  --auto : Automatically link WAMs and start Hand or Gimbals Hand RobotController thread\n");
 
 		return false;
 	}*/
@@ -65,9 +67,8 @@ template<size_t DOF>
 int wam_main(int argc, char** argv, ProductManager& pm, systems::Wam<DOF>& wam) {
 	BARRETT_UNITS_TEMPLATE_TYPEDEFS(DOF);
 	
-    senses = new Senses(&pm, ((systems::Wam<DIMENSION>*)(&wam)));
-    controller = new Controller(senses);
-    experiment = new Experiment(controller, senses);
+    robot = new Robot(&pm, ((systems::Wam<DIMENSION>*)(&wam)));
+        experiment = new Experiment(robot);
     //Demo demo;
 
     //run();
@@ -99,120 +100,7 @@ int wam_main(int argc, char** argv, ProductManager& pm, systems::Wam<DOF>& wam) 
             case 'd': experiment->toggle_collect_data(); break;
             case '1': experiment->teach_pose(0); break;
             case '2': experiment->teach_pose(1); break;
-            case '3': senses->getWAM()->gravityCompensate(); break;
-            /*case '4': {
-                std::string filename(line.substr(2));
-
-                Teach<DOF> teach(wam, pm, filename);
-
-                teach.init();
-
-                printf("\nPress [Enter] to start teaching.\n");
-                waitForEnter();
-                teach.record();
-                //boost::thread t(&Teach<DOF>::display, &teach);
-
-                printf("Press [Enter] to stop teaching.\n");
-                waitForEnter();
-                teach.createSpline();
-
-                pm.getSafetyModule()->waitForMode(SafetyModule::IDLE);
-                break;
-            }
-            case '5': {
-
-                std::string filename(line.substr(2));
-
-                // Load our vc_calibration file.
-                libconfig::Config config;
-                std::string calibration_file;
-                
-                calibration_file = "calibration7.conf";
-                config.readFile(calibration_file.c_str());
-                config.getRoot();
-
-                Play<DOF> play(wam, pm, filename, config.getRoot());
-
-                if (!play.init())
-                    return 1;
-
-                boost::thread displayThread(&Play<DOF>::displayEntryPoint, &play);
-
-                bool playing = true;
-                while (playing) {
-                    switch (curState) {
-                    case QUIT:
-                        playing = false;
-                        break;
-                    case PLAYING:
-                        switch (lastState) {
-                        case STOPPED:
-                            play.moveToStart();
-                            play.reconnectSystems();
-                            play.startPlayback();
-                            lastState = PLAYING;
-                            break;
-                        case PAUSED:
-                            play.startPlayback();
-                            lastState = PLAYING;
-                            break;
-                        case PLAYING:
-                            if (play.playbackActive()) {
-                                btsleep(0.1);
-                                break;
-                            } else if (play.loop) {
-                                play.disconnectSystems();
-                                lastState = STOPPED;
-                                curState = PLAYING;
-                                break;
-                            } else {
-                                curState = STOPPED;
-                                break;
-                            }
-                        default:
-                            break;
-                        }
-                        break;
-                    case PAUSED:
-                        switch (lastState) {
-                        case PLAYING:
-                            play.pausePlayback();
-                            lastState = PAUSED;
-                            break;
-                        case PAUSED:
-                            btsleep(0.1);
-                            break;
-                        case STOPPED:
-                            break;
-                        default:
-                            break;
-                        }
-                        break;
-                    case STOPPED:
-                        switch (lastState) {
-                        case PLAYING:
-                            play.disconnectSystems();
-                            lastState = STOPPED;
-                            break;
-                        case PAUSED:
-                            play.disconnectSystems();
-                            lastState = STOPPED;
-                            break;
-                        case STOPPED:
-                            btsleep(0.1);
-                            break;
-                        default:
-                            break;
-                        }
-                        break;
-                    }
-                }
-
-                wam.moveHome();
-                printf("\n\n");
-                pm.getSafetyModule()->waitForMode(SafetyModule::IDLE);
-                break;
-            }*/
+            case '3': robot->getWAM()->gravityCompensate(); break;
             default:
                 unsigned char in = atoi(line.c_str());
                 controller->hand_command(in);

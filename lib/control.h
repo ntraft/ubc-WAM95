@@ -3,9 +3,10 @@
 
 #include "stdheader.h"
 
+class Robot;
 class Senses;
 
-class Controller{
+class RobotController{
 private:
     systems::Wam<DIMENSION>* wam;
     Hand* hand;
@@ -14,7 +15,7 @@ private:
     Senses* senses;
 
 public:
-    Controller(Senses* senses);
+    RobotController(Robot* robot);
     void init_wam();
     void init_hand();
     //Close all fingers

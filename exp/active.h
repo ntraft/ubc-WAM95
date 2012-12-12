@@ -2,18 +2,19 @@
 #define ACTIVE_H_
 
 class Experiment;
-class Controller;
+class RobotController;
 class Senses;
+class Robot;
 
 class Active: public Experiment{
 public:
-    Active(Controller* controller, Senses* senses);
+    Active(Robot* robot);
     virtual void run();
 };
 
 /*class SimpleShapes: public Active{
 public:
-    SimpleShapes(Controller* controller, Senses* senses);
+    SimpleShapes(Robot* robot);
     void run();
 };*/
 #endif

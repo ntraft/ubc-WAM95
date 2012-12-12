@@ -22,6 +22,7 @@ enum SENSOR_KEYS{
     NUM_SENSOR_VARS
 };
 
+class Robot;
 
 class Senses: public MainLine{
     private:
@@ -32,7 +33,7 @@ class Senses: public MainLine{
 
         Hand::jv_type sensor_vars[NUM_SENSOR_VARS]; 
     public:
-        Senses(ProductManager* pm, systems::Wam<DIMENSION>* wam);
+        Senses(Robot* robot);
         void init_wam();
         void init_hand();
         void init_fts();

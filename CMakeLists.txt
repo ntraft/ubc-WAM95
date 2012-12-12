@@ -9,5 +9,5 @@ project (WAM95Ctrl)
 # the project's entire directory structure. 
 add_subdirectory (lib)
 add_subdirectory (exp)
-add_subdirectory (tap)
+#add_subdirectory (tap)
 add_subdirectory (demo)

@@ -9,6 +9,7 @@ include_directories(${CURSES_INCLUDE_DIR})
 
 
 add_library (utils utils.cxx)
+add_library (robot robot.cxx)
 add_library (senses senses.cxx)
 add_library (control control.cxx)
 add_library (mainline mainline.cxx)

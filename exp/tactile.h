@@ -2,23 +2,24 @@
 #define TACTILE_H_
 
 class Experiment;
-class Controller;
+class RobotController;
 class Senses;
+class Robot;
 
 class Tactile: public Experiment{
 public:
-    Tactile(Controller* controller, Senses* senses);
+    Tactile(Robot* robot);
     virtual void run();
 };
 
 class CartesianRaster: public Tactile{
 public:
-    CartesianRaster(Controller* controller, Senses* senses);
+    CartesianRaster(Robot* robot);
     void run();
 };
 /*class SimpleShapes: public Active{
 public:
-    SimpleShapes(Controller* controller, Senses* senses);
+    SimpleShapes(Robot* robot);
     void run();
 };*/
 #endif

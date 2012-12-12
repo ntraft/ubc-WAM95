@@ -2,8 +2,9 @@
 #define ACTION_H_
 
 class Experiment;
-class Controller;
+class RobotController;
 class Senses;
+class Robot;
 
 enum ACTION_PHASES{
         APPROACH = -1,
@@ -18,18 +19,18 @@ enum ACTION_PHASES{
 
 class Action: public Experiment{
 public:
-    Action(Controller* controller, Senses* senses);
+    Action(Robot* robot);
     virtual void run();
 };
 
 class ActionPhase: public Action{
 public:
-    ActionPhase(Controller* controller, Senses* senses);
+    ActionPhase(Robot* robot);
     void run();
 };
 class SimpleShapes: public Action{
 public:
-    SimpleShapes(Controller* controller, Senses* senses);
+    SimpleShapes(Robot* robot);
     void run();
 };
 #endif

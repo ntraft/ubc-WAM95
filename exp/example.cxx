@@ -4,25 +4,25 @@
 #include "control.h"
 #include "senses.h"
 
-Example::Example(Controller* controller, Senses* senses)
+Example::Example(RobotController* controller, Senses* senses)
 : Experiment(controller, senses){
 }
-HoldPosition::HoldPosition(Controller* controller, Senses* senses)
+HoldPosition::HoldPosition(RobotController* controller, Senses* senses)
 : Example(controller, senses){
 }
-SystemsIntro::SystemsIntro(Controller* controller, Senses* senses)
+SystemsIntro::SystemsIntro(RobotController* controller, Senses* senses)
 : Example(controller, senses){
 }
-RealtimeMove::RealtimeMove(Controller* controller, Senses* senses)
+RealtimeMove::RealtimeMove(RobotController* controller, Senses* senses)
 : Example(controller, senses){
 }
-TeachAndPlay::TeachAndPlay(Controller* controller, Senses* senses)
+TeachAndPlay::TeachAndPlay(RobotController* controller, Senses* senses)
 : Example(controller, senses){
 }
-TorqueControl::TorqueControl(Controller* controller, Senses* senses)
+TorqueControl::TorqueControl(RobotController* controller, Senses* senses)
 : Example(controller, senses){
 }
-Haptics::Haptics(Controller* controller, Senses* senses)
+Haptics::Haptics(RobotController* controller, Senses* senses)
 : Example(controller, senses){
 }
 

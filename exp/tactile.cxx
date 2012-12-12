@@ -1,4 +1,5 @@
 #include "tactile.h"
+#include "robot.h"
 /*TactileTestExperiment*/
 /*
 	test tactile sensor by moving the finger in a repeatable raster motion
@@ -7,11 +8,11 @@
 	detected by the sensors or if significant aliasing occurs
 */
 
-Tactile::Tactile(Controller* controller, Senses* senses):
-    Experiment(controller, senses){
+Tactile::Tactile(Robot* robot):
+    Experiment(robot){
 }
-CartesianRaster::CartesianRaster(Controller* controller, Senses* senses):
-    Tactile(controller, senses){
+CartesianRaster::CartesianRaster(Robot* robot):
+    Tactile(robot){
 }
 
 Tactile::run(){

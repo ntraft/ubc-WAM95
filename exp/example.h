@@ -3,7 +3,7 @@
 
 #include "stdheader.h"
 
-class Controller;
+class RobotController;
 class Senses;
 
 class Example: public Experiment{
@@ -11,7 +11,7 @@ private:
 protected:
 public:
     EIGEN_MAKE_ALIGNED_OPERATOR_NEW 
-	Example(Controller* controller, Senses* senses);
+	Example(RobotController* controller, Senses* senses);
 
     void init(std::string args);
     std::string get_help_string();
@@ -23,7 +23,7 @@ private:
 protected:
 public:
     EIGEN_MAKE_ALIGNED_OPERATOR_NEW 
-    Example(Controller* controller, Senses* senses);
+    Example(RobotController* controller, Senses* senses);
 
     void init(std::string args);
     std::string get_help_string();
