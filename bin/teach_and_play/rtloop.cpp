@@ -58,7 +58,6 @@ protected:
 	math::Spline<Eigen::Quaterniond>* qSpline;
 	
     systems::Callback<double, systems::Wam<DIMENSION>::jp_type>* jpTrajectory;
-		//jpTrajectory = new systems::Callback<double, systems::Wam<DIMENSION>::jp_type>(boost::ref(*jpSpline));
 	systems::Callback<double, cp_type>* cpTrajectory;
 	systems::Callback<double, Eigen::Quaterniond>* qTrajectory;
     

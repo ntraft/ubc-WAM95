@@ -14,6 +14,9 @@ include_directories(${CURSES_INCLUDE_DIR})
 include_directories (../../lib)
 link_directories (../../lib)
 
+include_directories (abstract)
+link_directories (abstract)
+
 add_executable(teach teach.cpp)
 target_link_libraries(teach ${BARRETT_LIBRARIES} ${CURSES_LIBRARIES})
 

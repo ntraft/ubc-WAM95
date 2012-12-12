@@ -15,6 +15,10 @@ Eigen::Quaterniond hjp2quaternion(Hand::jp_type* p);
 Eigen::Quaterniond jp2quaternion(jp_type* p);
 Hand::jp_type quaternion2hjp(Eigen::Quaterniond* q);
 jp_type quaternion2jp(Eigen::Quaterniond* q);
+
+//cast integer to string
+//std::string itoa(int i){std::string a = boost::lexical_cast<std::string>(i);return a;}
+
 // parses a string of space-separated doubles into a vector of doubles
 template<int R, int C, typename Units>
 bool parseDoubles(math::Matrix<R,C, Units>* dest, const std::string& str){
