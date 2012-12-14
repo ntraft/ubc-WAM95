@@ -26,4 +26,4 @@ link_directories (${WAM95Ctrl_SOURCE_DIR}/robot/senses)
 link_directories (${WAM95Ctrl_SOURCE_DIR}/robot/control)
 
 
-add_library (memory memory.cxx)
+add_library (memory memory.cxx rtmemory.cxx)
