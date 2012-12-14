@@ -64,16 +64,16 @@ public:
 
 		const libconfig::Setting& wamSetting = pm.getConfig().lookup(pm.getWamDefaultConfigPath());
 
-		wam.jpRobotController.setFromConfig(wamSetting["joint_position_control"]);
-		wam.jpRobotController.resetIntegrator();
+		wam.jpController.setFromConfig(wamSetting["joint_position_control"]);
+		wam.jpController.resetIntegrator();
 
-		wam.tpRobotController.setFromConfig(wamSetting["tool_position_control"]);
-		wam.tpRobotController.resetIntegrator();
-		wam.tpoTpRobotController.setFromConfig(wamSetting["tool_position_control"]);
-		wam.tpoTpRobotController.resetIntegrator();
+		wam.tpController.setFromConfig(wamSetting["tool_position_control"]);
+		wam.tpController.resetIntegrator();
+		wam.tpoTpController.setFromConfig(wamSetting["tool_position_control"]);
+		wam.tpoTpController.resetIntegrator();
 
-		wam.toRobotController.setFromConfig(wamSetting["tool_orientation_control"]);
-		wam.tpoToRobotController.setFromConfig(wamSetting["tool_orientation_control"]);
+		wam.toController.setFromConfig(wamSetting["tool_orientation_control"]);
+		wam.tpoToController.setFromConfig(wamSetting["tool_orientation_control"]);
 
 		torqueGainSys.setGain(cGain);
 
@@ -88,16 +88,16 @@ public:
 		wam.getLowLevelWam().getPuckGroup().setProperty(barrett::Puck::IKP, 8000);
 		wam.getLowLevelWam().getPuckGroup().setProperty(barrett::Puck::IKCOR, 0);
 
-		wam.jpRobotController.setFromConfig(setting["voltage_joint_position_control"]);
-		wam.jpRobotController.resetIntegrator();
+		wam.jpController.setFromConfig(setting["voltage_joint_position_control"]);
+		wam.jpController.resetIntegrator();
 
-		wam.tpRobotController.setFromConfig(setting["voltage_tool_position_control"]);
-		wam.tpRobotController.resetIntegrator();
-		wam.tpoTpRobotController.setFromConfig(setting["voltage_tool_position_control"]);
-		wam.tpoTpRobotController.resetIntegrator();
+		wam.tpController.setFromConfig(setting["voltage_tool_position_control"]);
+		wam.tpController.resetIntegrator();
+		wam.tpoTpController.setFromConfig(setting["voltage_tool_position_control"]);
+		wam.tpoTpController.resetIntegrator();
 
-		wam.toRobotController.setFromConfig(setting["voltage_tool_orientation_control"]);
-		wam.tpoToRobotController.setFromConfig(setting["voltage_tool_orientation_control"]);
+		wam.toController.setFromConfig(setting["voltage_tool_orientation_control"]);
+		wam.tpoToController.setFromConfig(setting["voltage_tool_orientation_control"]);
 
 		torqueGainSys.setGain(vGain);
 

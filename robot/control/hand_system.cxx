@@ -26,7 +26,7 @@
  *     to other Systems (see example below)
  *   - systems::FirstOrderFilter for filtering a stream of data
  *   - systems::Gain for multiplying by a constant
- *   - systems::PIDController for making simple feedback control systems
+ *   - systems::PIDRobotController for making simple feedback control systems
  *   - systems::Summer for adding two or more streams of data
  *   - systems::Wam for interacting with a WAM in real time (can also be used to
  *     interact asynchronously, as shown in Examples 1 through 4)
@@ -55,19 +55,6 @@
 
 #include "stdheader.h"
 
-#define TYPE_TABLE \
-X(JOINT_POSITIONS,    Wam<DIMENSION>::jp_type,  jp)   \
-X(JOINT_VELOCITIES,   Wam<DIMENSION>::jv_type,  jv)   \
-X(JOINT_TORQUES,      Wam<DIMENSION>::jt_type,  jt)   \
-X(CARTESIAN_POSITION, cp_type,                  cp)   \
-X(CARTESIAN_ORIENTATION,Hand::jp_type,          co)   \
-X(CARTESIAN_ORIENTATION_QD, Eigen::Quaterniond, qd)   \
-X(CARTESIAN_FORCE,    cf_type,                  cf)   \
-X(CARTESIAN_TORQUE,   ct_type,                  ct)   \
-X(CARTESIAN_ACCELERATION,ca_type,               ca)   \
-X(FINGERTIP_TORQUE,   Hand::jp_type,            ft)   \
-X(TACTILE_SUM,        Hand::jp_type,            ts)   \
-X(MISCELLEANOUS,      Wam<DIMENSION>::jp_type,  ms)
 
 using namespace barrett;
 using namespace systems;
@@ -79,7 +66,6 @@ class HandSystem : public systems::System {
 
 	typedef boost::tuple<Hand::jp_type, Hand::jp_type> input_ft_type;
 
-public:
 // IO
 // Marked as "public" because Inputs and Output are (except in special cases)
 // part of a System's public interface

@@ -68,9 +68,9 @@ using barrett::detail::waitForEnter;
 BARRETT_UNITS_TYPEDEFS(DIMENSION);
 
 typedef TactilePuck::v_type tact_array_type;
-typedef systems::Wam<DIMENSION>::jv_type jv_type;
-typedef systems::Wam<DIMENSION>::jp_type jp_type;
-typedef systems::Wam<DIMENSION>::jt_type jt_type;
+//typedef systems::Wam<DIMENSION>::jv_type jv_type;
+//typedef systems::Wam<DIMENSION>::jp_type jp_type;
+//typedef systems::Wam<DIMENSION>::jt_type jt_type;
 
 
 //Function defns

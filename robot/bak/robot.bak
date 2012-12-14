@@ -1,0 +1,152 @@
+
+using barrett::detail::waitForEnter;
+
+enum STATE {
+	PLAYING, STOPPED, PAUSED, QUIT
+} curState = STOPPED, lastState = STOPPED;
+
+static int loop_count = 0; 
+
+//Robot Class
+class Robot {
+	BARRETT_UNITS_TEMPLATE_TYPEDEFS(DIMENSION);
+protected:
+	systems::Wam<DIMENSION>* wam;
+	Hand* hand;
+    HandSystem* hand_system; //for realtime data logging of hand sensors
+    WamSystem* wam_system; //for realtime manipulation of wam trajectory
+	ProductManager& pm;
+	
+public:
+	int dataSize;
+	bool loop;
+    bool problem;
+    stringstream hand_debug;
+	Robot(systems::Wam<DIMENSION>* wam_, ProductManager& pm_, std::string filename_,
+			const libconfig::Setting& setting_) :
+			wam(wam_), hand(NULL), pm(pm_), robotName(filename_), inputType(0), setting(
+					setting_), cms(NULL), cpVec(NULL), qVec(NULL), jpSpline(
+					NULL), cpSpline(NULL), qSpline(NULL), jpTrajectory(NULL), cpTrajectory(
+					NULL), qTrajectory(NULL), time(pm.getExecutionManager()), dataSize(
+					0), loop(false) {
+    }
+	bool init();
+	void startrobotback();
+	void pauserobotback();
+	bool robotbackActive();
+private:
+	DISALLOW_COPY_AND_ASSIGN(Robot);
+public:
+	EIGEN_MAKE_ALIGNED_OPERATOR_NEW
+};
+
+// Initialization - Gravity compensating, setting safety limits, parsing input file and creating trajectories
+
+bool Robot::init() {
+    senses->init();
+    memory->init();
+    control->init();
+}
+void Robot::start(){
+    robot.loop = true;
+    curState = PLAYING;
+
+    float sleep_s = 0.002;
+
+	//while (roboting) {
+    while(pm.getSafetyModule()->getMode() == SafetyModule::ACTIVE){
+        if(robot.problem){
+            //cout << "contact!" << endl;
+            //cout << "hd: " << robot.hand_debug.str() << endl;
+            cout << "uh-oh" << endl;
+            robot.hand_debug.str("");
+            robot.problem = false;
+        }
+		switch (curState) {
+		case QUIT:
+			//roboting = false;
+			break;
+		case PLAYING:
+			switch (lastState) {
+			case STOPPED:
+				robot.moveToStart();
+                robot.init_data_logger();
+				robot.reconnectSystems();
+				robot.startrobotback();
+				lastState = PLAYING;
+				break;
+			case PAUSED:
+				robot.startrobotback();
+				lastState = PLAYING;
+				break;
+			case PLAYING:
+				if (robot.robotbackActive()) {
+					btsleep(sleep_s);
+					break;
+				} else if (robot.loop) {
+                    loop_count++;
+					robot.disconnectSystems();
+					lastState = STOPPED;
+					curState = PLAYING;
+					break;
+                } else {
+					curState = STOPPED;
+					break;
+				}
+    			default:
+				break;
+			}
+			break;
+		case PAUSED:
+			switch (lastState) {
+			case PLAYING:
+				robot.pauserobotback();
+				lastState = PAUSED;
+				break;
+			case PAUSED:
+				btsleep(sleep_s);
+				break;
+			case STOPPED:
+				break;
+			default:
+				break;
+			}
+			break;
+		case STOPPED:
+			switch (lastState) {
+			case PLAYING:
+				robot.disconnectSystems();
+				lastState = STOPPED;
+				break;
+			case PAUSED:
+				robot.disconnectSystems();
+				lastState = STOPPED;
+				break;
+			case STOPPED:
+				btsleep(sleep_s);
+				break;
+			default:
+				break;
+			}
+			break;
+		}
+        /*if(!collecting_data){
+            robot.collect_data_stream();
+            collecting_data = true;
+        }*/
+	}
+	robot.disconnectSystems();
+    robot.output_data_stream();
+	//wam->moveHome();
+	//printf("\n\n");
+	//pm.getSafetyModule()->waitForMode(SafetyModule::IDLE);
+}
+ void Robot::startrobotback() {time.start();}
+ void Robot::pauserobotback() {time.stop();}
+ bool Robot::robotbackActive() {
+	if (inputType == 0)
+		return (jpTrajectory->input.getValue() < jpSpline->finalS());
+	else {
+		return (cpTrajectory->input.getValue() < cpSpline->finalS());
+	}
+}

@@ -13,6 +13,20 @@
 #include "control_mode_switcher.h"
 #include <barrett/standard_main_function.h>
 
+#define TYPE_TABLE \
+X(JOINT_POSITIONS,          Wam<DIMENSION>::jp_type,        input_jp_type)   \
+X(JOINT_VELOCITIES,         Wam<DIMENSION>::jv_type,        input_jv_type)   \
+X(JOINT_TORQUES,            Wam<DIMENSION>::jt_type,        input_jt_type)   \
+X(CARTESIAN_POSITION,       cp_type,        input_cp_type)   \
+X(CARTESIAN_ORIENTATION,    Hand::jp_type,  input_co_type)   \
+X(CARTESIAN_ORIENTATION_QD, Eigen::Quaterniond,  input_qd_type)   \
+X(CARTESIAN_FORCE,          cf_type,        input_cf_type)   \
+X(CARTESIAN_TORQUE,         ct_type,        input_ct_type)   \
+X(CARTESIAN_ACCELERATION,   ca_type,        input_ca_type)   \
+X(FINGERTIP_TORQUE,         Hand::jp_type,  input_ft_type)   \
+X(TACTILE_SUM,              Hand::jp_type,  input_ts_type)   \
+X(MISCELLEANOUS,            Wam<DIMENSION>::jp_type,        input_ms_type)
+
 using barrett::detail::waitForEnter;
 
 enum STATE {
@@ -38,14 +52,18 @@ protected:
 	int inputType;
 	const libconfig::Setting& setting;
 	libconfig::Config config;
-	typedef boost::tuple<double, systems::Wam<DIMENSION>::jp_type> input_jp_type;
+
+#define X(a, b, c) typedef boost::tuple<double, b> c;
+    TYPE_TABLE
+#undef X
+	/*typedef boost::tuple<double, systems::Wam<DIMENSION>::jp_type> input_jp_type;
 	typedef boost::tuple<double, systems::Wam<DIMENSION>::jv_type> input_jv_type;
 	typedef boost::tuple<double, systems::Wam<DIMENSION>::jt_type> input_jt_type;
 	typedef boost::tuple<double, cp_type>                          input_cp_type;
 	typedef boost::tuple<double, Eigen::Quaterniond>               input_qd_type;
 	typedef boost::tuple<double, Hand::jp_type>                    input_ft_type;
 	typedef boost::tuple<double, cp_type>                          input_cf_type;
-	typedef boost::tuple<double, cp_type>                          input_ct_type;
+	typedef boost::tuple<double, cp_type>                          input_ct_type;*/
 
     std::string tmpStr, saveName, fileOut;
 

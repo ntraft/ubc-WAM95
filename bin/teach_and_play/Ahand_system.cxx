@@ -26,7 +26,7 @@
  *     to other Systems (see example below)
  *   - systems::FirstOrderFilter for filtering a stream of data
  *   - systems::Gain for multiplying by a constant
- *   - systems::PIDRobotController for making simple feedback control systems
+ *   - systems::PIDController for making simple feedback control systems
  *   - systems::Summer for adding two or more streams of data
  *   - systems::Wam for interacting with a WAM in real time (can also be used to
  *     interact asynchronously, as shown in Examples 1 through 4)

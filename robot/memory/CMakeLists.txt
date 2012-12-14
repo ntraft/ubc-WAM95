@@ -1,15 +1,11 @@
 ## libbarrett
 find_package(Barrett REQUIRED)
 include_directories(${BARRETT_INCLUDE_DIRS})
-link_directories(${BARRETT_LIBRARY_DIRS})
+#link_directories(${BARRETT_LIBRARY_DIRS})
 add_definitions(${BARRETT_DEFINITIONS})
-set (EXTRA_LIBS ${EXTRA_LIBS} ${BARRETT_LIBRARIES})
 
 find_package(Curses REQUIRED)
 include_directories(${CURSES_INCLUDE_DIR})
-set (EXTRA_LIBS ${EXTRA_LIBS} ${CURSES_LIBRARIES})
-
-set (EXTRA_LIBS ${EXTRA_LIBS} boost_system boost_filesystem)
 
 # Make sure the compiler can find include header files from our library. 
 include_directories (${WAM95Ctrl_SOURCE_DIR}/lib)
@@ -29,9 +25,5 @@ link_directories (${WAM95Ctrl_SOURCE_DIR}/robot/memory)
 link_directories (${WAM95Ctrl_SOURCE_DIR}/robot/senses)
 link_directories (${WAM95Ctrl_SOURCE_DIR}/robot/control)
 
-add_executable (demo main.cxx)
 
-# Link the executable to dependent modules
-# Note: Order is important! place modules to the left of their respective dependents
-#target_link_libraries (demo exp control senses teach play robot mainline utils ${EXTRA_LIBS})
-target_link_libraries (demo exp control senses robot mainline utils ${EXTRA_LIBS})
+add_library (memory memory.cxx)

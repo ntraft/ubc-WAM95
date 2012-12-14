@@ -6,8 +6,8 @@
  */
 
 #define BARRETT_SMF_VALIDATE_ARGS
-#include <barrett/standard_main_function.h> //wam_main function
 #include "stdheader.h"  //check here for all standard includes and definitions
+#include <barrett/standard_main_function.h> //wam_main function
 
 #include "utils.h"
 #include "senses.h"
