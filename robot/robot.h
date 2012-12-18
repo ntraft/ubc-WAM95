@@ -28,11 +28,12 @@ class Robot: public MainLine{
         virtual void run();
 
         //accessors
-        ProductManager* getPM();
+        ProductManager* get_pm();
+        systems::Wam<DIMENSION>* get_wam();
         systems::Wam<DIMENSION>* getWAM();
-        ForceTorqueSensor* getFTS();
-        Hand* getHand();
-        Senses* getSenses();
-        RobotController* getRobotController();
+        ForceTorqueSensor* get_fts();
+        Hand* get_hand();
+        Senses* get_senses();
+        RobotController* get_controller();
 };
 #endif

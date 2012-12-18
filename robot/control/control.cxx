@@ -6,11 +6,12 @@
 Hand::jp_type finger_contacts;        //entries are 0 if no contact, 1 if contact
 bool backdrivesemastop = true;
 
-RobotController::RobotController(Robot* robot){
-    this->pm = robot->getPM();
-    this->wam = robot->getWAM();
-    this->hand = robot->getHand();
-    this->senses = robot->getSenses();
+RobotController::RobotController(ProductManager* pm, Wam<DIMENSION>* wam, Senses* senses){
+    this->pm = pm;
+    this->wam = wam;
+    this->hand = pm->getHand();
+    this->fts = pm->getForceTorqueSensor();
+    this->senses = senses;
 
 	set_vector_values(&finger_contacts, 0, 0);
     init_wam();

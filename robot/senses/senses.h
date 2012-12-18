@@ -33,7 +33,7 @@ class Senses: public MainLine{
 
         Hand::jv_type sensor_vars[NUM_SENSOR_VARS]; 
     public:
-        Senses(Robot* robot);
+        Senses(ProductManager* pm, Wam<DIMENSION>* wam);
         void init_wam();
         void init_hand();
         void init_fts();
@@ -45,10 +45,10 @@ class Senses: public MainLine{
         virtual void run();
 
         //accessors
-        ProductManager* getPM();
-        systems::Wam<DIMENSION>* getWAM();
-        ForceTorqueSensor* getFTS();
-        Hand* getHand();
+        ProductManager* get_pm();
+        systems::Wam<DIMENSION>* get_wam();
+        ForceTorqueSensor* get_fts();
+        Hand* get_hand();
         
         //Sensor utilities
         int get_fingertip_torque_value(int finger_num);

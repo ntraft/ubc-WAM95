@@ -15,7 +15,7 @@ private:
     Senses* senses;
 
 public:
-    RobotController(Robot* robot);
+    RobotController(ProductManager* pm, Wam<DIMENSION>* wam, Senses* senses);
     void init_wam();
     void init_hand();
     //Close all fingers

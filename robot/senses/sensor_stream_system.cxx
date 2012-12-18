@@ -16,13 +16,13 @@ public:
     Input<double> time_input;
     float time_count;
 
-#define X(aa, bb, cc) Output<bb> output_##cc;
-    TYPE_TABLE
+#define X(aa, bb, cc, dd) Output<bb> output_##cc;
+    #include "type_table.h"
 #undef X   
 
 protected:
-#define X(aa, bb, cc) Output<bb>::Value* output_value_##cc;
-    TYPE_TABLE
+#define X(aa, bb, cc, dd) Output<bb>::Value* output_value_##cc;
+    #include "type_table.h"
 #undef X
     Hand* hand;
     Robot* robot;
@@ -34,8 +34,8 @@ public:
 	SensorStreamSystem(Robot* _robot, const std::string& sysName = "SensorStreamSystem") :
 		systems::System(sysName), 
         time_input(this), 
-#define X(aa, bb, cc) output_##cc(this, &output_value_##cc),
-        TYPE_TABLE
+#define X(aa, bb, cc, dd) output_##cc(this, &output_value_##cc),
+    #include "type_table.h"
 #undef X   
         robot(_robot) 
 		{
@@ -47,18 +47,18 @@ protected:
     Hand::jp_type fingertip_torque_readings;
 
 protected:
-#define X(aa, bb, cc) bb readings_##cc;
-    TYPE_TABLE
+#define X(aa, bb, cc, dd) bb readings_##cc;
+    #include "type_table.h"
 #undef X
 	
     virtual void operate() {
 
-        Wam<DIMENSION>* wam = robot->getWAM();
-        Hand* hand = robot->getHand();
-        ForceTorqueSensor* fts = robot->getFTS();
+        Wam<DIMENSION>* wam = robot->get_wam();
+        Hand* hand = robot->get_hand();
+        ForceTorqueSensor* fts = robot->get_fts();
 
-#define X(aa, bb, cc) output_value_##cc->setData(&readings_##cc);
-        TYPE_TABLE
+#define X(aa, bb, cc, dd) output_value_##cc->setData(&readings_##cc);
+    #include "type_table.h"
 #undef X
 	}
 };

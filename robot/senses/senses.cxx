@@ -1,6 +1,6 @@
 #include "senses.h"
 #include "stdheader.h"
-#include "robot.h"
+//#include "robot.h"
 
 const int TACT_CELL_HEIGHT = 3;
 const int TACT_CELL_WIDTH = 6;
@@ -9,9 +9,9 @@ const int TACT_BOARD_COLS = 3;
 const int TACT_BOARD_STRIDE = TACT_BOARD_COLS * TACT_CELL_WIDTH + 2;
 
 
-Senses::Senses(Robot* robot){
-    this->pm = robot->getPM();
-    this->wam = robot->getWAM();
+Senses::Senses(ProductManager* pm, Wam<DIMENSION>* wam){
+    this->pm = pm;
+    this->wam = wam;
     this->fts = pm->getForceTorqueSensor();
     this->hand = pm->getHand();
 
@@ -132,7 +132,7 @@ void Senses::display(){
 	// Is a Hand attached?
 	Hand* hand = NULL;
 	if (pm->foundHand()) {
-		hand = pm->getHand();
+		hand = pm->get_hand();
 
 		printf(">>> Press [Enter] to initialize Hand. (Make sure it has room!)");
 		waitForEnter();

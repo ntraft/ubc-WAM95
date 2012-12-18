@@ -8,7 +8,8 @@
 #include "stdheader.h"
 #include "macros.h"
 #include "control_mode_switcher.h"
-#include "robot.h"
+//#include "robot.h"
+#include "senses.h"
 
 std::string itoa(int i){std::string a = boost::lexical_cast<std::string>(i);return a;}
 
@@ -52,13 +53,13 @@ systems::TupleGrouper<cp_type, Eigen::Quaterniond> poseTg;
 //	jpTrajectory = new systems::Callback<double, systems::Wam<DIMENSION>::jp_type>(boost::ref(*jpSpline));
 
 typedef boost::tuple<double, 
-#define X(aa, bb, cc) bb,
+#define X(aa, bb, cc, dd) bb,
     #include "type_table.h"
 #undef X
         double> input_stream_type;
 
 systems::TupleGrouper<double, 
-#define X(aa, bb, cc) bb,
+#define X(aa, bb, cc, dd) bb,
     #include "type_table.h"
 #undef X
         double> tg;
@@ -74,30 +75,31 @@ std::string log_prefix;
 //  2. splines are built from these data points
 //  3. sensorimotor trajectories are built from the splines
 //  note: see lib/type_table.h
-#define X(aa, bb, cc) typedef boost::tuple<double, bb> input_type_##cc;
+#define X(aa, bb, cc, dd) typedef boost::tuple<double, bb> input_type_##cc;
     #include "type_table.h"
 #undef X
-#define X(aa, bb, cc) input_type_##cc* sample_##cc;
+#define X(aa, bb, cc, dd) input_type_##cc* sample_##cc;
     #include "type_table.h"
 #undef X
-#define X(aa, bb, cc) std::vector<input_type_##cc, Eigen::aligned_allocator<input_type_##cc> >* vec_##cc;
+#define X(aa, bb, cc, dd) std::vector<input_type_##cc, Eigen::aligned_allocator<input_type_##cc> >* vec_##cc;
     #include "type_table.h"
 #undef X
-#define X(aa, bb, cc) math::Spline<bb>* spline_##cc;
+#define X(aa, bb, cc, dd) math::Spline<bb>* spline_##cc;
     #include "type_table.h"
 #undef X
-#define X(aa, bb, cc) systems::Callback<double, bb>* trajectory_##cc;
+#define X(aa, bb, cc, dd) systems::Callback<double, bb>* trajectory_##cc;
     #include "type_table.h"
 #undef X
-#define X(aa, bb, cc) systems::Callback<double, bb>* mean_trajectory_##cc;
+#define X(aa, bb, cc, dd) systems::Callback<double, bb>* mean_trajectory_##cc;
     #include "type_table.h"
 #undef X
-#define X(aa, bb, cc) systems::Callback<double, bb>* std_trajectory_##cc;
+#define X(aa, bb, cc, dd) systems::Callback<double, bb>* std_trajectory_##cc;
     #include "type_table.h"
 #undef X
 
 protected:
-    Robot* robot;
+    ProductManager* pm;
+    Senses* senses;
 	systems::Wam<DIMENSION>* wam;
 	Hand* hand;
     //HandSystem* hand_system; //for realtime data logging of hand sensors
@@ -108,12 +110,12 @@ public:
 	bool loop;
     bool problem;
     stringstream hand_debug;
-	RTMemory(Robot* _robot, std::string filename_, const libconfig::Setting& setting_) :
-			robot(_robot), playName(filename_), inputType(0), setting(setting_), cms(NULL), 
+	RTMemory(ProductManager* _pm, Wam<DIMENSION>* _wam, Senses* _senses, std::string filename_, const libconfig::Setting& setting_) :
+			pm(_pm), wam(_wam), senses(_senses),playName(filename_), inputType(0), setting(setting_), cms(NULL), 
             //cpVec(NULL), qVec(NULL), 
             jpSpline( NULL), cpSpline(NULL), qSpline(NULL), 
             jpTrajectory(NULL), cpTrajectory( NULL), qTrajectory(NULL), 
-            time(robot->getPM()->getExecutionManager()), dataSize( 0), loop(false) 
+            time(pm->getExecutionManager()), dataSize( 0), loop(false) 
     { 
         data_log_headers = 
     "time"
@@ -124,13 +126,13 @@ public:
     ",cart_ori_0,cart_ori_1,cart_ori_2,cart_ori_3"
     ",ft_torque_0,ft_torque_1,ft_torque_2,ft_torque_3"
     ;
-#define X(aa, bb, cc) vec_##cc = new std::vector<input_type_##cc, Eigen::aligned_allocator<input_type_##cc> >();
+#define X(aa, bb, cc, dd) vec_##cc = new std::vector<input_type_##cc, Eigen::aligned_allocator<input_type_##cc> >();
         #include "type_table.h"
 #undef X
-#define X(aa, bb, cc) sample_##cc = new input_type_##cc();
+#define X(aa, bb, cc, dd) sample_##cc = new input_type_##cc();
         #include "type_table.h"
 #undef X
-//#define X(aa, bb, cc) trajectory_##cc = new systems::Callback<double,bb>(boost::ref(*spline_##cc));
+//#define X(aa, bb, cc, dd) trajectory_##cc = new systems::Callback<double,bb>(boost::ref(*spline_##cc));
 //    #include "type_table.h"
 //#undef X
     }
@@ -249,7 +251,7 @@ bool RTMemory::init(){
 
 	printf("\nFile Contains data in the form of: %s\n\n",
 			inputType == 0 ? "jp_type" : "pose_type");
-
+    return true;
 }
 
 //gets called at the start of each loop
@@ -273,9 +275,9 @@ bool RTMemory::init(){
     //    logger->closeLog();
     const size_t PERIOD_MULTIPLIER = 1;
     logger = new systems::PeriodicDataLogger<input_stream_type> (
-			robot->getPM()->getExecutionManager(),
+			pm->getExecutionManager(),
 			new log::RealTimeWriter<input_stream_type>(
-                (char*)tmp_filename.c_str(), PERIOD_MULTIPLIER * robot->getPM()->getExecutionManager()->getPeriod()),
+                (char*)tmp_filename.c_str(), PERIOD_MULTIPLIER * pm->getExecutionManager()->getPeriod()),
 			PERIOD_MULTIPLIER);
 }
 
@@ -323,7 +325,7 @@ void RTMemory::load_data_stream(bool mean){
 	boost::char_separator<char> sep(",");
     
     // Create our spline and trajectory if the first line of the parsed file informs us of a jp_type
-//#define X(aa, bb, cc) std::vector<input_type_##cc, = new input_type_##cc();
+//#define X(aa, bb, cc, dd) std::vector<input_type_##cc, = new input_type_##cc();
  //       #include "type_table.h"
 //#undef X
     /*std::vector<input_jp_type, Eigen::aligned_allocator<input_jp_type> > stream_jp_vec;
@@ -359,7 +361,7 @@ void RTMemory::load_data_stream(bool mean){
         fLine[0] = count;
         count += 0.002;
 
-#define X(aa, bb, cc) boost::get<0>(*sample_##cc) = fLine[fLine_i];
+#define X(aa, bb, cc, dd) boost::get<0>(*sample_##cc) = fLine[fLine_i];
         #include "type_table.h"
 #undef X
         fLine_i++;
@@ -431,23 +433,23 @@ void RTMemory::load_data_stream(bool mean){
         //boost::get<0>(sample) = fLine[j];
         //
 
-#define X(aa, bb, cc) vec_##cc->push_back(*sample_##cc); 
+#define X(aa, bb, cc, dd) vec_##cc->push_back(*sample_##cc); 
     #include "type_table.h"
 #undef X
     }
     //Create our splines between points
-#define X(aa, bb, cc) spline_##cc = new math::Spline<bb>(*vec_##cc); 
+#define X(aa, bb, cc, dd) spline_##cc = new math::Spline<bb>(*vec_##cc); 
     #include "type_table.h"
 #undef X
     //stream_ft_spline = new math::Spline<Hand::jp_type>          (stream_ft_vec);
     if(mean){
-#define X(aa, bb, cc) mean_trajectory_##cc = new systems::Callback<double, bb>(boost::ref(*spline_##cc)); 
+#define X(aa, bb, cc, dd) mean_trajectory_##cc = new systems::Callback<double, bb>(boost::ref(*spline_##cc)); 
     #include "type_table.h"
 #undef X
         //stream_ft_std_trajectory = new systems::Callback<double, Hand::jp_type>          (boost::ref(*stream_ft_spline));
     }
     else{
-#define X(aa, bb, cc) std_trajectory_##cc = new systems::Callback<double, bb>(boost::ref(*spline_##cc)); 
+#define X(aa, bb, cc, dd) std_trajectory_##cc = new systems::Callback<double, bb>(boost::ref(*spline_##cc)); 
     #include "type_table.h"
 #undef X
         //stream_ft_std_trajectory = new systems::Callback<double, Hand::jp_type>          (boost::ref(*stream_ft_spline));

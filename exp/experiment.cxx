@@ -57,11 +57,11 @@ std::string var_keys_3[NUM_EXP_VARS_3] = {
 std::vector<double> min_hfingertip_torque(4,9999999);//running minimum values
 Experiment::Experiment(Robot* robot){ 
     this->robot = robot;
-    this->controller = robot->getRobotController();
-    this->senses = robot->getSenses();
-    wam = robot->getWAM();
-    hand = robot->getHand();
-    pm = robot->getPM();
+    this->controller = robot->get_controller();
+    this->senses = robot->get_senses();
+    wam = robot->get_wam();
+    hand = robot->get_hand();
+    pm = robot->get_pm();
 }
 void Experiment::toggle_collect_data(){
     flag_collect_data = !flag_collect_data;
@@ -99,9 +99,9 @@ Experiment* Experiment::get_experiment(){
 void Experiment::teach_pose(int seqnum){
     load_exp_variables();
 	if(seqnum == 0){		
-        copy_matrix(&exp_vars_7[WAM_BOTTOM], robot->getWAM()->getJointPositions());
-        copy_matrix(&exp_vars_3[WAM_BOTTOM_C], robot->getWAM()->getToolPosition());
-        Eigen::Quaterniond wam_bottom_q =  robot->getWAM()->getToolOrientation();
+        copy_matrix(&exp_vars_7[WAM_BOTTOM], robot->get_wam()->getJointPositions());
+        copy_matrix(&exp_vars_3[WAM_BOTTOM_C], robot->get_wam()->getToolPosition());
+        Eigen::Quaterniond wam_bottom_q =  robot->get_wam()->getToolOrientation();
         copy_matrix(&exp_vars_4[WAM_BOTTOM_O], quaternion2hjp(&wam_bottom_q));
         /*
         std::cout << "Setting exp_vars[WAM_BOTTOM] to " << to_string(&exp_vars[WAM_BOTTOM]) << std::endl;
@@ -110,9 +110,9 @@ void Experiment::teach_pose(int seqnum){
         */
     }
     else if(seqnum == 1){	
-        copy_matrix(&exp_vars_7[WAM_TOP], robot->getWAM()->getJointPositions());
-        copy_matrix(&exp_vars_3[WAM_TOP_C], robot->getWAM()->getToolPosition());
-        Eigen::Quaterniond wam_top_q =  robot->getWAM()->getToolOrientation();
+        copy_matrix(&exp_vars_7[WAM_TOP], robot->get_wam()->getJointPositions());
+        copy_matrix(&exp_vars_3[WAM_TOP_C], robot->get_wam()->getToolPosition());
+        Eigen::Quaterniond wam_top_q =  robot->get_wam()->getToolOrientation();
         copy_matrix(&exp_vars_4[WAM_TOP_O], quaternion2hjp(&wam_top_q));
         /*
         std::cout << "Setting exp_vars[WAM_TOP] to " << to_string(&exp_vars[WAM_TOP]) << std::endl;
@@ -130,24 +130,24 @@ void Experiment::init_data_log(){
 		exit(1);
 	}
     std::cout << "tmpFile created" << std::endl;
-    time = new systems::Ramp(robot->getPM()->getExecutionManager(), 1.0);
+    time = new systems::Ramp(robot->get_pm()->getExecutionManager(), 1.0);
     std::cout << "time created" << std::endl;
 	
     tg = new systems::TupleGrouper<double, jp_type, jv_type, jt_type, Hand::cp_type, Eigen::Quaterniond>;
     std::cout << "tg created" << std::endl;
 	connect(time->output, tg->getInput<0>());
-	connect(robot->getWAM()->jpOutput, tg->getInput<1>());
-	connect(robot->getWAM()->jvOutput, tg->getInput<2>());
-	connect(robot->getWAM()->jtSum.output, tg->getInput<3>());
-	connect(robot->getWAM()->toolPosition.output, tg->getInput<4>());
-	connect(robot->getWAM()->toolOrientation.output, tg->getInput<5>());
+	connect(robot->get_wam()->jpOutput, tg->getInput<1>());
+	connect(robot->get_wam()->jvOutput, tg->getInput<2>());
+	connect(robot->get_wam()->jtSum.output, tg->getInput<3>());
+	connect(robot->get_wam()->toolPosition.output, tg->getInput<4>());
+	connect(robot->get_wam()->toolOrientation.output, tg->getInput<5>());
     std::cout << "tg connected" << std::endl;
 
 	typedef boost::tuple<double, jp_type, jv_type, jt_type, Hand::cp_type, Eigen::Quaterniond> tuple_type;
 	const size_t PERIOD_MULTIPLIER = 1;
 	logger = new systems::PeriodicDataLogger<tuple_type>(
-			robot->getPM()->getExecutionManager(),
-			new log::RealTimeWriter<tuple_type>((char*)tmpFile.c_str(), PERIOD_MULTIPLIER * robot->getPM()->getExecutionManager()->getPeriod()),
+			robot->get_pm()->getExecutionManager(),
+			new log::RealTimeWriter<tuple_type>((char*)tmpFile.c_str(), PERIOD_MULTIPLIER * robot->get_pm()->getExecutionManager()->getPeriod()),
 			PERIOD_MULTIPLIER);
 
     std::cout << "Logging initialized" << std::endl;
@@ -196,17 +196,17 @@ void Experiment::run(){
 	
     tg = new systems::TupleGrouper<LOG_DATA_TYPES>;
 	connect(time->output, tg->getInput<0>());
-	connect(robot->getWAM()->jpOutput, tg->getInput<1>());
-	connect(robot->getWAM()->jvOutput, tg->getInput<2>());
-	connect(robot->getWAM()->jtSum.output, tg->getInput<3>());
-	connect(robot->getWAM()->toolPosition.output, tg->getInput<4>());
-	connect(robot->getWAM()->toolOrientation.output, tg->getInput<5>());
+	connect(robot->get_wam()->jpOutput, tg->getInput<1>());
+	connect(robot->get_wam()->jvOutput, tg->getInput<2>());
+	connect(robot->get_wam()->jtSum.output, tg->getInput<3>());
+	connect(robot->get_wam()->toolPosition.output, tg->getInput<4>());
+	connect(robot->get_wam()->toolOrientation.output, tg->getInput<5>());
 
 	typedef boost::tuple<LOG_DATA_TYPES> tuple_type;
 	const size_t PERIOD_MULTIPLIER = 1;
 	logger = new systems::PeriodicDataLogger<tuple_type>(
-			robot->getPM()->getExecutionManager(),
-			new log::RealTimeWriter<tuple_type>(tmpFile.c_str(), PERIOD_MULTIPLIER * robot->getPM()->getExecutionManager()->getPeriod()),
+			robot->get_pm()->getExecutionManager(),
+			new log::RealTimeWriter<tuple_type>(tmpFile.c_str(), PERIOD_MULTIPLIER * robot->get_pm()->getExecutionManager()->getPeriod()),
 			PERIOD_MULTIPLIER);
 }
 
@@ -427,17 +427,17 @@ void Experiment::data_collect(){
 	
 	//systems::Wam<DIMENSION>::jp_type exp_vars[WAM_BOTTOM];
 	//parseDoubles(&exp_vars[WAM_BOTTOM], "-0.0800 -1.8072 -0.0199 0.9068 0.5583 -0.4459 0.0");
-	//robot->getWAM()->moveTo(exp_vars[WAM_BOTTOM], false, 1.0);
+	//robot->get_wam()->moveTo(exp_vars[WAM_BOTTOM], false, 1.0);
 	
 	while(pm->getSafetyModule()->getMode() == SafetyModule::ACTIVE){//datasemastop){
 		// WAM
-		jp.push_back(robot->getWAM()->getJointPositions());
-		jv.push_back(robot->getWAM()->getJointVelocities());
-		jt.push_back(robot->getWAM()->getJointTorques());
+		jp.push_back(robot->get_wam()->getJointPositions());
+		jv.push_back(robot->get_wam()->getJointVelocities());
+		jt.push_back(robot->get_wam()->getJointTorques());
 		
 		//WAM end-link Position (wrist)
-		cp.push_back(robot->getWAM()->getToolPosition());
-		Eigen::Quaterniond q = robot->getWAM()->getToolOrientation();
+		cp.push_back(robot->get_wam()->getToolPosition());
+		Eigen::Quaterniond q = robot->get_wam()->getToolOrientation();
 		std::vector<double> q_Scalars;
 		q_Scalars.push_back(q.w());
 		q_Scalars.push_back(q.x());

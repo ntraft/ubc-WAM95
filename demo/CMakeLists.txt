@@ -34,4 +34,4 @@ add_executable (demo main.cxx)
 # Link the executable to dependent modules
 # Note: Order is important! place modules to the left of their respective dependents
 #target_link_libraries (demo exp control senses teach play robot mainline utils ${EXTRA_LIBS})
-target_link_libraries (demo exp control senses robot mainline utils ${EXTRA_LIBS})
+target_link_libraries (demo exp robot control senses memory mainline utils ${EXTRA_LIBS})
