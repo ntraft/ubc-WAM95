@@ -2,6 +2,7 @@
 #define EXPERIMENT_H_
 
 #include "stdheader.h"
+#include "mainline.h"
 
 class Robot;
 class RobotController;
@@ -62,7 +63,7 @@ enum EXP_VAR_KEYS_3{
     NUM_EXP_VARS_3
 };
 
-class Experiment{
+class Experiment: public MainLine{
 private:
     //data collection vectors
     std::vector< std::vector<int> > hfingertip_torque;	//hand strain measure
@@ -123,7 +124,7 @@ protected:
 
 public:
     EIGEN_MAKE_ALIGNED_OPERATOR_NEW 
-	Experiment(Robot* robot);
+    Experiment(ProductManager* pm, Wam<DIMENSION>* wam, Senses* senses, RobotController* controller);
 
     void toggle_collect_data();
     void teach_pose(int seqnum);

@@ -59,10 +59,12 @@ public:
     }
 
     void run(){
-        
-        while (1){//robot->get_pm()->getSafetyModule()->getMode() == SafetyModule::ACTIVE) {
+        bool quit = false;
+        cout << "main run" << endl; 
+        while (!quit){//robot->get_pm()->getSafetyModule()->getMode() == SafetyModule::ACTIVE) {
             step();
             switch (line[0]) {
+                cout << "line received: " << line << endl;
 #define X(aa, bb, cc, dd, ee) case bb: cc; break;
         #include "main_table.h"
 #undef X
@@ -94,19 +96,20 @@ public:
                 case '3': robot->get_wam()->gravityCompensate(); break;
                 */
                 default:
-                    unsigned char in = atoi(line.c_str());
-                    controller->hand_command(in);
+                    //unsigned char in = atoi(line.c_str());
+                    //controller->hand_command(in);
                     help();
                     break;
             }
         }
+        exit();
     }
     void help(){
         printf("\n");
-#define X(aa, bb, cc, dd, ee) printf("     bb dd\n");
+#define X(aa, bb, cc, dd, ee) cout << "     " << bb << ": " << dd << endl; //printf("     bb dd\n");
         #include "main_table.h"
 #undef X
-/*
+        /*
         printf("    'j' go to joint position\n");
         printf("    'p' go to tool  position\n");
         printf("    'w' go to hand  position\n");
@@ -134,8 +137,8 @@ template<size_t DOF>
 int wam_main(int argc, char** argv, ProductManager& pm, systems::Wam<DOF>& wam) {
     BARRETT_UNITS_TEMPLATE_TYPEDEFS(DOF);
 
-    //robot = new Robot(&pm, ((systems::Wam<DIMENSION>*)(&wam)));
-    MainProgram mp(NULL);//robot);
+    robot = new Robot(&pm, ((systems::Wam<DIMENSION>*)(&wam)));
+    MainProgram mp(robot);
     mp.run();
     return 0;
 }

@@ -6,6 +6,7 @@
 
 class Senses;
 class RobotController;
+class Experiment;
 
 class Robot: public MainLine{
     private:
@@ -15,6 +16,7 @@ class Robot: public MainLine{
         ForceTorqueSensor* fts;
         Senses* senses;
         RobotController* controller;
+        Experiment* experiment;
 
     public:
         Robot(ProductManager* pm, systems::Wam<DIMENSION>* wam);

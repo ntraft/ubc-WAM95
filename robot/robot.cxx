@@ -2,6 +2,7 @@
 #include "stdheader.h"
 #include "control.h"
 #include "senses.h"
+#include "experiment.h"
 
 Robot::Robot(ProductManager* pm, systems::Wam<DIMENSION>* wam){
     this->pm = pm;
@@ -14,10 +15,12 @@ Robot::Robot(ProductManager* pm, systems::Wam<DIMENSION>* wam){
     
     senses = new Senses(pm, wam);
     controller = new RobotController(pm, wam, senses);
+    experiment = new Experiment(pm, wam, senses, controller);
 
     module_name = "Robot";
 
     std::cout << "Robot initialized!" << std::endl;
+    fflush(stdout);
 }
 
 void Robot::init_wam(){
@@ -29,14 +32,27 @@ void Robot::init_fts(){
 }
 
 //MAINLINE
-void Robot::help(){
-    std::cout << "Robot help" << std::endl;
-}
 void Robot::validate_args(){
     std::cout << "Robot validate args" << std::endl;
 }
 void Robot::run(){
-    step();
+    bool back = false;
+    while (!back){//robot->get_pm()->getSafetyModule()->getMode() == SafetyModule::ACTIVE) {
+        step();
+        switch (line[0]) {
+#define X(aa, bb, cc, dd, ee) case bb: cc; break;
+            #include "robot_table.h"
+#undef X
+            default: help(); break;
+        }
+    }
+    exit();
+}
+void Robot::help(){
+    printf("\n");
+#define X(aa, bb, cc, dd, ee) printf("     bb dd\n");
+    #include "robot_table.h"
+#undef X
 }
 
 //ACCESSORS

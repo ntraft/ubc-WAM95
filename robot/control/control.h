@@ -2,11 +2,12 @@
 #define CONTROL_H_
 
 #include "stdheader.h"
+#include "mainline.h"
 
 class Robot;
 class Senses;
 
-class RobotController{
+class RobotController: public MainLine{
 private:
     systems::Wam<DIMENSION>* wam;
     Hand* hand;
@@ -18,6 +19,11 @@ public:
     RobotController(ProductManager* pm, Wam<DIMENSION>* wam, Senses* senses);
     void init_wam();
     void init_hand();
+
+    void validate_args();
+    void run();
+    void help();
+
     //Close all fingers
     void close_hand();
     //Open all fingers
@@ -26,6 +32,7 @@ public:
     void grasp_object();
     //open all fingers and reset finger contact flags
     void ungrasp_object();
+    int get_fingertip_torque_value(Hand* hand, int finger_num);
     void backdrive_hand_thread();
     void backdrive_hand();
     template<size_t DOF, int R, int C, typename Units>

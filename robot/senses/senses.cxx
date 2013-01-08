@@ -21,14 +21,27 @@ Senses::Senses(ProductManager* pm, Wam<DIMENSION>* wam){
 }
 
 //MAINLINE
-void Senses::help(){
-    std::cout << "Senses help" << std::endl;
-}
 void Senses::validate_args(){
-    std::cout << "Senses validate args" << std::endl;
+    std::cout << "Robot validate args" << std::endl;
 }
 void Senses::run(){
-    step();
+    bool back = false;
+    while (!back){//robot->get_pm()->getSafetyModule()->getMode() == SafetyModule::ACTIVE) {
+        step();
+        switch (line[0]) {
+#define X(aa, bb, cc, dd, ee) case bb: cc; break;
+            #include "senses_table.h"
+#undef X
+            default: help(); break;
+        }
+    }
+    exit();
+}
+void Senses::help(){
+    printf("\n");
+#define X(aa, bb, cc, dd, ee) printf("     bb dd\n");
+    #include "senses_table.h"
+#undef X
 }
 
 //ACCESSORS

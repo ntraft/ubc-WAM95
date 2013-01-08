@@ -55,13 +55,14 @@ std::string var_keys_3[NUM_EXP_VARS_3] = {
     "WamTopC"
 };
 std::vector<double> min_hfingertip_torque(4,9999999);//running minimum values
-Experiment::Experiment(Robot* robot){ 
-    this->robot = robot;
-    this->controller = robot->get_controller();
-    this->senses = robot->get_senses();
-    wam = robot->get_wam();
-    hand = robot->get_hand();
-    pm = robot->get_pm();
+
+
+Experiment::Experiment(ProductManager* _pm, Wam<DIMENSION>* _wam, Senses* _senses, RobotController* _controller):MainLine(){//, pm(_pm),wam(_wam),hand(_pm->getHand()),senses(_senses),controller(_controller){
+    this->pm = _pm;
+    this->wam = _wam;
+    this->controller = _controller;
+    this->senses = _senses;
+    this->hand = pm->getHand();
 }
 void Experiment::toggle_collect_data(){
     flag_collect_data = !flag_collect_data;
@@ -70,7 +71,7 @@ void Experiment::toggle_collect_data(){
 Experiment* Experiment::get_experiment(){
 	std::cout << "Running " << experiment_keys[int(exp_id)] << " Experiment..." << std::endl;
 	switch(exp_id){
-		case ACTIONPHASE:{      return new BHTorque(robot);}
+		/*case ACTIONPHASE:{      return new BHTorque(robot);}
 		case ACTIVESENSING:{    return new BHTorque(robot);}
 		case WAMVELOCITY:{      return new BHTorque(robot);}
 		case WAMJOINTPOS:{      return new BHTorque(robot);}
@@ -82,8 +83,8 @@ Experiment* Experiment::get_experiment(){
 		case BHTRAPEZOIDAL:{    return new BHTorque(robot);}
 		case SIMPLESHAPES:{     return new BHTorque(robot);}
 		case ACTIVEPROBING:{    return new BHTorque(robot);}
-		case CARTESIANRASTER:{  return 0;/*new CartesianRaster(robot);*/}
-		case FLIP:{             return new FlipTilt(robot);}
+		case CARTESIANRASTER:{  return 0;new CartesianRaster(robot);}
+		case FLIP:{             return new FlipTilt(robot);}*/
 		//case HOLDPOSITION:{  return new HoldPosition(robot);}
 		//case SYSTEMSINTRO:{  return new SystemsIntro(robot);}
 		//case REALTIMEMOVE:{  return new RealtimeMove(robot);}
@@ -127,7 +128,7 @@ void Experiment::init_data_log(){
     tmpFile = "/tmp/btXXXXXX";
 	if (mkstemp((char*)tmpFile.c_str()) == -1) {
 		printf("ERROR: Couldn't create temporary file!\n");
-		exit(1);
+		exit();
 	}
     std::cout << "tmpFile created" << std::endl;
     time = new systems::Ramp(robot->get_pm()->getExecutionManager(), 1.0);
@@ -298,7 +299,7 @@ void Experiment::load_exp_variables_7(){
 	std::ifstream myfile ("data/exp7.dat");
 	if (!myfile.is_open()){
 		std::cout << "Unable to open file" << std::endl; 
-		exit(1);
+		exit();
 	}
     
     for(int i = 0; i < NUM_EXP_VARS_7; i++){
@@ -315,7 +316,7 @@ void Experiment::load_exp_variables_4(){
 	std::ifstream myfile ("data/exp4.dat");
 	if (!myfile.is_open()){
 		std::cout << "Unable to open file" << std::endl; 
-		exit(1);
+		exit();
 	}
     
     for(int i = 0; i < NUM_EXP_VARS_4; i++){
@@ -332,7 +333,7 @@ void Experiment::load_exp_variables_3(){
 	std::ifstream myfile ("data/exp3.dat");
 	if (!myfile.is_open()){
 		std::cout << "Unable to open file" << std::endl; 
-		exit(1);
+		exit();
 	}
     
     for(int i = 0; i < NUM_EXP_VARS_3; i++){
@@ -358,7 +359,7 @@ void Experiment::save_exp_variables_7(){
 	std::ofstream myfile ("data/exp7.dat");
 	if (!myfile.is_open()){
 		std::cout << "Unable to open file" << std::endl; 
-		exit(1);
+		exit();
 	}
 
 	//exp_vars[WAM_BOTTOM_O] = quaternion2hjp(&wam_bottom_q);
@@ -374,7 +375,7 @@ void Experiment::save_exp_variables_4(){
 	std::ofstream myfile ("data/exp4.dat");
 	if (!myfile.is_open()){
 		std::cout << "Unable to open file" << std::endl; 
-		exit(1);
+		exit();
 	}
 
 	//exp_vars[WAM_BOTTOM_O] = quaternion2hjp(&wam_bottom_q);
@@ -390,7 +391,7 @@ void Experiment::save_exp_variables_3(){
 	std::ofstream myfile ("data/exp3.dat");
 	if (!myfile.is_open()){
 		std::cout << "Unable to open file" << std::endl; 
-		exit(1);
+		exit();
 	}
 
 	//exp_vars[WAM_BOTTOM_O] = quaternion2hjp(&wam_bottom_q);
