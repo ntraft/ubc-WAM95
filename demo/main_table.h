@@ -14,7 +14,9 @@ X(O, 'o', controller->hold_orientation(), "to cause WAM to hold its current orie
 X(D, 'd', experiment->toggle_collect_data(), "to toggle data collection on/off (default off)", "N/A")
 #endif
 
-X(B, 'b', controller->backdrive_hand(), "toggle hand backdrivability", "N/A")
+X(T, 't', tap->run(), "run teach and play interface", "N/A")
+X(B, 'b', robot->get_controller()->backdrive_hand(), "toggle hand backdrivability", "N/A")
+X(E, 'e', exit(), "exit program", "N/A")
 X(ONE, '1', experiment->teach_pose(0), "to record WAM bottom joint angles", "N/A")
 X(TWO, '2', experiment->teach_pose(1), "to record WAM top joint angles", "N/A")
 X(THREE, '3', robot->get_wam()->gravityCompensate(), "to compensate for Gravity with WAM", "N/A")

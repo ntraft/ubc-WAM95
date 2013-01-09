@@ -57,11 +57,16 @@ std::string var_keys_3[NUM_EXP_VARS_3] = {
 std::vector<double> min_hfingertip_torque(4,9999999);//running minimum values
 
 
-Experiment::Experiment(ProductManager* _pm, Wam<DIMENSION>* _wam, Senses* _senses, RobotController* _controller):MainLine(){//, pm(_pm),wam(_wam),hand(_pm->getHand()),senses(_senses),controller(_controller){
-    this->pm = _pm;
+Experiment::Experiment(Robot* robot):MainLine(){//ProductManager* _pm, Wam<DIMENSION>* _wam, Senses* _senses, RobotController* _controller):MainLine(){//, pm(_pm),wam(_wam),hand(_pm->getHand()),senses(_senses),controller(_controller){
+    /*this->pm = _pm;
     this->wam = _wam;
     this->controller = _controller;
     this->senses = _senses;
+    this->hand = pm->getHand();*/
+    this->pm = robot->get_pm();
+    this->wam = robot->get_wam();
+    this->controller = robot->get_controller();
+    this->senses = robot->get_senses();
     this->hand = pm->getHand();
 }
 void Experiment::toggle_collect_data(){

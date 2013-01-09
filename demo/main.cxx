@@ -15,17 +15,15 @@
 #include "control.h"
 #include "experiment.h"
 #include "action.h"
+#include "tap.h"
 //#include "teach.h"
 //#include "play.h"
 
-std::vector<std::string> autoCmds;
-std::string line;
-
-Experiment* experiment;
-RobotController* controller;
-Senses* senses;
+//std::vector<std::string> autoCmds;
+//std::string line;
+/*
 Robot* robot;
-
+*/
 bool validate_args(int argc, char** argv) {
 	/*if (argc != 2  &&  argc != 3) {
 		printf("Usage: %s <remoteHost> [--auto]\n", argv[0]);
@@ -50,17 +48,21 @@ void step_program(){
 
 class MainProgram: public MainLine{
     Robot* robot;
+    Experiment* experiment;
+    TeachAndPlay* tap;
 
 public:
     MainProgram(Robot* _robot):MainLine(), robot(_robot){
+        tap = new TeachAndPlay(robot);
+        experiment = new Experiment(robot);
     }
 
     void validate_args(string line){
     }
 
     void run(){
+        MainLine::run();
         bool quit = false;
-        cout << "main run" << endl; 
         while (!quit){//robot->get_pm()->getSafetyModule()->getMode() == SafetyModule::ACTIVE) {
             step();
             switch (line[0]) {
@@ -137,7 +139,7 @@ template<size_t DOF>
 int wam_main(int argc, char** argv, ProductManager& pm, systems::Wam<DOF>& wam) {
     BARRETT_UNITS_TEMPLATE_TYPEDEFS(DOF);
 
-    robot = new Robot(&pm, ((systems::Wam<DIMENSION>*)(&wam)));
+    Robot* robot = new Robot(&pm, ((systems::Wam<DIMENSION>*)(&wam)));
     MainProgram mp(robot);
     mp.run();
     return 0;

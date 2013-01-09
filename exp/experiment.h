@@ -124,7 +124,7 @@ protected:
 
 public:
     EIGEN_MAKE_ALIGNED_OPERATOR_NEW 
-    Experiment(ProductManager* pm, Wam<DIMENSION>* wam, Senses* senses, RobotController* controller);
+    Experiment(Robot* robot);//ProductManager* pm, Wam<DIMENSION>* wam, Senses* senses, RobotController* controller);
 
     void toggle_collect_data();
     void teach_pose(int seqnum);

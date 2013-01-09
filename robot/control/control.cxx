@@ -146,7 +146,7 @@ void RobotController::backdrive_hand_thread(){
         for(int i = 0; i < NUM_FINGERS; i++){
             cout << "in for" << endl;fflush(stdout);
             //get_fingertip_torque_value(hand,0);
-            //int torque = 0; //robot->get_fingertip_torque_value(hand, i);
+            int torque = 0; //robot->get_fingertip_torque_value(hand, i);
             cout << "got torque value" << endl;fflush(stdout);
             if(torque > torque_threshold_max){
                 //std::cout << "move by " << small_negative_torque[i] << std::endl;fflush(stdout);

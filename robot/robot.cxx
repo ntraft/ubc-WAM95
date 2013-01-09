@@ -2,7 +2,7 @@
 #include "stdheader.h"
 #include "control.h"
 #include "senses.h"
-#include "experiment.h"
+//#include "experiment.h"
 
 Robot::Robot(ProductManager* pm, systems::Wam<DIMENSION>* wam){
     this->pm = pm;
@@ -15,7 +15,7 @@ Robot::Robot(ProductManager* pm, systems::Wam<DIMENSION>* wam){
     
     senses = new Senses(pm, wam);
     controller = new RobotController(pm, wam, senses);
-    experiment = new Experiment(pm, wam, senses, controller);
+    //experiment = new Experiment(pm, wam, senses, controller);
 
     module_name = "Robot";
 

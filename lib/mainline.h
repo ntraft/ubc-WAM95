@@ -4,6 +4,10 @@
 #include "stdheader.h"
 
 class MainLine{
+
+private:
+    static vector<MainLine*>* command_line_stack;// = new std::stack<MainLine*>(); 
+
 protected:
     std::string module_name;
     std::vector<std::string> autoCmds;
@@ -18,5 +22,7 @@ protected:
     virtual void run();
     void exit();
     void step();
+
+    void push(MainLine* ml);
 };
 #endif
