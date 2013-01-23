@@ -1,0 +1,8 @@
+//X("CARTESIAN_POSITION",       cp_type,            cp, senses->get_wam()->getToolPosition(), 4)   
+//X("CARTESIAN_ORIENTATION",    Hand::jp_type,      co, senses->get_tool_orientation_m() , 5)   
+//X("CARTESIAN_ORIENTATION_QD", Eigen::Quaterniond, qd, senses->get_tool_orientation_q(), 5)   
+//X("CARTESIAN_FORCE",          cf_type,            cf, senses->get_force(), 2)   
+//X("CARTESIAN_TORQUE",         ct_type,            ct, senses->get_torque(), 7)
+//X("CARTESIAN_ACCELERATION",   ca_type,            ca, senses->get_get_accel(), 6)   
+X("FINGERTIP_TORQUE",         Hand::jp_type,      ft, senses->get_fingertip_torques(), 2)   
+X("TACTILE_SUM",              Hand::jp_type,      ts, senses->get_tactile_sums(), 3)  
