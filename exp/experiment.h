@@ -80,7 +80,7 @@ protected:
 	//experiment-specific flags
 	bool move_and_lift;
 	bool land_and_stroke;
-    bool is_initialized;
+    bool is_instantiated;
 
     void data_collect();
     bool flag_collect_data;

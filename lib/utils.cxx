@@ -1,7 +1,10 @@
 #include "utils.h"
+#include "utils-inl.h"
 
 //NOTE: other (template) functions are defined in the header file
 
+//cast integer to string
+std::string itoa(int i){std::string a = boost::lexical_cast<std::string>(i);return a;}
 //returns a random float between a and b
 float random_float(float a, float b) {
     float random = ((float) rand()) / (float) RAND_MAX;

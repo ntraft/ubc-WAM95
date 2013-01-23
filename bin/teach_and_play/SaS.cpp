@@ -8,7 +8,7 @@
 
 #include "data_stream.h" //for sensor data stream io
 #include "hand_system.cxx" 
-#include "wam_system.cxx" 
+#include "Swam_system.cxx" 
 #include "display.cxx" 
 #include "control_mode_switcher.h"
 #include <barrett/standard_main_function.h>

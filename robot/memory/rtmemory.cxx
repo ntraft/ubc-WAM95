@@ -1,164 +1,160 @@
-#include <iostream>  // For std::cin
-#include <string>  // For std::string and std::getline()
-#include <cstdlib>  // For std::atexit()
-#include <unistd.h>  // For usleep() & readlink
-#include <string>
-
-
-#include "stdheader.h"
-#include "macros.h"
-#include "control_mode_switcher.h"
-//#include "robot.h"
+#include "rtmemory.h"
+#include "memory.h"
 #include "senses.h"
+#include "sensor_stream_system.h"
+#include "rtcontrol.h"
+#include "hand_system.cxx"
+#include "wam_system.cxx"
+#include "utils.h"
 
-std::string itoa(int i){std::string a = boost::lexical_cast<std::string>(i);return a;}
-
-//#include "data_stream.h" //for sensor data stream io
-//#include "hand_system.cxx" 
-//#include "wam_system.cxx" 
-//#include "display.cxx" 
-//#include <barrett/standard_main_function.h>
-
-string log_prefix = "./data_streams/";
-
-//RTMemory Class
-class RTMemory {
-	BARRETT_UNITS_TEMPLATE_TYPEDEFS(DIMENSION);
-string data_log_headers;
-std::string playName;
-int inputType;
-const libconfig::Setting& setting;
-libconfig::Config config;
-
-std::string tmpStr, saveName, fileOut;
-
-ControlModeSwitcher<DIMENSION>* cms;
-
-math::Spline<systems::Wam<DIMENSION>::jp_type>* jpSpline;
-math::Spline<cp_type>* cpSpline;
-math::Spline<Eigen::Quaterniond>* qSpline;
-
-systems::Callback<double, systems::Wam<DIMENSION>::jp_type>* jpTrajectory;
-//jpTrajectory = new systems::Callback<double, systems::Wam<DIMENSION>::jp_type>(boost::ref(*jpSpline));
-systems::Callback<double, cp_type>* cpTrajectory;
-systems::Callback<double, Eigen::Quaterniond>* qTrajectory;
-
-systems::Ramp time;
-systems::TupleGrouper<cp_type, Eigen::Quaterniond> poseTg;
-    
-//realtime data logging
-//typedef boost::tuple<double, jp_type, jv_type, jt_type, cp_type, Eigen::Quaterniond> input_stream_type;
-//systems::TupleGrouper<double, jp_type, jv_type, jt_type, cp_type, Eigen::Quaterniond> tg;
-//systems::Callback<double, systems::Wam<DIMENSION>::jp_type>* jpTrajectory;
-//	jpTrajectory = new systems::Callback<double, systems::Wam<DIMENSION>::jp_type>(boost::ref(*jpSpline));
-
-typedef boost::tuple<double, 
-#define X(aa, bb, cc, dd) bb,
-    #include "type_table.h"
+int recordType = 0;
+enum SENSORS{
+    enum_time,
+#define X(aa, bb, cc, dd, ee) enum_##cc,
+        #include "wam_type_table.h"
+        #include "tool_type_table.h"
 #undef X
-        double> input_stream_type;
+    NUM_SENSORS
+};
 
-systems::TupleGrouper<double, 
-#define X(aa, bb, cc, dd) bb,
-    #include "type_table.h"
-#undef X
-        double> tg;
-
-const static int STREAM_SIZE = 1+7+7+7+3+4+4;
-
-systems::PeriodicDataLogger<input_stream_type>* logger;
-std::vector<std::string> tmp_filenames;
-std::string log_prefix;
-
-//realtime logfile reading:
-//  1. vectors (input_type_xx) of data points are built from data samples (lines of an input file)
-//  2. splines are built from these data points
-//  3. sensorimotor trajectories are built from the splines
-//  note: see lib/type_table.h
-#define X(aa, bb, cc, dd) typedef boost::tuple<double, bb> input_type_##cc;
-    #include "type_table.h"
-#undef X
-#define X(aa, bb, cc, dd) input_type_##cc* sample_##cc;
-    #include "type_table.h"
-#undef X
-#define X(aa, bb, cc, dd) std::vector<input_type_##cc, Eigen::aligned_allocator<input_type_##cc> >* vec_##cc;
-    #include "type_table.h"
-#undef X
-#define X(aa, bb, cc, dd) math::Spline<bb>* spline_##cc;
-    #include "type_table.h"
-#undef X
-#define X(aa, bb, cc, dd) systems::Callback<double, bb>* trajectory_##cc;
-    #include "type_table.h"
-#undef X
-#define X(aa, bb, cc, dd) systems::Callback<double, bb>* mean_trajectory_##cc;
-    #include "type_table.h"
-#undef X
-#define X(aa, bb, cc, dd) systems::Callback<double, bb>* std_trajectory_##cc;
-    #include "type_table.h"
-#undef X
-
-protected:
-    ProductManager* pm;
-    Senses* senses;
-	systems::Wam<DIMENSION>* wam;
-	Hand* hand;
-    //HandSystem* hand_system; //for realtime data logging of hand sensors
-    //WamSystem* wam_system; //for realtime manipulation of wam trajectory
-	
-public:
-	int dataSize;
-	bool loop;
-    bool problem;
-    stringstream hand_debug;
-	RTMemory(ProductManager* _pm, Wam<DIMENSION>* _wam, Senses* _senses, std::string filename_, const libconfig::Setting& setting_) :
-			pm(_pm), wam(_wam), senses(_senses),playName(filename_), inputType(0), setting(setting_), cms(NULL), 
+RTMemory::RTMemory(ProductManager* _pm, Wam<DIMENSION>* _wam, Memory* _memory, Senses* _senses, RobotController* _control) :
+			//pm(_pm), wam(_wam), senses(_senses),
+            playName("recorded/test.csv"), inputType(0), saveName("test"),
             //cpVec(NULL), qVec(NULL), 
             jpSpline( NULL), cpSpline(NULL), qSpline(NULL), 
             jpTrajectory(NULL), cpTrajectory( NULL), qTrajectory(NULL), 
-            time(pm->getExecutionManager()), dataSize( 0), loop(false) 
-    { 
+            time(_pm->getExecutionManager()), dataSize( 0), loop(false), 
+            tmpStr("/tmp/btXXXXXX")
+{ 
+        pm = _pm;
+        wam = _wam;
+        memory = _memory;
+        senses = _senses;
+        control= _control;
+        log_prefix = "./data_streams/";
         data_log_headers = 
-    "time"
-    ",joint_pos_0,joint_pos_1,joint_pos_2,joint_pos_3,joint_pos_4,joint_pos_5,joint_pos_6,joint_pos_7"
-    ",joint_vel_0,joint_vel_1,joint_vel_2,joint_vel_3,joint_vel_4,joint_vel_5,joint_vel_6,joint_vel_7"
-    ",joint_tor_0,joint_tor_1,joint_tor_2,joint_tor_3,joint_tor_4,joint_tor_5,joint_tor_6,joint_tor_7"
-    ",cart_pos_0,cart_pos_1,cart_pos_2,cart_pos_3"
-    ",cart_ori_0,cart_ori_1,cart_ori_2,cart_ori_3"
-    ",ft_torque_0,ft_torque_1,ft_torque_2,ft_torque_3"
-    ;
-#define X(aa, bb, cc, dd) vec_##cc = new std::vector<input_type_##cc, Eigen::aligned_allocator<input_type_##cc> >();
-        #include "type_table.h"
+            "time"
+            ",joint_pos_0,joint_pos_1,joint_pos_2,joint_pos_3,joint_pos_4,joint_pos_5,joint_pos_6,joint_pos_7"
+            ",joint_vel_0,joint_vel_1,joint_vel_2,joint_vel_3,joint_vel_4,joint_vel_5,joint_vel_6,joint_vel_7"
+            ",joint_tor_0,joint_tor_1,joint_tor_2,joint_tor_3,joint_tor_4,joint_tor_5,joint_tor_6,joint_tor_7"
+            ",cart_pos_0,cart_pos_1,cart_pos_2,cart_pos_3"
+            ",cart_ori_0,cart_ori_1,cart_ori_2,cart_ori_3"
+            ",ft_torque_0,ft_torque_1,ft_torque_2,ft_torque_3"
+            ;
+        
+        jpVec = new std::vector<input_jp_type, Eigen::aligned_allocator<input_jp_type> >();
+        jpSample= new input_jp_type();
+#define X(aa, bb, cc, dd, ee) vec_##cc = new std::vector<input_type_##cc, Eigen::aligned_allocator<input_type_##cc> >();
+        #include "wam_type_table.h"
+        #include "tool_type_table.h"
 #undef X
-#define X(aa, bb, cc, dd) sample_##cc = new input_type_##cc();
-        #include "type_table.h"
+#define X(aa, bb, cc, dd, ee) sample_##cc = new input_type_##cc();
+        #include "wam_type_table.h"
+        #include "tool_type_table.h"
 #undef X
-//#define X(aa, bb, cc, dd) trajectory_##cc = new systems::Callback<double,bb>(boost::ref(*spline_##cc));
-//    #include "type_table.h"
+//#define X(aa, bb, cc, dd, ee) trajectory_##cc = new systems::Callback<double,bb>(boost::ref(*spline_##cc));
+//    #include "wam_type_table.h"
+//    #include "tool_type_table.h"
 //#undef X
-    }
-	bool init();
-	void init_data_logger();
-    void output_data_stream();
-    void load_data_stream(bool);
-private:
-	DISALLOW_COPY_AND_ASSIGN(RTMemory);
-public:
-	EIGEN_MAKE_ALIGNED_OPERATOR_NEW
-};
+        cout << "RTMemory instantiated!" << endl;
+}
+void RTMemory::init(){
+    //hand system deals with realtime sensor reading
+    //hand_system = new HandSystem(hand,&problem,&hand_debug);
+    wam_system = new WamSystem(wam);
+    sss = new SensorStreamSystem(senses);
+    rtc = new RTControl(&rtc_debug, 
+#define X(aa, bb, cc, dd, ee) &problem_count_##cc,
+        #include "wam_type_table.h"
+        #include "tool_type_table.h"
+#undef X 
+            memory, senses, control);
+	
+    pm->getExecutionManager()->startManaging(time); //starting time management
+    cout << "RTMemory initialized!" << endl;
+}
 
-bool RTMemory::init(){
+//*********TEACH*********
+bool RTMemory::prepare_log_file(){
+	tmpFile = new char[tmpStr.length() + 1];
+	strcpy(tmpFile, tmpStr.c_str());
+	if (mkstemp(tmpFile) == -1) {
+		printf("ERROR: Couldn't create temporary file!\n");
+		return false;
+	}
+	if (recordType == 0){
+		jpLogger = new systems::PeriodicDataLogger<jp_sample_type>(
+				pm->getExecutionManager(),
+				new barrett::log::RealTimeWriter<jp_sample_type>(tmpFile,
+						pm->getExecutionManager()->getPeriod()), 1);
+    }
+	else{
+		poseLogger = new systems::PeriodicDataLogger<pose_sample_type>(
+				pm->getExecutionManager(),
+				new barrett::log::RealTimeWriter<pose_sample_type>(tmpFile,
+						pm->getExecutionManager()->getPeriod()), 1);
+    }
+	return true;
+}
+void RTMemory::record(){
+	BARRETT_SCOPED_LOCK(pm->getExecutionManager()->getMutex());
+    cout << "recording trajectory as ";
+	if (recordType == 0) {
+        cout << "jp_type";
+		connect(time.output, jpLogTg.getInput<0>());
+		connect(wam->jpOutput, jpLogTg.getInput<1>());
+		connect(jpLogTg.output, jpLogger->input);
+	} else {
+        cout << "pose_type";
+		connect(time.output, poseLogTg.getInput<0>());
+		connect(wam->toolPose.output, poseLogTg.getInput<1>());
+		connect(poseLogTg.output, poseLogger->input);
+	}
+    cout << endl;
+	time.start();
+}
+void RTMemory::create_spline(){
+	saveName = "recorded/" + saveName;
+	if (recordType == 0) {
+		jpLogger->closeLog();
+		disconnect(jpLogger->input);
+		// Build spline between recorded points
+		log::Reader<jp_sample_type> lr(tmpFile);
+		lr.exportCSV(saveName.c_str());
+	}
+	else{
+		poseLogger->closeLog();
+		disconnect(poseLogger->input);
+		log::Reader<pose_sample_type> pr(tmpFile);
+		pr.exportCSV(saveName.c_str());
+	}
+	// Adding our datatype as the first line of the recorded trajectory
+	fileOut = saveName + ".csv";
+	std::ifstream in(saveName.c_str());
+	std::ofstream out(fileOut.c_str());
+	if (recordType == 0)
+		out << "jp_type\n";
+	else
+		out << "pose_type\n";
+	out << in.rdbuf();
+	out.close();
+	in.close();
+	remove(saveName.c_str());
+	printf("Trajectory saved to the location: %s \n\n ", fileOut.c_str());
+}
+//**********************
+//*********PLAY*********
+bool RTMemory::load_trajectory(){
     
    // std::string filename(argv[1]);
     // Load our vc_calibration file.
+    /*
 	libconfig::Config config;
 	std::string calibration_file;
-	if (DIMENSION == 4)
-		calibration_file = "calibration4.conf";
-	else
-		calibration_file = "calibration7.conf";
+    calibration_file = "calibration7.conf";
 	config.readFile(calibration_file.c_str());
 	config.getRoot();
-    
+    */
     //Create stream from input file
 	std::ifstream fs(playName.c_str());
 	std::string line;
@@ -170,6 +166,7 @@ bool RTMemory::init(){
 	typedef boost::tokenizer<boost::char_separator<char> > t_tokenizer;
 	t_tokenizer tok(line, sep);
 	if (strcmp(line.c_str(), "pose_type") == 0) {
+        /*
 		// Create our spline and trajectory if the first line of the parsed file informs us of a pose_type
 		inputType = 1;
 		float fLine[8];
@@ -206,7 +203,7 @@ bool RTMemory::init(){
 		cpTrajectory = new systems::Callback<double, cp_type>(
 				boost::ref(*cpSpline));
 		qTrajectory = new systems::Callback<double, Eigen::Quaterniond>(
-				boost::ref(*qSpline));
+				boost::ref(*qSpline));*/
 	} else if (strcmp(line.c_str(), "jp_type") == 0) {
 		// Create our spline and trajectory if the first line of the parsed file informs us of a jp_type
 		//std::vector<input_jp_type, Eigen::aligned_allocator<input_jp_type> > vec_jp;
@@ -223,22 +220,22 @@ bool RTMemory::init(){
 				fLine[j] = boost::lexical_cast<float>(*beg);
 				j++;
 			}
-			boost::get<0>(*sample_jp) = fLine[0];
+			boost::get<0>(*jpSample) = fLine[0];
 			// To handle the different WAM configurations
 			if (j == 5)
-				boost::get<1>(*sample_jp) << fLine[1], fLine[2], fLine[3], fLine[4];
+				boost::get<1>(*jpSample) << fLine[1], fLine[2], fLine[3], fLine[4];
 			else
-				boost::get<1>(*sample_jp) << fLine[1], fLine[2], fLine[3], fLine[4], fLine[5], fLine[6], fLine[7];
-			vec_jp->push_back(*sample_jp);
+				boost::get<1>(*jpSample) << fLine[1], fLine[2], fLine[3], fLine[4], fLine[5], fLine[6], fLine[7];
+			jpVec->push_back(*jpSample);
 		}
 		// Create our splines between points
-		jpSpline= new math::Spline<systems::Wam<DIMENSION>::jp_type>(*vec_jp);
+		jpSpline= new math::Spline<systems::Wam<DIMENSION>::jp_type>(*jpVec);
 		// Create our trajectory
 		jpTrajectory= new systems::Callback<double, systems::Wam<DIMENSION>::jp_type>(boost::ref(*jpSpline));
 	} else {
 		// The first line does not contain "jp_type or pose_type" return false and exit.
 		printf(
-				"EXITING: First line of file must specify jp_type or pose_type data.");
+				"EXITING: First line of file must specify jp_type or pose_type data, found %s\n",line.c_str());
 		btsleep(1.5);
 		return false;
 	}
@@ -246,8 +243,6 @@ bool RTMemory::init(){
     //Close the file
 	fs.close();
 
-    load_data_stream(true);
-    load_data_stream(false);
 
 	printf("\nFile Contains data in the form of: %s\n\n",
 			inputType == 0 ? "jp_type" : "pose_type");
@@ -256,6 +251,11 @@ bool RTMemory::init(){
 
 //gets called at the start of each loop
  void RTMemory::init_data_logger(){
+	char* ptmpFile = new char[tmpStr.length() + 1];
+	strcpy(ptmpFile, tmpStr.c_str());
+	if (mkstemp(ptmpFile) == -1) {
+		printf("ERROR: Couldn't create temporary file!\n");
+	}
     //set up realtime data logging
     char tmp_filename_template[] = "/tmp/btXXXXXX";
     int tmp_file_descriptor;
@@ -279,12 +279,18 @@ bool RTMemory::init(){
 			new log::RealTimeWriter<input_stream_type>(
                 (char*)tmp_filename.c_str(), PERIOD_MULTIPLIER * pm->getExecutionManager()->getPeriod()),
 			PERIOD_MULTIPLIER);
+    /*plogger = new systems::PeriodicDataLogger<pinput_stream_type> (
+			pm->getExecutionManager(),
+			new log::RealTimeWriter<pinput_stream_type>(
+                ptmpFile, PERIOD_MULTIPLIER * pm->getExecutionManager()->getPeriod()),
+			PERIOD_MULTIPLIER);*/
+    cout << "Data logger initialized!" << endl;
 }
 
 //export to csv files
-
 void RTMemory::output_data_stream(){
     logger->closeLog(); //clost outstanding log
+    //plogger->closeLog(); //clost outstanding log
     //save headers for data log of entire trajectory
     std::string log_name = playName.substr(9,playName.length()-4-9); //strip recorded/ and .csv from playName
     std::string header_filename = log_prefix+log_name+".h";
@@ -301,159 +307,239 @@ void RTMemory::output_data_stream(){
         std::remove((tmp_filename).c_str());
         printf("Data log saved to the location: %s \n", out_filename.c_str());
     }
-        std::cout <<  "All data logs saved successfully!" << std::endl;
+    std::cout <<  "All data logs saved successfully!" << std::endl;
 }
-/*typedef boost::tuple<//double, 
-            systems::Wam<DIMENSION>::jp_type, 
-            systems::Wam<DIMENSION>::jv_type, 
-            systems::Wam<DIMENSION>::jt_type, 
-            cp_type, 
-            Eigen::Quaterniond, 
-            Hand::jp_type > input_stream_type;
-*/;
 
 void RTMemory::load_data_stream(bool mean){
-    
     //Create stream from input file
     std::ifstream* fs;
-    if(mean)
-        fs = new std::ifstream("data_streams/mean_flip_0412.csv");
-    else
-        fs = new std::ifstream("data_streams/std_flip_0412.csv");
+    if(mean){
+        fs = new std::ifstream("data_streams/mean_test.csv");
+        cout << "loading data mean" << endl;
+    }
+    else{
+        fs = new std::ifstream("data_streams/std_test.csv");
+        cout << "loading data std " << endl;
+    }
 	std::string line;
 	typedef boost::tokenizer<boost::char_separator<char> > t_tokenizer;
 	boost::char_separator<char> sep(",");
     
-    // Create our spline and trajectory if the first line of the parsed file informs us of a jp_type
-//#define X(aa, bb, cc, dd) std::vector<input_type_##cc, = new input_type_##cc();
- //       #include "type_table.h"
-//#undef X
-    /*std::vector<input_jp_type, Eigen::aligned_allocator<input_jp_type> > stream_jp_vec;
-    std::vector<input_jv_type, Eigen::aligned_allocator<input_jv_type> > stream_jv_vec;
-    std::vector<input_jt_type, Eigen::aligned_allocator<input_jt_type> > stream_jt_vec;
-    std::vector<input_cp_type, Eigen::aligned_allocator<input_cp_type> > stream_cp_vec;
-    std::vector<input_qd_type, Eigen::aligned_allocator<input_qd_type> > stream_qd_vec;
-    vec_qd = new std::vector<input_qd_type,Eigen::aligned_allocator<input_qd_type> >();
-    std::vector<input_ft_type, Eigen::aligned_allocator<input_ft_type> > stream_ft_vec;*/
-    
     float fLine[STREAM_SIZE];
-    /*input_jp_type jp_sample;
-    input_jv_type jv_sample;
-    input_jt_type jt_sample;
-    input_cp_type cp_sample;
-    input_qd_type qd_sample;
-    input_ft_type ft_sample;*/
-    float count = 0.002;
+    //float count = 0.002;
     while (true) {
         std::getline(*fs, line);
         if (!fs->good())
             break;
-        int fLine_i = 0;
+        int fLine_i = 1; //skip time column
         
         t_tokenizer tok(line, sep);
         int j = 0;
-        for (t_tokenizer::iterator beg = tok.begin(); beg != tok.end();
-                ++beg) {
-            if(j >= STREAM_SIZE-4) //only look at trailing values
-                fLine[j] = boost::lexical_cast<float>(*beg);
+        for (t_tokenizer::iterator beg = tok.begin(); beg != tok.end(); ++beg) {
+            fLine[j] = boost::lexical_cast<float>(*beg);
             j++;
         }
-        fLine[0] = count;
-        count += 0.002;
-
-#define X(aa, bb, cc, dd) boost::get<0>(*sample_##cc) = fLine[fLine_i];
-        #include "type_table.h"
+#define X(aa, bb, cc, dd, ee) \
+        boost::get<0>(*sample_##cc) = fLine[0];\
+        bb cc; \
+        for(int i = 0; i < cc.size(); i++){\
+            cc[i] = fLine[fLine_i++];\
+        } \
+        boost::get<1>(*sample_##cc)=cc;\
+        //cout<<"got "<<aa<<" at time "<<fLine[0]<<endl;fflush(stdout); 
+        #include "wam_type_table.h"
+        #include "tool_type_table.h"
 #undef X
-        fLine_i++;
-        
-        //cout << "got time " << fLine_i << endl;
-        //get joint pos
-        /*Wam<DIMENSION>::jp_type jp;
-        for(int i = 0; i < jp.size(); i++){
-            jp[i] = fLine[fLine_i++];
-        }
-        boost::get<1>(jp_sample) = jp;*/
-        //boost::get<1>(jp_sample) << fLine[fLine_i+0], fLine[fLine_i+1], fLine[fLine_i+2], fLine[fLine_i+3],
-        //                            fLine[fLine_i+4], fLine[fLine_i+5], fLine[fLine_i+6];
-        fLine_i+=7;
-
-        //cout << "got jp "<< fLine_i <<endl;//: " << to_string(&jp) << endl;
-        //get joint vel
-        /*Wam<DIMENSION>::jv_type jv;
-        for(int i = 0; i < jv.size(); i++){
-            jv[i] = fLine[fLine_i++];
-        }
-        boost::get<1>(jv_sample) = jv;*/
-        //boost::get<1>(jv_sample) << fLine[fLine_i+0], fLine[fLine_i+1], fLine[fLine_i+2], fLine[fLine_i+3],
-        //                            fLine[fLine_i+4], fLine[fLine_i+5], fLine[fLine_i+6];
-        fLine_i+=7;
-
-        //cout << "got jv " << fLine_i <<endl;//: " << to_string(&jp) << endl;
-        //get joint tor
-        /*Wam<DIMENSION>::jt_type jt;
-        for(int i = 0; i < jt.size(); i++){
-            jt[i] = fLine[fLine_i++];
-        }
-        boost::get<1>(jt_sample) = jt;*/
-        //boost::get<1>(jt_sample) << fLine[fLine_i+0], fLine[fLine_i+1], fLine[fLine_i+2], fLine[fLine_i+3],
-        //                            fLine[fLine_i+4], fLine[fLine_i+5], fLine[fLine_i+6];
-        fLine_i+=7;
-        //cout << "got jt "<< fLine_i <<endl;//: " << to_string(&jp) << endl;
-        //get cart pos
-        /*cp_type cp; 
-        for(int i = 0; i < cp.size(); i++){
-            cp[i] = fLine[fLine_i++];
-        }
-        boost::get<1>(cp_sample) = cp;*/
-		//boost::get<1>(cp_sample) << fLine[fLine_i+0], fLine[fLine_i+1], fLine[fLine_i+2];
-        fLine_i+=3;
-        //cout << "got cp " << fLine_i <<endl;//: " << to_string(&jp) << endl;
-        //get cart ori
-        /*Eigen::Quaterniond qd;(
-                fLine[fLine_i++],
-                fLine[fLine_i++],
-                fLine[fLine_i++],
-                fLine[fLine_i++]
-                ); */
-		//boost::get<1>(qd_sample) << fLine[fLine_i+0], fLine[fLine_i+1], fLine[fLine_i+2], fLine[fLine_i+3];
-        fLine_i+=4;
-        //cout << "got qd " << fLine_i <<endl;//: " << to_string(&jp) << endl;
-        //fLine_i+= STREAM_SIZE-1-1-4;
-        //get finger torque
-		boost::get<1>(*sample_ft) << fLine[fLine_i+0], fLine[fLine_i+1], fLine[fLine_i+2], fLine[fLine_i+3];
-        //if(mean && fLine[0] > 3.1 && fLine[0] < 4.5)
-        //    cout << fLine[0] << ": " << fLine[fLine_i+0] << ", "<< fLine[fLine_i+1] << endl;
-        fLine_i+=4;
-        /*
-        for(int i = 0; i < ft.size(); i++){
-            ft[i] = fLine[fLine_i++];
-        }
-        boost::get<1>(ft_sample) = ft;*/
-        //cout << "got ft"<< fLine_i << endl;//: " << to_string(&jp) << endl;
-        //boost::get<0>(sample) = fLine[j];
-        //
-
-#define X(aa, bb, cc, dd) vec_##cc->push_back(*sample_##cc); 
-    #include "type_table.h"
+#define X(aa, bb, cc, dd, ee) vec_##cc->push_back(*sample_##cc); 
+        #include "wam_type_table.h"
+        #include "tool_type_table.h"
 #undef X
     }
     //Create our splines between points
-#define X(aa, bb, cc, dd) spline_##cc = new math::Spline<bb>(*vec_##cc); 
-    #include "type_table.h"
+#define X(aa, bb, cc, dd, ee) spline_##cc = new math::Spline<bb>(*vec_##cc); 
+        #include "wam_type_table.h"
+        #include "tool_type_table.h"
 #undef X
-    //stream_ft_spline = new math::Spline<Hand::jp_type>          (stream_ft_vec);
+
+#define X(aa, bb, cc, dd, ee) vec_##cc->clear();
+        #include "wam_type_table.h"
+        #include "tool_type_table.h"
+#undef X
+    cout << "\tSpline created!" << endl;
+    
     if(mean){
-#define X(aa, bb, cc, dd) mean_trajectory_##cc = new systems::Callback<double, bb>(boost::ref(*spline_##cc)); 
-    #include "type_table.h"
+#define X(aa, bb, cc, dd, ee) mean_trajectory_##cc = new systems::Callback<double, bb>(boost::ref(*spline_##cc)); 
+        #include "wam_type_table.h"
+        #include "tool_type_table.h"
 #undef X
-        //stream_ft_std_trajectory = new systems::Callback<double, Hand::jp_type>          (boost::ref(*stream_ft_spline));
     }
     else{
-#define X(aa, bb, cc, dd) std_trajectory_##cc = new systems::Callback<double, bb>(boost::ref(*spline_##cc)); 
-    #include "type_table.h"
+#define X(aa, bb, cc, dd, ee) std_trajectory_##cc = new systems::Callback<double, bb>(boost::ref(*spline_##cc)); 
+        #include "wam_type_table.h"
+        #include "tool_type_table.h"
 #undef X
-        //stream_ft_std_trajectory = new systems::Callback<double, Hand::jp_type>          (boost::ref(*stream_ft_spline));
     }
+    cout << "\tTrajectory created!" << endl;
 	fs->close();
 }
+void RTMemory::start_playback() {time.start();}
+void RTMemory::pause_playback() {time.stop();}
+bool RTMemory::playback_active(){
+    bool active;
+	if (inputType == 0){
+		active = (jpTrajectory->input.getValue() < jpSpline->finalS());
+    }
+	else {
+		active = (jpTrajectory->input.getValue() < cpSpline->finalS());
+	}
+    if(!active)
+        cout << "playback active: " << active << endl;
+    return active;
+}
+void RTMemory::disconnect_systems(){
+	disconnect(wam->input);
+    disconnect(logger->input);
+    //disconnect(plogger->input);
+    disconnect(sss->time_input);
+    disconnect(tg.getInput<0>());
+#define X(aa, bb, cc, dd, ee) disconnect(tg.getInput<ee>());
+    #include "wam_type_table.h"
+    #include "tool_type_table.h"
+#undef X
+    disconnect(tg.getInput<NUM_SENSORS>());
+	disconnect(rtc->input_time);
+#define X(aa, bb, cc, dd, ee) disconnect(rtc->mean_input_##cc);
+    #include "wam_type_table.h"
+    #include "tool_type_table.h"
+#undef X
+#define X(aa, bb, cc, dd, ee) disconnect(rtc->std_input_##cc);
+    #include "wam_type_table.h"
+    #include "tool_type_table.h"
+#undef X
+#define X(aa, bb, cc, dd, ee) disconnect(rtc->actual_input_##cc);
+    #include "wam_type_table.h"
+    #include "tool_type_table.h"
+#undef X
+    /*
+*/
+   /* 
+    disconnect(tgp.getInput<0>());
+#define X(aa, bb, cc, dd, ee) disconnect(tgp.getInput<ee>());
+    #include "wam_type_table.h"
+    #include "tool_type_table.h"
+#undef X
+    disconnect(tgp.getInput<NUM_SENSORS>());
+*/
+    wam->idle();
+	time.stop();
+	time.setOutput(0.0);
+    cout << "Systems disconnected! " << endl;
+}
+void RTMemory::reconnect_systems(){
+    wam_system->init();
 
+	if (inputType == 0) {
+		//systems::forceConnect(time.output, jpTrajectory->input);
+		//systems::forceConnect(jpTrajectory->output, wam_system->input);
+	} else {
+		systems::forceConnect(time.output, cpTrajectory->input);
+		systems::forceConnect(time.output, qTrajectory->input);
+		systems::forceConnect(cpTrajectory->output, poseTg.getInput<0>());
+		systems::forceConnect(qTrajectory->output, poseTg.getInput<1>());
+		wam->trackReferenceSignal(poseTg.output);
+	}
+    systems::forceConnect(time.output, sss->time_input);
+	systems::forceConnect(time.output, rtc->input_time);
+#define X(aa, bb, cc, dd, ee) systems::forceConnect(time.output, mean_trajectory_##cc->input);
+    #include "wam_type_table.h"
+    #include "tool_type_table.h"
+#undef X
+#define X(aa, bb, cc, dd, ee) systems::forceConnect(time.output, std_trajectory_##cc->input);
+    #include "wam_type_table.h"
+    #include "tool_type_table.h"
+#undef X
+#define X(aa, bb, cc, dd, ee) systems::forceConnect(mean_trajectory_##cc->output, rtc->mean_input_##cc);
+    #include "wam_type_table.h"
+    #include "tool_type_table.h"
+#undef X
+#define X(aa, bb, cc, dd, ee) systems::forceConnect(std_trajectory_##cc->output, rtc->std_input_##cc);
+    #include "wam_type_table.h"
+    #include "tool_type_table.h"
+#undef X
+#define X(aa, bb, cc, dd, ee) systems::forceConnect(sss->output_##cc, rtc->actual_input_##cc);
+    #include "wam_type_table.h"
+    #include "tool_type_table.h"
+#undef X
+/*
+*/
+	systems::forceConnect(time.output,                tg.getInput<0>());
+	//systems::forceConnect(rtc->output_time,             tg.getInput<0>());
+#define X(aa, bb, cc, dd, ee) systems::forceConnect(sss->output_##cc, tg.getInput<ee>());
+    #include "wam_type_table.h"
+    #include "tool_type_table.h"
+#undef X
+	//systems::forceConnect(time.output,                tg.getInput<NUM_SENSORS>());
+	systems::forceConnect(rtc->output_jp,             tg.getInput<NUM_SENSORS>());
+    wam->trackReferenceSignal(rtc->output_jp);
+    //cout << "NUM_SENSORS: " << NUM_SENSORS << endl;
+/*    systems::forceConnect(time.output,                tgp.getInput<0>());
+#define X(aa, bb, cc, dd, ee) systems::forceConnect(rtc->output_##cc, tgp.getInput<ee>());
+    #include "wam_type_table.h"
+    #include "tool_type_table.h"
+#undef X
+	systems::forceConnect(rtc->output_time,                tgp.getInput<NUM_SENSORS>());
+*/
+    systems::forceConnect(tg.output, logger->input);
+    //systems::forceConnect(tgp.output, plogger->input); 
+    //hand_system->time_count = 0;
+	time.start();
+	printf("Logging started.\n");
+}
+jp_type RTMemory::get_initial_jp(){
+    return jpSpline->eval(jpSpline->initialS());
+}
+pose_type RTMemory::get_initial_tp(){
+    return boost::make_tuple(cpSpline->eval(cpSpline->initialS()),
+            qSpline->eval(qSpline->initialS()));
+}
+//checks all entries in src and dest and adds 1 to each entry where mat1 is less than mat2 
+template<int R, int C, typename Units>
+void check_greater_than_reset(math::Matrix<R,C, Units>* to_check, double limit, string output_string){
+    for (int i = 0; i < to_check->size(); ++i) {
+        if((*to_check)[i] > limit){
+            (*to_check)[i] = 0;
+        }
+    }
+}
+//checks all entries in src and dest and adds 1 to each entry where mat1 is less than mat2 
+template<int R, int C, typename Units>
+void check_greater_than_reset_print(math::Matrix<R,C, Units>* to_check, double limit, string output_string){
+    for (int i = 0; i < to_check->size(); ++i) {
+        if((*to_check)[i] > limit){
+            cout << output_string << "[" << i << "]" << endl;
+            (*to_check)[i] = 0;
+        }
+    }
+}
+void RTMemory::check_for_problems(){
+    if(strcmp(rtc_debug.str().c_str(),"")!=0)
+        cout << "rtcdbg: " << endl << rtc_debug.str() << endl;
+    float threshold = memory->get_float("problem_count_threshold");
+#define X(aa, bb, cc, dd, ee) check_greater_than_reset_print(&problem_count_##cc,threshold,aa);
+        #include "wam_type_table.h"
+        #include "tool_type_table.h"
+#undef X   
+/*    
+    cout << "pcft0: " << problem_count_ft[0] << endl;
+    if(problem_count_ft[0] > 40){
+        cout << "uh-oh" << endl;
+    }
+#define X(aa, bb, cc, dd, ee) check_greater_than_reset(&problem_count_##cc,40,aa);
+        #include "wam_type_table.h"
+        #include "tool_type_table.h"
+#undef X   
+*/
+}
+void RTMemory::set_control_strategy(ControlStrategy* strategy){
+    rtc->set_control_strategy(strategy);
+}

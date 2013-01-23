@@ -1,5 +1,6 @@
 #include "control.h"
 #include "utils.h"
+#include "utils-inl.h"
 #include "senses.h"
 #include "robot.h"
 
@@ -17,16 +18,16 @@ RobotController::RobotController(ProductManager* _pm, Wam<DIMENSION>* _wam, Sens
     
 	set_vector_values(&finger_contacts, 0, 0);
     init_wam();
-    init_hand();
+    //init_hand();
 
-    std::cout << "RobotController initialized!" << std::endl;
+    std::cout << "RobotController instantiated!" << std::endl;
 }
 void RobotController::init_wam(){
     //wam->gravityCompensate(true);
 }
 void RobotController::init_hand(){
-    //printf(">>> Press [Enter] to initialize Hand. (Make sure it has room!)");
-    //waitForEnter();
+    printf(">>> Press [Enter] to initialize Hand. (Make sure it has room!)");
+    waitForEnter();
     hand->initialize();
 }
 //MAINLINE
@@ -139,7 +140,7 @@ void RobotController::backdrive_hand_thread(){
     Hand::jv_type zero_velocity;
     parseDoubles(&zero_velocity,"0 0 0 0");
 
-    cout << "vars initialized" << endl;fflush(stdout);
+    cout << "vars instantiated" << endl;fflush(stdout);
 
     //hand->setTorqueMode();
     while(!backdrivesemastop){

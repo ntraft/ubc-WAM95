@@ -51,7 +51,16 @@ class Senses: public MainLine{
         Hand* get_hand();
         
         //Sensor utilities
+        cf_type get_force();
+        ct_type get_torque();
+        ca_type get_accel();
+        Eigen::Quaterniond get_tool_orientation_q();
+        Hand::jp_type get_tool_orientation_m();
+        Hand::jp_type get_fingertip_torques();
+        Hand::jp_type get_fingertip_torques(bool realtime);
         int get_fingertip_torque_value(int finger_num);
+        int get_fingertip_torque_value(int finger_num,bool realtime);
+        Hand::jp_type get_tactile_sums();
         bool check_tactile_contact(int finger_num);
         bool check_tactile_contact(int finger_num, float threshold);
         bool check_tactile_contact();

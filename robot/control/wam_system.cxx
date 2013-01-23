@@ -10,6 +10,7 @@
 
 #include "stdheader.h"
 #include "utils.h"
+#include "utils-inl.h"
 
 using namespace barrett;
 using namespace systems;

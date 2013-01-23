@@ -6,6 +6,7 @@
 
 class Robot;
 class Teach;
+class Play;
 
 class TeachAndPlay: public MainLine{
 private:
@@ -13,14 +14,16 @@ private:
 protected:
     Robot* robot;
     Teach* teach;
-    //Play* play;
+    Play* play;
     //Loop* loop;
     
 public:
     EIGEN_MAKE_ALIGNED_OPERATOR_NEW 
     TeachAndPlay(Robot* robot);
 
-    void init(std::string args);
+    void init_tap();
+    void init_play();
+    void init_teach();
     void help();
 	virtual void run();
 };

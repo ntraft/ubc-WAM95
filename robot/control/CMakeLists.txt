@@ -27,4 +27,8 @@ link_directories (${WAM95Ctrl_SOURCE_DIR}/robot/senses)
 link_directories (${WAM95Ctrl_SOURCE_DIR}/robot/control)
 
 
-add_library (control control.cxx rtcontrol.cxx)
+add_library (control control.cxx)
+add_library (rtcontrol rtcontrol.cxx)
+add_library (control_strategy control_strategy.cxx)
+add_library (SaS SaS.cxx)
+add_library (SaA SaA.cxx)

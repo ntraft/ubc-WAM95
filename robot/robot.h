@@ -7,6 +7,8 @@
 class Senses;
 class RobotController;
 class Experiment;
+class RTMemory;
+class Memory;
 
 class Robot: public MainLine{
     private:
@@ -16,13 +18,18 @@ class Robot: public MainLine{
         ForceTorqueSensor* fts;
         Senses* senses;
         RobotController* controller;
+        RTMemory* rtmemory;
+        Memory* memory;
         Experiment* experiment;
 
     public:
+        Robot();
         Robot(ProductManager* pm, systems::Wam<DIMENSION>* wam);
+        void instantiate_components();
         void init_wam();
         void init_hand();
         void init_fts();
+        void init_rt();
 
         //mainline
         virtual void help();
@@ -36,6 +43,11 @@ class Robot: public MainLine{
         ForceTorqueSensor* get_fts();
         Hand* get_hand();
         Senses* get_senses();
+        RTMemory* get_rtmemory();
+        Memory* get_memory();
         RobotController* get_controller();
+
+        //mutators
+        void update_sensors();
 };
 #endif

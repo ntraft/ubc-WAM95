@@ -51,7 +51,7 @@ protected:
 
         count++;
 
-        if(count < 5)
+        if(count < 0)
             jp_offsets[5] += 0.01;
         
         outputValue->setData(&jp_out);  // Push data into the output

@@ -3,6 +3,7 @@
 #include "action.h"
 //#include "example.h"
 #include "utils.h"
+#include "utils-inl.h"
 #include "action.h"
 #include "bh.h"
 #include "control.h"
@@ -105,10 +106,12 @@ Experiment* Experiment::get_experiment(){
 void Experiment::teach_pose(int seqnum){
     load_exp_variables();
 	if(seqnum == 0){		
+        /*
         copy_matrix(&exp_vars_7[WAM_BOTTOM], robot->get_wam()->getJointPositions());
         copy_matrix(&exp_vars_3[WAM_BOTTOM_C], robot->get_wam()->getToolPosition());
         Eigen::Quaterniond wam_bottom_q =  robot->get_wam()->getToolOrientation();
         copy_matrix(&exp_vars_4[WAM_BOTTOM_O], quaternion2hjp(&wam_bottom_q));
+        */
         /*
         std::cout << "Setting exp_vars[WAM_BOTTOM] to " << to_string(&exp_vars[WAM_BOTTOM]) << std::endl;
         std::cout << "Setting exp_vars[WAM_BOTTOM_C] to " << to_string(&exp_vars[WAM_BOTTOM_C]) << std::endl;
@@ -116,10 +119,12 @@ void Experiment::teach_pose(int seqnum){
         */
     }
     else if(seqnum == 1){	
+        /*
         copy_matrix(&exp_vars_7[WAM_TOP], robot->get_wam()->getJointPositions());
         copy_matrix(&exp_vars_3[WAM_TOP_C], robot->get_wam()->getToolPosition());
         Eigen::Quaterniond wam_top_q =  robot->get_wam()->getToolOrientation();
         copy_matrix(&exp_vars_4[WAM_TOP_O], quaternion2hjp(&wam_top_q));
+        */
         /*
         std::cout << "Setting exp_vars[WAM_TOP] to " << to_string(&exp_vars[WAM_TOP]) << std::endl;
         std::cout << "Setting exp_vars[WAM_TOP_C] to " << to_string(&exp_vars[WAM_TOP_C]) << std::endl;
@@ -156,7 +161,7 @@ void Experiment::init_data_log(){
 			new log::RealTimeWriter<tuple_type>((char*)tmpFile.c_str(), PERIOD_MULTIPLIER * robot->get_pm()->getExecutionManager()->getPeriod()),
 			PERIOD_MULTIPLIER);
 
-    std::cout << "Logging initialized" << std::endl;
+    std::cout << "Logging instantiated" << std::endl;
 }
 void Experiment::start_data_log(){
     time->start();
@@ -178,8 +183,8 @@ void Experiment::run(){
 	/*if(flag_collect_data){
 		dataCollectionThread = new boost::thread(dataCollect, hand, fts, wam, pm, exp_id, expshape);
 	}
-    if(!is_initialized){
-        std::cout << "experiment not yet initialized...aborting" << std::endl;
+    if(!is_instantiated){
+        std::cout << "experiment not yet instantiated...aborting" << std::endl;
         return;
     }
     else{*/
@@ -230,7 +235,7 @@ void Experiment::stop_data_log(){
 
 
 void Experiment::init(std::string args){
-    bool is_initialized = true;
+    bool is_instantiated = true;
     std::string exp_idstr = "";
     std::string exp_shapestr = "";
     std::string sub = "";

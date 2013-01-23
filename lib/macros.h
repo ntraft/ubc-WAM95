@@ -1,3 +1,4 @@
+/*
 #define TYPE_TABLE \
 X(JOINT_POSITIONS,    Wam<DIMENSION>::jp_type,  jp, robot->get_wam()->getJointPositions())   \
 X(JOINT_VELOCITIES,   Wam<DIMENSION>::jv_type,  jv, robot->get_wam()->getJointVelocities())   \
@@ -14,3 +15,4 @@ X(CARTESIAN_ACCELERATION,ca_type,               ca, robot->get_fts()->getAccel()
 #endif \
 X(FINGERTIP_TORQUE,   Hand::jp_type,            ft, robot->get_senses()->get_fingertip_torques())   \
 X(TACTILE_SUM,        Hand::jp_type,            ts, robot->get_senses()->get_tactile_sums())   
+*/

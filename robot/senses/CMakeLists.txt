@@ -25,4 +25,5 @@ link_directories (${WAM95Ctrl_SOURCE_DIR}/robot/memory)
 link_directories (${WAM95Ctrl_SOURCE_DIR}/robot/senses)
 link_directories (${WAM95Ctrl_SOURCE_DIR}/robot/control)
 
-add_library (senses senses.cxx sensor_stream_system.cxx)
+add_library (senses senses.cxx)
+add_library (sensor_stream_system sensor_stream_system.cxx)

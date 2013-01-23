@@ -2,7 +2,12 @@
 #include "stdheader.h"
 #include "control.h"
 #include "senses.h"
+#include "rtmemory.h"
+#include "memory.h"
 //#include "experiment.h"
+Robot::Robot(){
+    memory = new Memory();
+}
 
 Robot::Robot(ProductManager* pm, systems::Wam<DIMENSION>* wam){
     this->pm = pm;
@@ -12,23 +17,30 @@ Robot::Robot(ProductManager* pm, systems::Wam<DIMENSION>* wam){
     init_wam();
     init_hand();
     init_fts();
-    
-    senses = new Senses(pm, wam);
-    controller = new RobotController(pm, wam, senses);
-    //experiment = new Experiment(pm, wam, senses, controller);
+
+    instantiate_components();
 
     module_name = "Robot";
 
-    std::cout << "Robot initialized!" << std::endl;
+    std::cout << "Robot instantiated!" << std::endl;
     fflush(stdout);
 }
-
+void Robot::instantiate_components(){
+    senses = new Senses(pm, wam);
+    controller = new RobotController(pm, wam, senses);
+    memory = new Memory();
+    rtmemory = new RTMemory(pm, wam, memory, senses, controller);
+    //experiment = new Experiment(pm, wam, senses, controller);
+}
 void Robot::init_wam(){
 }
 void Robot::init_hand(){
 }
 void Robot::init_fts(){
    fts->tare();
+}
+void Robot::init_rt(){
+    get_rtmemory()->init();
 }
 
 //MAINLINE
@@ -61,5 +73,14 @@ systems::Wam<DIMENSION>* Robot::get_wam(){return wam;}
 systems::Wam<DIMENSION>* Robot::getWAM(){return wam;}
 ForceTorqueSensor* Robot::get_fts(){return fts;}
 Hand* Robot::get_hand(){return hand;}
-RobotController* Robot::get_controller(){return controller;}
 Senses* Robot::get_senses(){return senses;}
+RTMemory* Robot::get_rtmemory(){return rtmemory;}
+Memory* Robot::get_memory(){return memory;}
+RobotController* Robot::get_controller(){return controller;}
+
+//MUTATORS
+void Robot::update_sensors(){
+    get_hand()->update(Hand::S_ALL,true); //update hand sensors
+    get_fts()->update(true); //update f/t sensor 
+    get_fts()->updateAccel(true); //update f/t acceleration sensor 
+}

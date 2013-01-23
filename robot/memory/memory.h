@@ -1,20 +1,21 @@
 #ifndef IO_H_
 #define IO_H_
-
-
-#include <stdexcept>
-
-#include <syslog.h>
-#include <unistd.h> /* for close() */
-#include <sys/socket.h> /* For sockets */
-#include <fcntl.h>      /* To change socket to nonblocking mode */
-#include <arpa/inet.h>  /* For inet_pton() */
-
 #include "stdheader.h"
 
-//Function defns
+using namespace std;
 
-//void dataCollect(Hand* hand, ForceTorqueSensor* fts, void* wamin, ProductManager* pm, enum EXPERIMENT_KEYS expnum, enum EXPERIMENT_SHAPES expshape);
+template<class T>class VarServer;
 
+class Memory{
+private:
+    VarServer<float>* float_server;
+    VarServer<string>* string_server;
+public:
+    Memory();
+    string get_string(string name);
+    float get_float(string name);
+    void set_string(string name, string value);
+    void set_float(string name, float value);
+};
 
 #endif /* IO_H_ */

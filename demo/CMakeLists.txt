@@ -30,8 +30,26 @@ link_directories (${WAM95Ctrl_SOURCE_DIR}/robot/senses)
 link_directories (${WAM95Ctrl_SOURCE_DIR}/robot/control)
 
 add_executable (demo main.cxx)
+add_executable (test test.cxx)
 
 # Link the executable to dependent modules
 # Note: Order is important! place modules to the left of their respective dependents
 #target_link_libraries (demo exp control senses teach play robot mainline utils ${EXTRA_LIBS})
-target_link_libraries (demo exp tap robot control senses memory mainline utils ${EXTRA_LIBS})
+target_link_libraries (demo 
+    exp 
+    tap teach play 
+    robot 
+    memory rtmemory 
+    control_strategy SaS SaA
+    control rtcontrol 
+    senses sensor_stream_system 
+    mainline var_server utils ${EXTRA_LIBS})
+target_link_libraries (test 
+    exp 
+    tap teach play 
+    robot 
+    memory rtmemory 
+    control_strategy SaS SaA
+    control rtcontrol 
+    senses sensor_stream_system 
+    mainline var_server utils ${EXTRA_LIBS})

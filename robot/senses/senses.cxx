@@ -1,5 +1,7 @@
 #include "senses.h"
 #include "stdheader.h"
+#include "utils.h"
+#include "utils-inl.h"
 //#include "robot.h"
 
 const int TACT_CELL_HEIGHT = 3;
@@ -13,11 +15,12 @@ Senses::Senses(ProductManager* pm, Wam<DIMENSION>* wam){
     this->pm = pm;
     this->wam = wam;
     this->fts = pm->getForceTorqueSensor();
+    fts->tare();
     this->hand = pm->getHand();
 
     module_name = "Senses";
 
-    std::cout << "Senses initialized!" << std::endl;
+    std::cout << "Senses instantiated!" << std::endl;
 }
 
 //MAINLINE
@@ -45,10 +48,68 @@ void Senses::help(){
 }
 
 //ACCESSORS
+ProductManager* Senses::get_pm(){ return pm; }
+Wam<DIMENSION>* Senses::get_wam(){ return wam; }
+ForceTorqueSensor* Senses::get_fts(){ return fts; }
+Hand* Senses::get_hand(){ return hand; }
+cf_type Senses::get_force(){
+    //fts->update();
+    return fts->getForce();
+}
+ct_type Senses::get_torque(){
+    //fts->update();
+    return fts->getTorque();
+}
+ca_type Senses::get_accel(){
+    //fts->updateAccel();
+    return fts->getAccel();
+}
+Eigen::Quaterniond Senses::get_tool_orientation_q(){
+    return wam->getToolOrientation();
+}
+Hand::jp_type Senses::get_tool_orientation_m(){
+    Eigen::Quaterniond q = get_tool_orientation_q();
+    return quaternion2hjp(&q);
+}
+Hand::jp_type Senses::get_fingertip_torques(){
+    Hand::jp_type torques;
+    vector<int> vtorques = hand->getFingertipTorque();
+    for(int i = 0; i < 4; i++){ //for each fingertip torque sensor
+        torques[i] = vtorques[i];
+    }
+    return torques;
+}
+Hand::jp_type Senses::get_fingertip_torques(bool realtime){
+    hand->update(Hand::S_FINGERTIP_TORQUE,realtime);
+    Hand::jp_type torques;
+    vector<int> vtorques = hand->getFingertipTorque();
+    for(int i = 0; i < 4; i++){ //for each fingertip torque sensor
+        torques[i] = vtorques[i];
+    }
+    return torques;
+}
 int Senses::get_fingertip_torque_value(int finger_num){
-    hand->update(Hand::S_FINGERTIP_TORQUE,true);
     std::vector<int> fingertip_torque = hand->getFingertipTorque();
     return fingertip_torque[finger_num];
+}
+int Senses::get_fingertip_torque_value(int finger_num,bool realtime){
+    hand->update(Hand::S_FINGERTIP_TORQUE,realtime);
+    std::vector<int> fingertip_torque = hand->getFingertipTorque();
+    return fingertip_torque[finger_num];
+}
+Hand::jp_type Senses::get_tactile_sums(){
+    Hand::jp_type tact_sums;
+    //hand->update(Hand::S_TACT_FULL);//, true);
+    std::vector<TactilePuck*> tps;
+    tps = hand->getTactilePucks();
+    for(int j = 0; j < 4; j++){ //for each tactile pad
+        tact_array_type finger_tact = tps[j]->getFullData();
+        tact_sums[j] = 0; 
+        for(int i = 0; i < finger_tact.size(); i++){
+            tact_sums[j] += finger_tact[i];
+        }
+    }
+    return tact_sums;
 }
 bool Senses::check_tactile_contact(int finger_num){
     //std::cout << "check_tactile_contact!" << std::endl;
