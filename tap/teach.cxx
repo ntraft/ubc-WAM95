@@ -20,6 +20,15 @@ bool Teach::init() {
 
 void Teach::run(){
 	init();
+
+    string saveName;
+    printf("Please type name of trajectory to be recorded (press [Enter] for default): ");
+    std::getline(std::cin, saveName);
+    if (saveName.size() == 0) 
+        saveName = robot->get_memory()->get_string("default_teach_name");
+
+    robot->get_rtmemory()->set_teach_name(saveName);
+
 	printf("\nPress [Enter] to start teaching.\n");
 	waitForEnter();
 	robot->get_rtmemory()->record();
@@ -28,6 +37,4 @@ void Teach::run(){
 	printf("Press [Enter] to stop teaching.\n");
 	waitForEnter();
 	robot->get_rtmemory()->create_spline();
-	
-	//robot->get_pm()->getSafetyModule()->waitForMode(SafetyModule::IDLE);
 }

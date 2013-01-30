@@ -9,10 +9,12 @@ class RobotController;
 class WamSystem;
 class HandSystem;
 class SensorStreamSystem;
+class Qd2CoSystem;
 class RTControl;
 class RTControl2;
 class Memory;
 class ControlStrategy;
+//class co_type;
 
 //RTMemory Class
 class RTMemory {
@@ -30,13 +32,15 @@ std::string playName;
 int inputType;
 math::Spline<systems::Wam<DIMENSION>::jp_type>* jpSpline;
 math::Spline<cp_type>* cpSpline;
-math::Spline<Eigen::Quaterniond>* qSpline;
+math::Spline<Eigen::Quaterniond>* qdSpline;
 systems::Callback<double, systems::Wam<DIMENSION>::jp_type>* jpTrajectory;
 systems::Callback<double, cp_type>* cpTrajectory;
-systems::Callback<double, Eigen::Quaterniond>* qTrajectory;
+systems::Callback<double, Eigen::Quaterniond>* qdTrajectory;
 
 //Teach related
 typedef boost::tuple<double, jp_type> input_jp_type;
+typedef boost::tuple<double, cp_type> input_cp_type;
+typedef boost::tuple<double, qd_type> input_qd_type;
 systems::TupleGrouper<double, jp_type> jpLogTg;
 systems::TupleGrouper<double, pose_type> poseLogTg;
 typedef boost::tuple<double, jp_type> jp_sample_type;
@@ -46,6 +50,10 @@ systems::PeriodicDataLogger<pose_sample_type>* poseLogger;
 
 //Play related
 systems::TupleGrouper<cp_type, Eigen::Quaterniond> poseTg;
+std::vector<input_cp_type, Eigen::aligned_allocator<input_cp_type> >* cpVec;
+//input_cp_type* cpSample;
+std::vector<input_qd_type, Eigen::aligned_allocator<input_qd_type> >* qdVec;
+//input_qd_type* qdSample;
 std::vector<input_jp_type, Eigen::aligned_allocator<input_jp_type> >* jpVec;
 input_jp_type* jpSample;
 
@@ -60,33 +68,18 @@ typedef boost::tuple<double,
     #include "tool_type_table.h"
 #undef X
         jp_type> input_stream_type;
-/*
-typedef boost::tuple<double, 
-#define X(aa, bb, cc, dd, ee) bb,
-    #include "wam_type_table.h"
-    #include "tool_type_table.h"
-#undef X
-        double> pinput_stream_type;
-*/
+
 systems::TupleGrouper<double, 
 #define X(aa, bb, cc, dd, ee) bb,
     #include "wam_type_table.h"
     #include "tool_type_table.h"
 #undef X
         jp_type> tg;
-/*
-systems::TupleGrouper<double, 
-#define X(aa, bb, cc, dd, ee) bb,
-    #include "wam_type_table.h"
-    #include "tool_type_table.h"
-#undef X
-        double> tgp;
-*/
+
 const static int STREAM_SIZE = 1+7+7+7+3+4+4+1;
 
     private:
 systems::PeriodicDataLogger<input_stream_type>* logger;
-//systems::PeriodicDataLogger<pinput_stream_type>* plogger;
 
 //realtime logfile reading:
 //  1. vectors (input_type_xx) of data points are built from data samples (lines of an input file)
@@ -139,6 +132,7 @@ protected:
     HandSystem* hand_system; //for realtime data logging of hand sensors
     WamSystem* wam_system; //for realtime manipulation of wam trajectory
     SensorStreamSystem* sss; //for realtime logging all sensor data readings 
+    Qd2CoSystem* qd2co_system; //for realtime conversions between Quaternion and Matrix
     RTControl* rtc; //for realtime manipulation of robot 
 	
 public:
@@ -150,14 +144,16 @@ public:
 	RTMemory(ProductManager* _pm, Wam<DIMENSION>* _wam, Memory* _memory, Senses* _senses, RobotController* _control); 
     void init();
     //teach
+    void set_teach_name(string saveName);
     bool prepare_log_file();
     void record();
     void create_spline();
     //play
+    void set_play_name(string playName);
     bool load_trajectory();
 	void init_data_logger();
     void output_data_stream();
-    void load_data_stream(bool);
+    bool load_data_stream(bool);
     void start_playback();
     void pause_playback();
     bool playback_active();

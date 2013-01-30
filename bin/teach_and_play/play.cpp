@@ -15,7 +15,6 @@
 #include <boost/tokenizer.hpp>
 #include <libconfig.h++>
 #include <Eigen/Core>
-
 #include <barrett/exception.h>
 #include <barrett/units.h>
 #include <barrett/systems.h>

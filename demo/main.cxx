@@ -104,6 +104,7 @@ public:
                     break;
             }
         }
+        robot->get_pm()->getSafetyModule()->waitForMode(SafetyModule::IDLE);
         exit();
     }
     void help(){

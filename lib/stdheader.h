@@ -45,8 +45,12 @@
 #include <barrett/math.h>  // For barrett::math::saturate()
 #include <barrett/exception.h>
 
+//eigen includes
+#include <Eigen/Core>
+
 // The ncurses library allows us to write text to any location on the screen
 #include <curses.h>
+
 
 #define DIMENSION 7u
 #define FINGERTIP_TORQUE2TORQUE_RATIO 118.0     //convert hand fingertip_torque to N-m
@@ -62,11 +66,14 @@
 using namespace barrett;
 using namespace systems;
 using namespace std;
+using namespace Eigen;
 using systems::connect;
 using barrett::detail::waitForEnter;
 
 BARRETT_UNITS_TYPEDEFS(DIMENSION);
 
+typedef Quaterniond qd_type;
+typedef Hand::jp_type co_type;
 typedef TactilePuck::v_type tact_array_type;
 //typedef systems::Wam<DIMENSION>::jv_type jv_type;
 //typedef systems::Wam<DIMENSION>::jp_type jp_type;

@@ -21,8 +21,8 @@ include_directories (${WAM95Ctrl_SOURCE_DIR}/robot/control)
 include_directories (${WAM95Ctrl_SOURCE_DIR}/data)
 link_directories (${WAM95Ctrl_SOURCE_DIR}/lib)
 
-add_library(exp 
-	experiment.cxx)
+#add_library(exp 
+#	experiment.cxx)
 #flip.cxx
 #    bh.cxx
 #    action.cxx

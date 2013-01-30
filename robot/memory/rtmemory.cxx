@@ -2,12 +2,13 @@
 #include "memory.h"
 #include "senses.h"
 #include "sensor_stream_system.h"
+#include "qd2co_system.h"
 #include "rtcontrol.h"
 #include "hand_system.cxx"
 #include "wam_system.cxx"
 #include "utils.h"
+#include "control_strategy.cxx"
 
-int recordType = 0;
 enum SENSORS{
     enum_time,
 #define X(aa, bb, cc, dd, ee) enum_##cc,
@@ -18,32 +19,30 @@ enum SENSORS{
 };
 
 RTMemory::RTMemory(ProductManager* _pm, Wam<DIMENSION>* _wam, Memory* _memory, Senses* _senses, RobotController* _control) :
-			//pm(_pm), wam(_wam), senses(_senses),
-            playName("recorded/test.csv"), inputType(0), saveName("test"),
-            //cpVec(NULL), qVec(NULL), 
-            jpSpline( NULL), cpSpline(NULL), qSpline(NULL), 
-            jpTrajectory(NULL), cpTrajectory( NULL), qTrajectory(NULL), 
-            time(_pm->getExecutionManager()), dataSize( 0), loop(false), 
+			pm(_pm), wam(_wam), memory(_memory), senses(_senses), control(_control),
+            inputType(_memory->get_float("trajectory_type")), 
+            jpSpline(NULL), cpSpline(NULL), qdSpline(NULL), 
+            jpTrajectory(NULL), cpTrajectory(NULL), qdTrajectory(NULL), 
+            time(_pm->getExecutionManager()), dataSize(0), loop(false), 
             tmpStr("/tmp/btXXXXXX")
 { 
-        pm = _pm;
-        wam = _wam;
-        memory = _memory;
-        senses = _senses;
-        control= _control;
         log_prefix = "./data_streams/";
+#define X(aa, bb, cc, dd, ee) bb cc;
+        #include "wam_type_table.h"
+        #include "tool_type_table.h"
+#undef X
         data_log_headers = 
-            "time"
-            ",joint_pos_0,joint_pos_1,joint_pos_2,joint_pos_3,joint_pos_4,joint_pos_5,joint_pos_6,joint_pos_7"
-            ",joint_vel_0,joint_vel_1,joint_vel_2,joint_vel_3,joint_vel_4,joint_vel_5,joint_vel_6,joint_vel_7"
-            ",joint_tor_0,joint_tor_1,joint_tor_2,joint_tor_3,joint_tor_4,joint_tor_5,joint_tor_6,joint_tor_7"
-            ",cart_pos_0,cart_pos_1,cart_pos_2,cart_pos_3"
-            ",cart_ori_0,cart_ori_1,cart_ori_2,cart_ori_3"
-            ",ft_torque_0,ft_torque_1,ft_torque_2,ft_torque_3"
-            ;
+            string("time") +
+#define X(aa, bb, cc, dd, ee) aa + "," + num2str(cc.size()) + ";" +
+        #include "wam_type_table.h"
+        #include "tool_type_table.h"
+#undef X
+            "";
         
+        cpVec = new std::vector<input_cp_type, Eigen::aligned_allocator<input_cp_type> >();
+        qdVec = new std::vector<input_qd_type, Eigen::aligned_allocator<input_qd_type> >();
         jpVec = new std::vector<input_jp_type, Eigen::aligned_allocator<input_jp_type> >();
-        jpSample= new input_jp_type();
+        jpSample = new input_jp_type();
 #define X(aa, bb, cc, dd, ee) vec_##cc = new std::vector<input_type_##cc, Eigen::aligned_allocator<input_type_##cc> >();
         #include "wam_type_table.h"
         #include "tool_type_table.h"
@@ -63,6 +62,7 @@ void RTMemory::init(){
     //hand_system = new HandSystem(hand,&problem,&hand_debug);
     wam_system = new WamSystem(wam);
     sss = new SensorStreamSystem(senses);
+    qd2co_system = new Qd2CoSystem();
     rtc = new RTControl(&rtc_debug, 
 #define X(aa, bb, cc, dd, ee) &problem_count_##cc,
         #include "wam_type_table.h"
@@ -75,6 +75,9 @@ void RTMemory::init(){
 }
 
 //*********TEACH*********
+void RTMemory::set_teach_name(string _teachName){
+    saveName = _teachName;
+}
 bool RTMemory::prepare_log_file(){
 	tmpFile = new char[tmpStr.length() + 1];
 	strcpy(tmpFile, tmpStr.c_str());
@@ -82,7 +85,7 @@ bool RTMemory::prepare_log_file(){
 		printf("ERROR: Couldn't create temporary file!\n");
 		return false;
 	}
-	if (recordType == 0){
+	if (inputType == 0){
 		jpLogger = new systems::PeriodicDataLogger<jp_sample_type>(
 				pm->getExecutionManager(),
 				new barrett::log::RealTimeWriter<jp_sample_type>(tmpFile,
@@ -99,7 +102,7 @@ bool RTMemory::prepare_log_file(){
 void RTMemory::record(){
 	BARRETT_SCOPED_LOCK(pm->getExecutionManager()->getMutex());
     cout << "recording trajectory as ";
-	if (recordType == 0) {
+	if (inputType == 0) {
         cout << "jp_type";
 		connect(time.output, jpLogTg.getInput<0>());
 		connect(wam->jpOutput, jpLogTg.getInput<1>());
@@ -115,24 +118,30 @@ void RTMemory::record(){
 }
 void RTMemory::create_spline(){
 	saveName = "recorded/" + saveName;
-	if (recordType == 0) {
+	if (inputType == 0) {
 		jpLogger->closeLog();
 		disconnect(jpLogger->input);
 		// Build spline between recorded points
 		log::Reader<jp_sample_type> lr(tmpFile);
 		lr.exportCSV(saveName.c_str());
+        disconnect(jpLogTg.getInput<0>());
+        disconnect(jpLogTg.getInput<1>());
+        disconnect(jpLogger->input);
 	}
 	else{
 		poseLogger->closeLog();
 		disconnect(poseLogger->input);
 		log::Reader<pose_sample_type> pr(tmpFile);
 		pr.exportCSV(saveName.c_str());
+        disconnect(poseLogTg.getInput<0>());
+        disconnect(poseLogTg.getInput<1>());
+        disconnect(poseLogger->input);
 	}
 	// Adding our datatype as the first line of the recorded trajectory
 	fileOut = saveName + ".csv";
 	std::ifstream in(saveName.c_str());
 	std::ofstream out(fileOut.c_str());
-	if (recordType == 0)
+	if (inputType == 0)
 		out << "jp_type\n";
 	else
 		out << "pose_type\n";
@@ -144,6 +153,9 @@ void RTMemory::create_spline(){
 }
 //**********************
 //*********PLAY*********
+void RTMemory::set_play_name(string _playName){
+    playName = _playName;
+}
 bool RTMemory::load_trajectory(){
     
    // std::string filename(argv[1]);
@@ -156,7 +168,8 @@ bool RTMemory::load_trajectory(){
 	config.getRoot();
     */
     //Create stream from input file
-	std::ifstream fs(playName.c_str());
+    string play_filename = string("recorded/") + playName + string(".csv");
+	std::ifstream fs(play_filename.c_str());
 	std::string line;
 	// Check to see the data type specified on the first line (jp_type or pose_type)
 	// this will inform us if we are tracking 4DIMENSION WAM Joint Angles, 7DIMENSION WAM Joint Angles, or WAM Poses
@@ -166,13 +179,13 @@ bool RTMemory::load_trajectory(){
 	typedef boost::tokenizer<boost::char_separator<char> > t_tokenizer;
 	t_tokenizer tok(line, sep);
 	if (strcmp(line.c_str(), "pose_type") == 0) {
-        /*
+        
 		// Create our spline and trajectory if the first line of the parsed file informs us of a pose_type
 		inputType = 1;
 		float fLine[8];
 
-		//input_cp_type *sample_cp;
-		//input_qd_type *sample_qd;
+		input_cp_type cpSample;
+		input_qd_type qdSample;
 		while (true) {
 			std::getline(fs, line);
 			if (!fs.good())
@@ -184,26 +197,26 @@ bool RTMemory::load_trajectory(){
 				fLine[j] = boost::lexical_cast<float>(*beg);
 				j++;
 			}
-			boost::get<0>(*sample_cp) = fLine[0];
-			boost::get<0>(*sample_qd) = boost::get<0>(*sample_cp);
+			boost::get<0>(cpSample) = fLine[0];
+			boost::get<0>(qdSample) = boost::get<0>(cpSample);
 
-			boost::get<1>(*sample_cp) << fLine[1], fLine[2], fLine[3];
-			boost::get<1>(*sample_qd) = Eigen::Quaterniond(fLine[4], fLine[5],
+			boost::get<1>(cpSample) << fLine[1], fLine[2], fLine[3];
+			boost::get<1>(qdSample) = Eigen::Quaterniond(fLine[4], fLine[5],
 					fLine[6], fLine[7]);
-			boost::get<1>(*sample_qd).normalize();
-			vec_cp->push_back(*sample_cp);
-			vec_qd->push_back(*sample_qd);
+			boost::get<1>(qdSample).normalize();
+			cpVec->push_back(cpSample);
+			qdVec->push_back(qdSample);
 		}
 		// Make sure the vectors created are the same size
-		assert(vec_cp->size() == vec_qd->size());
+		assert(cpVec->size() == qdVec->size());
 		// Create our splines between points
-		cpSpline = new math::Spline<cp_type>(*vec_cp);
-		qSpline = new math::Spline<Eigen::Quaterniond>(*vec_qd);
+		cpSpline = new math::Spline<cp_type>(*cpVec);
+		qdSpline = new math::Spline<Eigen::Quaterniond>(*qdVec);
+        cout << "created splines" << endl;
 		// Create trajectories from the splines
-		cpTrajectory = new systems::Callback<double, cp_type>(
-				boost::ref(*cpSpline));
-		qTrajectory = new systems::Callback<double, Eigen::Quaterniond>(
-				boost::ref(*qSpline));*/
+		cpTrajectory = new systems::Callback<double, cp_type>(boost::ref(*cpSpline));
+		qdTrajectory = new systems::Callback<double, Eigen::Quaterniond>(boost::ref(*qdSpline));
+        cout << "created trajectories" << endl;
 	} else if (strcmp(line.c_str(), "jp_type") == 0) {
 		// Create our spline and trajectory if the first line of the parsed file informs us of a jp_type
 		//std::vector<input_jp_type, Eigen::aligned_allocator<input_jp_type> > vec_jp;
@@ -279,20 +292,15 @@ bool RTMemory::load_trajectory(){
 			new log::RealTimeWriter<input_stream_type>(
                 (char*)tmp_filename.c_str(), PERIOD_MULTIPLIER * pm->getExecutionManager()->getPeriod()),
 			PERIOD_MULTIPLIER);
-    /*plogger = new systems::PeriodicDataLogger<pinput_stream_type> (
-			pm->getExecutionManager(),
-			new log::RealTimeWriter<pinput_stream_type>(
-                ptmpFile, PERIOD_MULTIPLIER * pm->getExecutionManager()->getPeriod()),
-			PERIOD_MULTIPLIER);*/
-    cout << "Data logger initialized!" << endl;
+    //cout << "Data logger initialized!" << endl;
 }
 
 //export to csv files
 void RTMemory::output_data_stream(){
     logger->closeLog(); //clost outstanding log
-    //plogger->closeLog(); //clost outstanding log
     //save headers for data log of entire trajectory
-    std::string log_name = playName.substr(9,playName.length()-4-9); //strip recorded/ and .csv from playName
+    //std::string log_name = playName.substr(9,playName.length()-4-9); //strip recorded/ and .csv from playName
+    std::string log_name = playName;
     std::string header_filename = log_prefix+log_name+".h";
     std::ofstream out(header_filename.c_str());
     out << data_log_headers << std::endl;
@@ -310,18 +318,21 @@ void RTMemory::output_data_stream(){
     std::cout <<  "All data logs saved successfully!" << std::endl;
 }
 
-void RTMemory::load_data_stream(bool mean){
+bool RTMemory::load_data_stream(bool mean){
     //Create stream from input file
-    std::ifstream* fs;
-    if(mean){
-        fs = new std::ifstream("data_streams/mean_test.csv");
-        cout << "loading data mean" << endl;
+    string stream_prefix = "";
+    if(mean){stream_prefix = "mean_";}
+    else{stream_prefix = "std_";}
+    string stream_filename = log_prefix + stream_prefix + playName + ".csv";
+    std::ifstream* fs = new std::ifstream(stream_filename.c_str());
+
+    if(!fs->is_open()){
+        cout << "WARNING: Data stream does not yet exist for trajectory " << playName << ". Toggling Realtime Learning off." << endl;
+        memory->set_float("realtime_learning",0);
+        return false;
     }
-    else{
-        fs = new std::ifstream("data_streams/std_test.csv");
-        cout << "loading data std " << endl;
-    }
-	std::string line;
+	
+    std::string line;
 	typedef boost::tokenizer<boost::char_separator<char> > t_tokenizer;
 	boost::char_separator<char> sep(",");
     
@@ -365,7 +376,7 @@ void RTMemory::load_data_stream(bool mean){
         #include "wam_type_table.h"
         #include "tool_type_table.h"
 #undef X
-    cout << "\tSpline created!" << endl;
+    //cout << "\tSpline created!" << endl;
     
     if(mean){
 #define X(aa, bb, cc, dd, ee) mean_trajectory_##cc = new systems::Callback<double, bb>(boost::ref(*spline_##cc)); 
@@ -379,27 +390,28 @@ void RTMemory::load_data_stream(bool mean){
         #include "tool_type_table.h"
 #undef X
     }
-    cout << "\tTrajectory created!" << endl;
+    //cout << "\tTrajectory created!" << endl;
 	fs->close();
+    return true;
 }
 void RTMemory::start_playback() {time.start();}
 void RTMemory::pause_playback() {time.stop();}
 bool RTMemory::playback_active(){
     bool active;
+    //cout << "playback active?" << endl; fflush(stdout);
 	if (inputType == 0){
 		active = (jpTrajectory->input.getValue() < jpSpline->finalS());
     }
 	else {
-		active = (jpTrajectory->input.getValue() < cpSpline->finalS());
+		active = (cpTrajectory->input.getValue() < cpSpline->finalS());
 	}
-    if(!active)
-        cout << "playback active: " << active << endl;
+    //if(!active)
+    //    cout << "playback active: " << active << endl; fflush(stdout);
     return active;
 }
 void RTMemory::disconnect_systems(){
 	disconnect(wam->input);
     disconnect(logger->input);
-    //disconnect(plogger->input);
     disconnect(sss->time_input);
     disconnect(tg.getInput<0>());
 #define X(aa, bb, cc, dd, ee) disconnect(tg.getInput<ee>());
@@ -422,14 +434,6 @@ void RTMemory::disconnect_systems(){
 #undef X
     /*
 */
-   /* 
-    disconnect(tgp.getInput<0>());
-#define X(aa, bb, cc, dd, ee) disconnect(tgp.getInput<ee>());
-    #include "wam_type_table.h"
-    #include "tool_type_table.h"
-#undef X
-    disconnect(tgp.getInput<NUM_SENSORS>());
-*/
     wam->idle();
 	time.stop();
 	time.setOutput(0.0);
@@ -437,70 +441,84 @@ void RTMemory::disconnect_systems(){
 }
 void RTMemory::reconnect_systems(){
     wam_system->init();
+    rtc->init();
 
 	if (inputType == 0) {
-		//systems::forceConnect(time.output, jpTrajectory->input);
-		//systems::forceConnect(jpTrajectory->output, wam_system->input);
+		systems::forceConnect(time.output, jpTrajectory->input); //important!!
+		systems::forceConnect(jpTrajectory->output, wam_system->input);
 	} else {
 		systems::forceConnect(time.output, cpTrajectory->input);
-		systems::forceConnect(time.output, qTrajectory->input);
-		systems::forceConnect(cpTrajectory->output, poseTg.getInput<0>());
-		systems::forceConnect(qTrajectory->output, poseTg.getInput<1>());
-		wam->trackReferenceSignal(poseTg.output);
+		systems::forceConnect(time.output, qdTrajectory->input);
 	}
     systems::forceConnect(time.output, sss->time_input);
-	systems::forceConnect(time.output, rtc->input_time);
+    if(memory->get_float("realtime_learning")){
+        systems::forceConnect(time.output, rtc->input_time);
 #define X(aa, bb, cc, dd, ee) systems::forceConnect(time.output, mean_trajectory_##cc->input);
-    #include "wam_type_table.h"
-    #include "tool_type_table.h"
+        #include "wam_type_table.h"
+        #include "tool_type_table.h"
 #undef X
 #define X(aa, bb, cc, dd, ee) systems::forceConnect(time.output, std_trajectory_##cc->input);
-    #include "wam_type_table.h"
-    #include "tool_type_table.h"
+        #include "wam_type_table.h"
+        #include "tool_type_table.h"
 #undef X
 #define X(aa, bb, cc, dd, ee) systems::forceConnect(mean_trajectory_##cc->output, rtc->mean_input_##cc);
-    #include "wam_type_table.h"
-    #include "tool_type_table.h"
+        #include "wam_type_table.h"
+        #include "tool_type_table.h"
 #undef X
 #define X(aa, bb, cc, dd, ee) systems::forceConnect(std_trajectory_##cc->output, rtc->std_input_##cc);
-    #include "wam_type_table.h"
-    #include "tool_type_table.h"
+        #include "wam_type_table.h"
+        #include "tool_type_table.h"
 #undef X
 #define X(aa, bb, cc, dd, ee) systems::forceConnect(sss->output_##cc, rtc->actual_input_##cc);
-    #include "wam_type_table.h"
-    #include "tool_type_table.h"
+        #include "wam_type_table.h"
+        #include "tool_type_table.h"
 #undef X
+    }
+    else{
+    }
 /*
 */
-	systems::forceConnect(time.output,                tg.getInput<0>());
-	//systems::forceConnect(rtc->output_time,             tg.getInput<0>());
+	systems::forceConnect(time.output,                          tg.getInput<0>());
 #define X(aa, bb, cc, dd, ee) systems::forceConnect(sss->output_##cc, tg.getInput<ee>());
     #include "wam_type_table.h"
     #include "tool_type_table.h"
 #undef X
+    if(memory->get_float("realtime_learning") && memory->get_float("track_rtc_jp") && inputType == 0){
+        systems::forceConnect(jpTrajectory->output,        rtc->actual_input_jp);
+        systems::forceConnect(rtc->output_jp,                 tg.getInput<NUM_SENSORS>());
+        wam->trackReferenceSignal(rtc->output_jp);
+    }else if(memory->get_float("realtime_learning") && memory->get_float("track_rtc_c") && inputType == 1){
+		//systems::forceConnect(cpTrajectory->output, rtc->actual_input_cp);
+		//systems::forceConnect(time.output, qd2co_system->input_time);
+		//systems::forceConnect(qdTrajectory->output, qd2co_system->input_qd);
+		//systems::forceConnect(qd2co_system->output_co, rtc->actual_input_co);
+
+		systems::forceConnect(sss->output_cp, rtc->actual_input_cp);
+		systems::forceConnect(sss->output_co, rtc->actual_input_co);
+		systems::forceConnect(rtc->output_cp, poseTg.getInput<0>());
+		systems::forceConnect(rtc->output_qd, poseTg.getInput<1>());
+		wam->trackReferenceSignal(poseTg.output);
+    }else if(inputType == 0){
+        systems::forceConnect(jpTrajectory->output, tg.getInput<NUM_SENSORS>());
+        wam->trackReferenceSignal(jpTrajectory->output);
+    }else{
+		systems::forceConnect(cpTrajectory->output, poseTg.getInput<0>());
+		systems::forceConnect(qdTrajectory->output, poseTg.getInput<1>());
+		wam->trackReferenceSignal(poseTg.output);
+    }
 	//systems::forceConnect(time.output,                tg.getInput<NUM_SENSORS>());
-	systems::forceConnect(rtc->output_jp,             tg.getInput<NUM_SENSORS>());
-    wam->trackReferenceSignal(rtc->output_jp);
     //cout << "NUM_SENSORS: " << NUM_SENSORS << endl;
-/*    systems::forceConnect(time.output,                tgp.getInput<0>());
-#define X(aa, bb, cc, dd, ee) systems::forceConnect(rtc->output_##cc, tgp.getInput<ee>());
-    #include "wam_type_table.h"
-    #include "tool_type_table.h"
-#undef X
-	systems::forceConnect(rtc->output_time,                tgp.getInput<NUM_SENSORS>());
-*/
     systems::forceConnect(tg.output, logger->input);
-    //systems::forceConnect(tgp.output, plogger->input); 
     //hand_system->time_count = 0;
 	time.start();
-	printf("Logging started.\n");
+	//cout << "Logging started" << endl;
 }
 jp_type RTMemory::get_initial_jp(){
     return jpSpline->eval(jpSpline->initialS());
 }
 pose_type RTMemory::get_initial_tp(){
-    return boost::make_tuple(cpSpline->eval(cpSpline->initialS()),
-            qSpline->eval(qSpline->initialS()));
+    qd_type init_qd = memory->get_qd_transform() * qdSpline->eval(qdSpline->initialS());
+    return boost::make_tuple(cpSpline->eval(cpSpline->initialS()), init_qd);
 }
 //checks all entries in src and dest and adds 1 to each entry where mat1 is less than mat2 
 template<int R, int C, typename Units>
@@ -525,16 +543,18 @@ void RTMemory::check_for_problems(){
     if(strcmp(rtc_debug.str().c_str(),"")!=0)
         cout << "rtcdbg: " << endl << rtc_debug.str() << endl;
     float threshold = memory->get_float("problem_count_threshold");
+    /*
 #define X(aa, bb, cc, dd, ee) check_greater_than_reset_print(&problem_count_##cc,threshold,aa);
         #include "wam_type_table.h"
         #include "tool_type_table.h"
 #undef X   
+*/
 /*    
     cout << "pcft0: " << problem_count_ft[0] << endl;
     if(problem_count_ft[0] > 40){
         cout << "uh-oh" << endl;
     }
-#define X(aa, bb, cc, dd, ee) check_greater_than_reset(&problem_count_##cc,40,aa);
+#define X(aa, bb, cc, dd, ee) check_greater_than_reset(&problem_count_##cc,threshold,aa);
         #include "wam_type_table.h"
         #include "tool_type_table.h"
 #undef X   

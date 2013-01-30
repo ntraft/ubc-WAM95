@@ -4,11 +4,12 @@ template <class T>
 class VarServer{
 private:
     map<string,T> vars;
+    string filename;
 public:
-    VarServer(string filename){
-        load_vars(filename);
+    VarServer(string _filename):filename(_filename){
+        load_vars();
     }
-    void load_vars(string filename){
+    void load_vars(){
         //cout << "loading vars from " << filename << endl;
         ifstream fs(filename.c_str());
         string line;

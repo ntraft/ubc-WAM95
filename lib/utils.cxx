@@ -29,11 +29,11 @@ std::string num2str(double number){
    return ss.str();//return a string with the contents of the stream
 }
 //The following two functions convert between a 4-element vector and quaternion
-Eigen::Quaterniond hjp2quaternion(Hand::jp_type* p){
-	return Eigen::Quaterniond((*p)[0], (*p)[1], (*p)[2], (*p)[3]);
+qd_type co2qd(const co_type* co){
+	return Eigen::Quaterniond((*co)[0], (*co)[1], (*co)[2], (*co)[3]);
 }
-Hand::jp_type quaternion2hjp(Eigen::Quaterniond* q){
-	return Hand::jp_type(q->w(), q->x(), q->y(), q->z());
+co_type qd2co(const qd_type* qd){
+	return Hand::jp_type(qd->w(), qd->x(), qd->y(), qd->z());
 }
 //The following two functions convert between a 7-element vector and quaternion
 Eigen::Quaterniond jp2quaternion(jp_type* p){
@@ -51,8 +51,8 @@ jp_type quaternion2jp(Eigen::Quaterniond* q){
     return jp;
 }
 //first converts quaternion to hand joint position vector (same size = 4)
-std::string to_string(Eigen::Quaterniond* src) {
-	Hand::jp_type temp = quaternion2hjp(src); 
+std::string to_string(qd_type* src) {
+	co_type temp = qd2co(src); 
 	return to_string(&temp);
 }
 void stop_thread(bool* semaphore){

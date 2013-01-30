@@ -54,6 +54,7 @@ class Senses: public MainLine{
         cf_type get_force();
         ct_type get_torque();
         ca_type get_accel();
+        co_type get_tool_orientation();
         Eigen::Quaterniond get_tool_orientation_q();
         Hand::jp_type get_tool_orientation_m();
         Hand::jp_type get_fingertip_torques();

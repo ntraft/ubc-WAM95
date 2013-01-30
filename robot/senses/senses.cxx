@@ -64,12 +64,16 @@ ca_type Senses::get_accel(){
     //fts->updateAccel();
     return fts->getAccel();
 }
+co_type Senses::get_tool_orientation(){
+    Eigen::Quaterniond q = get_tool_orientation_q();
+    return qd2co(&q);
+}
 Eigen::Quaterniond Senses::get_tool_orientation_q(){
     return wam->getToolOrientation();
 }
 Hand::jp_type Senses::get_tool_orientation_m(){
     Eigen::Quaterniond q = get_tool_orientation_q();
-    return quaternion2hjp(&q);
+    return qd2co(&q);
 }
 Hand::jp_type Senses::get_fingertip_torques(){
     Hand::jp_type torques;

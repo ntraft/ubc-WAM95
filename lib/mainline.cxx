@@ -5,11 +5,13 @@ vector<MainLine*>* MainLine::command_line_stack = new vector<MainLine*>();
 MainLine::MainLine(){
 }
 void MainLine::help(){
+    cout << "Commands: " << endl;
 }
 void MainLine::validate_args(){
 }
 void MainLine::run(){
     push(this);
+    help();
 }
 void MainLine::step(){
     if (autoCmds.empty()) {
@@ -23,7 +25,7 @@ void MainLine::step(){
 void MainLine::exit(){
     command_line_stack->pop_back();
     if(command_line_stack->empty())
-        std::cout << module_name << "Exited Normally" << std::endl;
+        std::cout << module_name << "Program Exited Normally" << std::endl;
     else{
         command_line_stack->back()->run();
     }

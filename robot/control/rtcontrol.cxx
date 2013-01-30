@@ -4,9 +4,12 @@
 #include "control.h"
 #include "utils.h"
 #include "utils-inl.h"
-#include "control_strategy.cxx"
-#include "SaS.cxx"
-#include "SaA.cxx"
+#include "control_strategy.h"
+#include "SaS.h"
+#include "SaA.h"
+//#include "co_type.h"
+
+using namespace Eigen;
 
 Hand::jp_type vec2hjp(vector<int>* v){
     Hand::jp_type j;
@@ -16,34 +19,25 @@ Hand::jp_type vec2hjp(vector<int>* v){
     j[3] = (*v)[3];
     return j;
 }
-
 //checks all entries in src and dest and adds 1 to each entry where mat1 is greater than mat2 
 template<int R, int C, typename Units>
 void rtc_entries_greater_or_less_than_count(math::Matrix<R,C, Units>* dest, const math::Matrix<R,C, Units>* mat1, math::Matrix<R,C, Units>* ub, math::Matrix<R,C, Units>* lb){
     for (int i = 0; i < dest->size(); ++i) {
-        if((*mat1)[i] > (*ub)[i] || (*mat1)[i] < (*lb)[i]){
-            (*dest)[i]++;
-        }
-        else{
-            (*dest)[i] = 0;
-        }
-    }
-}
+        if((*mat1)[i] > (*ub)[i] || (*mat1)[i] < (*lb)[i]){ (*dest)[i]++; }
+        else{ (*dest)[i] = 0; } } }
 //checks all entries in src and dest and adds 1 to each entry where mat1 is less than mat2 
 template<int R, int C, typename Units>
 void rtc_entries_less_than_count(math::Matrix<R,C, Units>* dest, const math::Matrix<R,C, Units>* mat1, math::Matrix<R,C, Units>* mat2){
     for (int i = 0; i < dest->size(); ++i) {
-        if((*mat1)[i] < (*mat2)[i]){
-            (*dest)[i]++;
-        }
-        else{
-            (*dest)[i] = 0;
-        }
-     }
+        if((*mat1)[i] < (*mat2)[i]){ (*dest)[i]++; }
+        else{ (*dest)[i] = 0; } } }
+void RTControl::init(){
+    set_vector_values(&offsets_jp, 0, 0);
+    set_vector_values(&offsets_cp, 0, 0);
+    transform_qd = AngleAxisd(0, Vector3d::UnitX()) * AngleAxisd(0, Vector3d::UnitY()) * AngleAxisd(0, Vector3d::UnitZ());
 }
-
 void RTControl::operate() {
-        int num_sigmas = 6;
+        int num_sigmas = (int)memory->get_float("num_sigmas");
 #define X(aa, bb, cc, dd, ee) const bb& expected_mean_##cc = mean_input_##cc.getValue();
         #include "wam_type_table.h"
         #include "tool_type_table.h"
@@ -112,10 +106,6 @@ void RTControl::operate() {
 #undef X
 */
         debug->str("");
-        //*debug << "ft[0]" << senses->get_fingertip_torque_value(0,true) << endl;
-        //senses->get_hand()->update(Hand::S_FINGERTIP_TORQUE,true);
-        //*debug << "ft[0]" << senses->get_hand()->getFingertipTorque()[0] << endl;
-        //*debug << "cf[0]" << senses->get_force()[0] << endl;
 /*
 #define X(aa, bb, cc, dd, ee) \
         *debug << "ub_" << aa << ": " << upper_bound_##cc[0] << endl;\
@@ -129,8 +119,28 @@ void RTControl::operate() {
 #undef X
         *debug << "~~~~~~~~~~" << endl;
 */
-        jp_type new_jp = control_strategy->invoke(&actual_jp, &expected_mean_ft, &actual_ft, problem_count_ft);
-        const double& time = input_time.getValue(); // Pull data from the input
-        output_value_time->setData(&time);
-        output_value_jp->setData(&new_jp);
+        if(memory->get_float("trajectory_type") == 0){
+            if(control_strategy != NULL){
+                //control_strategy->invoke(&offsets_jp, &expected_mean_ft, &actual_ft, problem_count_ft);
+                //*debug << "invoke" << endl;
+            }
+            out_jp = actual_jp + offsets_jp;
+            const double& time = input_time.getValue();
+            output_value_time->setData(&time);
+            output_value_jp->setData(&out_jp);
+        }else{
+            if(control_strategy != NULL){
+                control_strategy->invoke(&offsets_cp, &transform_qd, &expected_mean_ct, &actual_ct, problem_count_ct);
+                //*debug << "invoke" << endl;
+            }
+            out_cp = actual_cp + offsets_cp;
+            qd_type actual_qd = co2qd(&actual_co);
+            qd_type new_qd = transform_qd * actual_qd;
+            out_co = qd2co(&new_qd);
+            const double& time = input_time.getValue(); 
+            output_value_time->setData(&time);
+            output_value_cp->setData(&out_cp);
+            output_value_co->setData(&out_co);
+            output_value_qd->setData(&new_qd);
+        }
 }

@@ -1,5 +1,6 @@
 #include "stdheader.h"
 #include "senses.h"
+//#include "co_type.h"
 
 class SensorStreamSystem : public systems::System {
 

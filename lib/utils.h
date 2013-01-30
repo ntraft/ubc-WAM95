@@ -13,12 +13,14 @@ std::string num2str(int number);
 std::string num2str(float number);
 std::string num2str(double number);
 //The following two functions convert between a 4-element vector and quaternion
-Eigen::Quaterniond hjp2quaternion(Hand::jp_type* p);
+qd_type co2qd(const co_type* co);
+co_type qd2co(const qd_type* qd);
 Eigen::Quaterniond jp2quaternion(jp_type* p);
-Hand::jp_type quaternion2hjp(Eigen::Quaterniond* q);
 jp_type quaternion2jp(Eigen::Quaterniond* q);
 //first converts quaternion to hand joint position vector (same size = 4)
-std::string to_string(Eigen::Quaterniond* src); 
+std::string to_string(qd_type* src); 
 void stop_thread(bool* semaphore);
+
+#include "utils-inl.h"
 
 #endif /* UTILS_H_ */

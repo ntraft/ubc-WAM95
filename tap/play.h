@@ -5,10 +5,6 @@ class HandSystem;
 class WamSystem;
 class SensorStreamSystem;
 class ControlStrategy;
-class SaS;
-class SaA1;
-class SaA2;
-class SaA3;
 
 using barrett::detail::waitForEnter;
 
@@ -25,21 +21,27 @@ protected:
     systems::Ramp time;
 
     ControlStrategy* strategy;
-    vector<ControlStrategy*> saa;
-    ControlStrategy* sas;
-    bool sas_toggle;
+    vector<ControlStrategy*> control_strategies;
+    //bool sas_toggle;
+    bool is_init;
+    bool playing;
 	    
 public:
-	bool loop;
+	bool loop_flag;
     bool problem;
     Robot* robot;
     stringstream hand_debug;
 	Play(Robot* robot);
+    void instantiate_control_strategies();
 	bool init();
+    void loop();
+    void user_control();
     void run();
 	void move_to_start();
-    void toggle_sas();
-    void toggle_saa(int);
+    void toggle_var(string name);
+    //void toggle_sas();
+    //void toggle_saa(int);
+    void set_control_strategy(int);
 private:
 	DISALLOW_COPY_AND_ASSIGN(Play);
 public:
