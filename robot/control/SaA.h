@@ -1,0 +1,43 @@
+#ifndef _SAA1_h
+#define _SAA1_h
+
+#include "stdheader.h"
+#include "control_strategy.h"
+
+class RobotController;
+class Memory;
+
+class SaA0 : public ControlStrategy{
+public:
+    SaA0(Memory* _memory, RobotController* _controller);
+    virtual void invoke(jp_type* output_jp, 
+            const Hand::jp_type* expected_mean_ft, 
+            const Hand::jp_type* actual_ft, 
+            Hand::jp_type* problem_count_ft);
+};
+class SaA1 : public ControlStrategy{
+public:
+    SaA1(Memory* _memory, RobotController* _controller);
+    virtual void invoke(jp_type* output_jp, 
+            const Hand::jp_type* expected_mean_ft, 
+            const Hand::jp_type* actual_ft, 
+            Hand::jp_type* problem_count_ft);
+};
+class SaA2 : public ControlStrategy{
+public:
+    SaA2(Memory* _memory, RobotController* _controller);
+    virtual void invoke(jp_type* output_jp, 
+            const Hand::jp_type* expected_mean_ft, 
+            const Hand::jp_type* actual_ft, 
+            Hand::jp_type* problem_count_ft);
+};
+class SaA3 : public ControlStrategy{
+public:
+    SaA3(Memory* _memory, RobotController* _controller);
+    virtual void invoke(jp_type* output_jp, 
+            const Hand::jp_type* expected_mean_ft, 
+            const Hand::jp_type* actual_ft, 
+            Hand::jp_type* problem_count_ft);
+};
+
+#endif
