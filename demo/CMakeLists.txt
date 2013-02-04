@@ -29,8 +29,12 @@ link_directories (${WAM95Ctrl_SOURCE_DIR}/robot/memory)
 link_directories (${WAM95Ctrl_SOURCE_DIR}/robot/senses)
 link_directories (${WAM95Ctrl_SOURCE_DIR}/robot/control)
 
+#add in compile flags
+#set(GCC_COMPILE_FLAGS "-DEIGEN_DONT_ALIGN=1") #prevent eigen unaligned array assertion
+#add_definitions(${GCC_COMPILE_FLAGS})
+
 add_executable (demo main.cxx)
-add_executable (test test.cxx)
+add_executable (test test2.cxx)
 
 # Link the executable to dependent modules
 # Note: Order is important! place modules to the left of their respective dependents

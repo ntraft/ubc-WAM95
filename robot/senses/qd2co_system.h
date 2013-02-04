@@ -4,7 +4,7 @@
 class Qd2CoSystem : public systems::System {
 
 public:
-    Input<double> input_time;
+    //Input<double> input_time;
     Input<Quaterniond> input_qd;
 
     Output<co_type> output_co;
@@ -15,8 +15,8 @@ public:
 	Qd2CoSystem(const std::string& sysName = "Qd2CoSystem") :
 		systems::System(sysName), 
         output_co(this, &output_value_co),
-        input_qd(this),
-        input_time(this)
+        input_qd(this)
+        //input_time(this)
 		{}
 
 	virtual ~Qd2CoSystem() { mandatoryCleanUp(); }

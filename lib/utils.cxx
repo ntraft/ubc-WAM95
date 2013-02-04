@@ -30,7 +30,9 @@ std::string num2str(double number){
 }
 //The following two functions convert between a 4-element vector and quaternion
 qd_type co2qd(const co_type* co){
-	return Eigen::Quaterniond((*co)[0], (*co)[1], (*co)[2], (*co)[3]);
+    qd_type qd((*co)[0], (*co)[1], (*co)[2], (*co)[3]);
+    qd.normalize();
+	return qd; 
 }
 co_type qd2co(const qd_type* qd){
 	return Hand::jp_type(qd->w(), qd->x(), qd->y(), qd->z());

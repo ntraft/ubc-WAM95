@@ -9,6 +9,7 @@ class Memory;
 
 class SaA0 : public ControlStrategy{
 public:
+    EIGEN_MAKE_ALIGNED_OPERATOR_NEW 
     SaA0(Memory* _memory, RobotController* _controller);
     virtual void invoke(jp_type* output_jp, 
             const Hand::jp_type* expected_mean_ft, 
@@ -17,6 +18,7 @@ public:
 };
 class SaA1 : public ControlStrategy{
 public:
+    EIGEN_MAKE_ALIGNED_OPERATOR_NEW 
     SaA1(Memory* _memory, RobotController* _controller);
     virtual void invoke(jp_type* output_jp, 
             const Hand::jp_type* expected_mean_ft, 
@@ -25,6 +27,7 @@ public:
 };
 class SaA2 : public ControlStrategy{
 public:
+    EIGEN_MAKE_ALIGNED_OPERATOR_NEW 
     SaA2(Memory* _memory, RobotController* _controller);
     virtual void invoke(jp_type* output_jp, 
             const Hand::jp_type* expected_mean_ft, 
@@ -33,6 +36,7 @@ public:
 };
 class SaA3 : public ControlStrategy{
 public:
+    EIGEN_MAKE_ALIGNED_OPERATOR_NEW 
     SaA3(Memory* _memory, RobotController* _controller);
     virtual void invoke(jp_type* output_jp, 
             const Hand::jp_type* expected_mean_ft, 

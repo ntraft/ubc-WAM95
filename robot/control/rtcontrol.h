@@ -4,8 +4,6 @@
 class Senses;
 class RobotController;
 class ControlStrategy;
-//class co_type;
-
 
 class RTControl : public systems::System {
 
@@ -64,6 +62,8 @@ protected:
     jp_type offsets_jp; //modifications to realtime motion feed
     cp_type offsets_cp; //modifications to realtime motion feed
     qd_type transform_qd; //modifications to realtime motion feed
+    qd_type actual_qd;
+    qd_type new_qd;
 
 public:
     void init();
@@ -122,5 +122,9 @@ protected:
     cp_type out_cp;	
     co_type out_co;	
     virtual void operate();
+
+public:
+	EIGEN_MAKE_ALIGNED_OPERATOR_NEW
+
 };
 

@@ -8,6 +8,7 @@
 //Teach Class
 
 Teach::Teach(Robot* _robot){ 
+    cout << "instantiating teach" << endl; fflush(stdout);
     robot = _robot;
     cout << "Teach instantiated!" << endl; fflush(stdout);
 }

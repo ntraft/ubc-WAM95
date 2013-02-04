@@ -47,6 +47,15 @@
 
 //eigen includes
 #include <Eigen/Core>
+#include <Eigen/StdVector>
+//#define EIGEN_DONT_ALIGN_STATICALLY
+#define EIGEN_DONT_ALIGN 1
+//#define EIGEN_DONT_VECTORIZE
+//#define EIGEN_DISABLE_UNALIGNED_ARRAY_ASSERT
+
+//reading config files
+//#include <libconfig.h++>
+//#include "control_mode_switcher.h"
 
 // The ncurses library allows us to write text to any location on the screen
 #include <curses.h>

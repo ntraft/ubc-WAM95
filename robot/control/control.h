@@ -16,6 +16,7 @@ private:
     Senses* senses;
 
 public:
+    EIGEN_MAKE_ALIGNED_OPERATOR_NEW 
     RobotController(ProductManager* pm, Wam<DIMENSION>* wam, Senses* senses);
     void init_wam();
     void init_hand();

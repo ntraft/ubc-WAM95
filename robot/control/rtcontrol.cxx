@@ -34,7 +34,10 @@ void rtc_entries_less_than_count(math::Matrix<R,C, Units>* dest, const math::Mat
 void RTControl::init(){
     set_vector_values(&offsets_jp, 0, 0);
     set_vector_values(&offsets_cp, 0, 0);
-    transform_qd = AngleAxisd(0, Vector3d::UnitX()) * AngleAxisd(0, Vector3d::UnitY()) * AngleAxisd(0, Vector3d::UnitZ());
+    transform_qd = 
+        AngleAxisd(memory->get_float("transform_qd_x"), Vector3d::UnitX()) * 
+        AngleAxisd(memory->get_float("transform_qd_y"), Vector3d::UnitY()) * 
+        AngleAxisd(memory->get_float("transform_qd_z"), Vector3d::UnitZ());
 }
 void RTControl::operate() {
         int num_sigmas = (int)memory->get_float("num_sigmas");
@@ -124,23 +127,27 @@ void RTControl::operate() {
                 //control_strategy->invoke(&offsets_jp, &expected_mean_ft, &actual_ft, problem_count_ft);
                 //*debug << "invoke" << endl;
             }
-            out_jp = actual_jp + offsets_jp;
-            const double& time = input_time.getValue();
-            output_value_time->setData(&time);
-            output_value_jp->setData(&out_jp);
+            //out_jp = actual_jp + offsets_jp;
+            //output_value_jp->setData(&out_jp);
         }else{
             if(control_strategy != NULL){
-                control_strategy->invoke(&offsets_cp, &transform_qd, &expected_mean_ct, &actual_ct, problem_count_ct);
+                //control_strategy->invoke(&offsets_cp, &transform_qd, &expected_mean_ct, &actual_ct, problem_count_ct);
                 //*debug << "invoke" << endl;
             }
             out_cp = actual_cp + offsets_cp;
-            qd_type actual_qd = co2qd(&actual_co);
-            qd_type new_qd = transform_qd * actual_qd;
+            actual_qd = co2qd(&actual_co);
+            new_qd = transform_qd * actual_qd;
             out_co = qd2co(&new_qd);
-            const double& time = input_time.getValue(); 
-            output_value_time->setData(&time);
             output_value_cp->setData(&out_cp);
             output_value_co->setData(&out_co);
+            //*debug << "transform_qd: " << transform_qd.w() << ", " << transform_qd.x() << ", " << transform_qd.y() << ", " << transform_qd.z() << endl;
+            //*debug << "new_qd: " << out_co << endl;
+            //output_value_qd->setData(&new_qd);
+            //memory->set_string("rtc_dbg",string("qdw: ") + num2str(new_qd.w()) + "co0: " + num2str(out_co[0]));
+            //output_value_qd->setData(&actual_qd);
             output_value_qd->setData(&new_qd);
+           // output_value_jp->setData(&actual_jp);
         }
+        //const double& time = input_time.getValue(); 
+        //output_value_time->setData(&time);
 }

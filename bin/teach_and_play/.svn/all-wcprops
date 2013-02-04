@@ -3,6 +3,12 @@ svn:wc:ra_dav:version-url
 V 58
 /svn/libbarrett/!svn/ver/1079/trunk/sandbox/teach_and_play
 END
+teach.cpp
+K 25
+svn:wc:ra_dav:version-url
+V 68
+/svn/libbarrett/!svn/ver/1076/trunk/sandbox/teach_and_play/teach.cpp
+END
 play.cpp
 K 25
 svn:wc:ra_dav:version-url
@@ -44,10 +50,4 @@ K 25
 svn:wc:ra_dav:version-url
 V 82
 /svn/libbarrett/!svn/ver/1076/trunk/sandbox/teach_and_play/control_mode_switcher.h
-END
-teach.cpp
-K 25
-svn:wc:ra_dav:version-url
-V 68
-/svn/libbarrett/!svn/ver/1076/trunk/sandbox/teach_and_play/teach.cpp
 END

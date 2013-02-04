@@ -33,6 +33,7 @@ class Senses: public MainLine{
 
         Hand::jv_type sensor_vars[NUM_SENSOR_VARS]; 
     public:
+        EIGEN_MAKE_ALIGNED_OPERATOR_NEW 
         Senses(ProductManager* pm, Wam<DIMENSION>* wam);
         void init_wam();
         void init_hand();

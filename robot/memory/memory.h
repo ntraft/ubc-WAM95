@@ -14,6 +14,7 @@ private:
     VarServer<string>* string_server;
     qd_type transform_qd;
 public:
+    EIGEN_MAKE_ALIGNED_OPERATOR_NEW 
     Memory();
     void reload_vars();
     string get_string(string name);
@@ -22,7 +23,7 @@ public:
     void set_float(string name, float value);
     void toggle_float(string name);
     void set_qd_transform(float x, float y, float z);
-    qd_type get_qd_transform();
+    qd_type* get_qd_transform();
 };
 
 #endif /* IO_H_ */

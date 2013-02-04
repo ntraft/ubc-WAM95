@@ -52,6 +52,8 @@ class MainProgram: public MainLine{
     TeachAndPlay* tap;
 
 public:
+	EIGEN_MAKE_ALIGNED_OPERATOR_NEW
+
     MainProgram(Robot* _robot):MainLine(), robot(_robot){
         tap = new TeachAndPlay(robot);
         experiment = new Experiment(robot);

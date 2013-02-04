@@ -10,6 +10,7 @@ protected:
     Memory* memory;
     RobotController* controller;
 public:
+    EIGEN_MAKE_ALIGNED_OPERATOR_NEW 
     ControlStrategy(Memory* _memory, RobotController* _controller);
     virtual void invoke(jp_type* output_jp, 
             const Hand::jp_type* expected_mean_ft, 

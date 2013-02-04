@@ -9,16 +9,20 @@ TeachAndPlay::TeachAndPlay(Robot* robot):MainLine(){
     this->robot = robot;
 }
 void TeachAndPlay::init_tap(){
-	// Turn on Gravity Compensation
+    //cout << "initializing tap..."; fflush(stdout);
+	
+    // Turn on Gravity Compensation
 	robot->get_wam()->gravityCompensate(true);
     
     // Modify the WAM Safety Limits
 	robot->get_pm()->getSafetyModule()->setTorqueLimit(3.0);
 	robot->get_pm()->getSafetyModule()->setVelocityLimit(1.5);
+    
 
     init_teach();
     init_play();
     robot->get_rtmemory()->init();
+    //cout << "Teach And Play initialized!" << endl; fflush(stdout);
 }
 void TeachAndPlay::init_teach(){
     teach = new Teach(robot);

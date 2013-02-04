@@ -33,6 +33,7 @@ enum VAR_TOGGLE{
 static int loop_count = 0;
 
 Play::Play(Robot* robot) : inputType(robot->get_memory()->get_float("trajectory_type")), time(robot->get_pm()->getExecutionManager()), is_init(false), loop_flag(false), playing(false), playName("") {                       
+    cout << "Play instantiating...";
     this->robot = robot; 
     pm = robot->get_pm();
     wam = robot->get_wam();
@@ -63,7 +64,7 @@ void Play::move_to_start() {
 	if (inputType == 0) {
 		wam->moveTo( robot->get_rtmemory()->get_initial_jp() , true);
 	} else
-		wam->moveTo( robot->get_rtmemory()->get_initial_tp() , true, 0.5, 0.5);
+		wam->moveTo( robot->get_rtmemory()->get_initial_tp() );//, true, 0.5, 0.5);
     //cout << "playback started!" << endl; fflush(stdout);
 }
 void Play::toggle_var(string name){
@@ -164,7 +165,10 @@ void Play::run(){
                 robot->get_rtmemory()->init_data_logger();
 				robot->get_rtmemory()->reconnect_systems();
 				robot->get_rtmemory()->start_playback();
-                //robot->get_memory()->reload_vars();
+                if(robot->get_memory()->get_float("reload_vars")){
+                    robot->get_memory()->reload_vars();
+                    toggle_var("reload_vars");
+                }
 				last_state = PLAYING;
 				break;
 			case PAUSED:
@@ -232,7 +236,7 @@ void Play::run(){
 	}
 	robot->get_rtmemory()->disconnect_systems();
     if(robot->get_memory()->get_float("data_stream_out")){
-        //robot->get_rtmemory()->output_data_stream();
+        robot->get_rtmemory()->output_data_stream();
     }
     else
         cout << "NOT writing out data streams" << endl;

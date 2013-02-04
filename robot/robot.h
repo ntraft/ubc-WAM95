@@ -23,6 +23,7 @@ class Robot: public MainLine{
         Experiment* experiment;
 
     public:
+        EIGEN_MAKE_ALIGNED_OPERATOR_NEW 
         Robot();
         Robot(ProductManager* pm, systems::Wam<DIMENSION>* wam);
         void instantiate_components();

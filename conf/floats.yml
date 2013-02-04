@@ -5,8 +5,9 @@ track_rtc_jp:0
 track_rtc_c:1
 default_control_strategy:1
 realtime_control_break:0
-data_stream_out:0
+data_stream_out:1
 trajectory_type:1
-transform_qd_x:0
-transform_qd_y:0.5
+transform_qd_x:0.1
+transform_qd_y:0
 transform_qd_z:0
+reload_vars:0

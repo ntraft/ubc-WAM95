@@ -10,6 +10,7 @@ class WamSystem;
 class HandSystem;
 class SensorStreamSystem;
 class Qd2CoSystem;
+class Co2QdSystem;
 class RTControl;
 class RTControl2;
 class Memory;
@@ -33,14 +34,17 @@ int inputType;
 math::Spline<systems::Wam<DIMENSION>::jp_type>* jpSpline;
 math::Spline<cp_type>* cpSpline;
 math::Spline<Eigen::Quaterniond>* qdSpline;
+math::Spline<co_type>* coSpline;
 systems::Callback<double, systems::Wam<DIMENSION>::jp_type>* jpTrajectory;
 systems::Callback<double, cp_type>* cpTrajectory;
 systems::Callback<double, Eigen::Quaterniond>* qdTrajectory;
+systems::Callback<double, co_type>* coTrajectory;
 
 //Teach related
 typedef boost::tuple<double, jp_type> input_jp_type;
 typedef boost::tuple<double, cp_type> input_cp_type;
 typedef boost::tuple<double, qd_type> input_qd_type;
+typedef boost::tuple<double, co_type> input_co_type;
 systems::TupleGrouper<double, jp_type> jpLogTg;
 systems::TupleGrouper<double, pose_type> poseLogTg;
 typedef boost::tuple<double, jp_type> jp_sample_type;
@@ -51,9 +55,8 @@ systems::PeriodicDataLogger<pose_sample_type>* poseLogger;
 //Play related
 systems::TupleGrouper<cp_type, Eigen::Quaterniond> poseTg;
 std::vector<input_cp_type, Eigen::aligned_allocator<input_cp_type> >* cpVec;
-//input_cp_type* cpSample;
 std::vector<input_qd_type, Eigen::aligned_allocator<input_qd_type> >* qdVec;
-//input_qd_type* qdSample;
+std::vector<input_co_type, Eigen::aligned_allocator<input_co_type> >* coVec;
 std::vector<input_jp_type, Eigen::aligned_allocator<input_jp_type> >* jpVec;
 input_jp_type* jpSample;
 
@@ -67,14 +70,14 @@ typedef boost::tuple<double,
     #include "wam_type_table.h"
     #include "tool_type_table.h"
 #undef X
-        jp_type> input_stream_type;
+        double> input_stream_type;
 
 systems::TupleGrouper<double, 
 #define X(aa, bb, cc, dd, ee) bb,
     #include "wam_type_table.h"
     #include "tool_type_table.h"
 #undef X
-        jp_type> tg;
+        double> tg;
 
 const static int STREAM_SIZE = 1+7+7+7+3+4+4+1;
 
@@ -133,6 +136,7 @@ protected:
     WamSystem* wam_system; //for realtime manipulation of wam trajectory
     SensorStreamSystem* sss; //for realtime logging all sensor data readings 
     Qd2CoSystem* qd2co_system; //for realtime conversions between Quaternion and Matrix
+    Co2QdSystem* co2qd_system; //for realtime conversions between Quaternion and Matrix
     RTControl* rtc; //for realtime manipulation of robot 
 	
 public:

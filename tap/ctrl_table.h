@@ -1,0 +1,5 @@
+X(SAS,   't', SaS, "Toggle Surprise & Stop")
+X(SAA0,  '0', SaA0,"Cancel Adaptation")
+X(SAA1,  '1', SaA1,"Perform Adaptation1")
+X(SAA2,  '2', SaA2,"Perform Adaptation2")
+X(SAA3,  '3', SaA3,"Perform Adaptation3")

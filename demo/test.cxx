@@ -1,9 +1,9 @@
 #include "robot.h"
+#include "rtmemory.h"
 #include <iostream>
 
 using namespace std;
 
 int main(){
-   Robot robot;
-   cout << robot.get_memory()->get_float("test") << endl; 
+    RTMemory* rtmemory = new RTMemory();
 }
