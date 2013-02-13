@@ -549,7 +549,7 @@ jp_type RTMemory::get_initial_jp(){
 }
 pose_type RTMemory::get_initial_tp(){
     co_type init_co = coSpline->eval(coSpline->initialS());
-    qd_type init_qd = (*(memory->get_qd_transform())) * co2qd(&init_co);
+    qd_type init_qd = /*(*(memory->get_qd_transform())) **/ co2qd(&init_co);
     return boost::make_tuple(cpSpline->eval(cpSpline->initialS()), init_qd);
 }
 //checks all entries in src and dest and adds 1 to each entry where mat1 is less than mat2 

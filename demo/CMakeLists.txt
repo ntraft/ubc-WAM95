@@ -40,7 +40,6 @@ add_executable (test test2.cxx)
 # Note: Order is important! place modules to the left of their respective dependents
 #target_link_libraries (demo exp control senses teach play robot mainline utils ${EXTRA_LIBS})
 target_link_libraries (demo 
-    exp 
     tap teach play 
     robot 
     memory rtmemory 
@@ -49,7 +48,6 @@ target_link_libraries (demo
     senses sensor_stream_system 
     mainline var_server utils ${EXTRA_LIBS})
 target_link_libraries (test 
-    exp 
     tap teach play 
     robot 
     memory rtmemory 

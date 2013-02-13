@@ -48,7 +48,7 @@ void step_program(){
 
 class MainProgram: public MainLine{
     Robot* robot;
-    Experiment* experiment;
+    //Experiment* experiment;
     TeachAndPlay* tap;
 
 public:
@@ -56,7 +56,7 @@ public:
 
     MainProgram(Robot* _robot):MainLine(), robot(_robot){
         tap = new TeachAndPlay(robot);
-        experiment = new Experiment(robot);
+        //experiment = new Experiment(robot);
     }
 
     void validate_args(string line){
