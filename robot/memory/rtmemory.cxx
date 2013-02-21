@@ -4,6 +4,7 @@
 #include "sensor_stream_system.h"
 #include "qd2co_system.h"
 #include "co2qd_system.h"
+#include "cp_system.h"
 #include "rtcontrol.h"
 #include "hand_system.cxx"
 #include "wam_system.cxx"
@@ -34,7 +35,7 @@ RTMemory::RTMemory(ProductManager* _pm, Wam<DIMENSION>* _wam,
         #include "tool_type_table.h"
 #undef X
         data_log_headers = 
-            string("time") +
+            string("TIME,1;") +
 #define X(aa, bb, cc, dd, ee) aa + "," + num2str(cc.size()) + ";" +
         #include "wam_type_table.h"
         #include "tool_type_table.h"
@@ -64,9 +65,10 @@ void RTMemory::init(){
     //hand system deals with realtime sensor reading
     //hand_system = new HandSystem(hand,&problem,&hand_debug);
     wam_system = new WamSystem(wam);
-    sss = new SensorStreamSystem(senses);
+    sss = new SensorStreamSystem(memory, senses);
     qd2co_system = new Qd2CoSystem();
     co2qd_system = new Co2QdSystem(memory);
+    cp_system = new CpSystem(memory);
     rtc = new RTControl(&rtc_debug, 
 #define X(aa, bb, cc, dd, ee) &problem_count_##cc,
         #include "wam_type_table.h"
@@ -326,6 +328,7 @@ void RTMemory::output_data_stream(){
         std::remove((tmp_filename).c_str());
         printf("Data log saved to the location: %s \n", out_filename.c_str());
     }
+    tmp_filenames.clear();
     std::cout <<  "All data logs saved successfully!" << std::endl;
 }
 
@@ -460,6 +463,8 @@ void RTMemory::disconnect_systems(){
 void RTMemory::reconnect_systems(){
     wam_system->init();
     rtc->init();
+    cp_system->init();
+    co2qd_system->init();
 
 	if (inputType == 0) {
 		systems::forceConnect(time.output, jpTrajectory->input); //important!!
@@ -497,7 +502,8 @@ void RTMemory::reconnect_systems(){
     }
 /*
 */
-	
+    cout << "transform_qd_x: " << memory->get_float("transform_qd_x") << endl;	
+    cout << "transform_cp_z: " << memory->get_float("transform_cp_z") << endl;	
     systems::forceConnect(time.output, tg.getInput<0>());
 #define X(aa, bb, cc, dd, ee) systems::forceConnect(sss->output_##cc, tg.getInput<ee>());
     #include "wam_type_table.h"
@@ -531,7 +537,8 @@ void RTMemory::reconnect_systems(){
     {
         //systems::forceConnect(sss->output_jp, tg.getInput<NUM_SENSORS>());
         if(memory->get_float("track_rtc_c")){
-            systems::forceConnect(cpTrajectory->output, poseTg.getInput<0>());
+            systems::forceConnect(cpTrajectory->output, cp_system->input);
+            systems::forceConnect(cp_system->output, poseTg.getInput<0>());
             systems::forceConnect(coTrajectory->output, co2qd_system->input);
             systems::forceConnect(co2qd_system->output, poseTg.getInput<1>());
             wam->trackReferenceSignal(poseTg.output);
@@ -545,12 +552,19 @@ void RTMemory::reconnect_systems(){
 	cout << "Logging started" << endl; fflush(stdout);
 }
 jp_type RTMemory::get_initial_jp(){
-    return jpSpline->eval(jpSpline->initialS());
+    if(jpSpline != NULL)
+        return jpSpline->eval(jpSpline->initialS());
+    else{
+        return memory->get_initial_jp();
+    }
 }
 pose_type RTMemory::get_initial_tp(){
+    cp_type init_cp = memory->get_transform_cp() + cpSpline->eval(cpSpline->initialS());
     co_type init_co = coSpline->eval(coSpline->initialS());
-    qd_type init_qd = /*(*(memory->get_qd_transform())) **/ co2qd(&init_co);
-    return boost::make_tuple(cpSpline->eval(cpSpline->initialS()), init_qd);
+    qd_type init_qd = memory->get_transform_qd() * co2qd(&init_co);
+    cout << "initial_cp: " << init_cp << endl;
+    cout << "initial_qd: " << init_qd.w() << ", " << init_qd.x() << ", " << init_qd.y() << ", " << init_qd.z() << endl;
+    return boost::make_tuple(init_cp, init_qd);
 }
 //checks all entries in src and dest and adds 1 to each entry where mat1 is less than mat2 
 template<int R, int C, typename Units>

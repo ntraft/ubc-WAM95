@@ -21,19 +21,19 @@ public:
         output(this, &output_value),
         input(this)
 		{
-            transform_qd = 
-                AngleAxisd(memory->get_float("transform_qd_x"), Vector3d::UnitX()) * 
-                AngleAxisd(memory->get_float("transform_qd_y"), Vector3d::UnitY()) * 
-                AngleAxisd(memory->get_float("transform_qd_z"), Vector3d::UnitZ());
+            init();
         }
 
 	virtual ~Co2QdSystem() { mandatoryCleanUp(); }
+
+    void init(){
+        transform_qd = memory->get_transform_qd();
+    }
 
 protected:
     co_type readings_co;
     qd_type readings_qd;
     qd_type transform_qd;
-    qd_type test_qd;
 	
     virtual void operate(){
         readings_co = input.getValue();

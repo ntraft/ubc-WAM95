@@ -1,6 +1,6 @@
 #include "stdheader.h"
 #include "senses.h"
-//#include "co_type.h"
+#include "memory.h"
 
 class SensorStreamSystem : public systems::System {
 
@@ -18,21 +18,23 @@ protected:
     #include "wam_type_table.h"
     #include "tool_type_table.h"
 #undef X
+    Memory* memory;
     Senses* senses;
     bool* problem;
     int problem_count;
     stringstream* debug;
 
 public:
-	SensorStreamSystem(Senses* senses, const std::string& sysName = "SensorStreamSystem") :
-		systems::System(sysName), 
+	SensorStreamSystem(Memory* _memory, Senses* _senses, const std::string& sysName = "SensorStreamSystem") :
+		systems::System(sysName),
+        memory(_memory),
+        senses(_senses),
 #define X(aa, bb, cc, dd, ee) output_##cc(this, &output_value_##cc),
         #include "wam_type_table.h"
         #include "tool_type_table.h"
 #undef X   
         time_input(this)
 		{
-            this->senses = senses;
         }
 
 	virtual ~SensorStreamSystem() { mandatoryCleanUp(); }

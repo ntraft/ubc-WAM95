@@ -1,6 +1,9 @@
 #ifndef STDHEADER_H_
 #define STDHEADER_H_
 
+#define EIGEN_DONT_VECTORIZE
+#define EIGEN_DISABLE_UNALIGNED_ARRAY_ASSERT
+
 //system includes
 #include <stdexcept>
 #include <syslog.h>
@@ -49,9 +52,7 @@
 #include <Eigen/Core>
 #include <Eigen/StdVector>
 //#define EIGEN_DONT_ALIGN_STATICALLY
-#define EIGEN_DONT_ALIGN 1
-//#define EIGEN_DONT_VECTORIZE
-//#define EIGEN_DISABLE_UNALIGNED_ARRAY_ASSERT
+//#define EIGEN_DONT_ALIGN 
 
 //reading config files
 //#include <libconfig.h++>

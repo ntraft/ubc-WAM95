@@ -63,8 +63,13 @@ void Play::move_to_start() {
     //cout << "moving to start..."; fflush(stdout);
 	if (inputType == 0) {
 		wam->moveTo( robot->get_rtmemory()->get_initial_jp() , true);
-	} else
-		wam->moveTo( robot->get_rtmemory()->get_initial_tp() );//, true, 0.5, 0.5);
+	} else{
+        if(0 == playName.find("f")){ //if playname begins with the letter f (for flip)
+            wam->moveTo( robot->get_rtmemory()->get_initial_jp() , true);
+        }
+		wam->moveTo( robot->get_rtmemory()->get_initial_tp() , true, 0.5, 0.5);
+    }
+		//wam->moveTo( robot->get_rtmemory()->get_initial_tp());//, true, 0.5, 0.5);
     //cout << "playback started!" << endl; fflush(stdout);
 }
 void Play::toggle_var(string name){
@@ -153,6 +158,11 @@ void Play::run(){
 	playing = true;
 	while (playing) {
         robot->get_rtmemory()->check_for_problems();
+        if(robot->get_memory()->get_float("reload_vars")){
+            robot->get_memory()->reload_vars();
+            //toggle_var("reload_vars");
+            robot->get_memory()->set_float("reload_vars", 0);
+        }
 		switch (curr_state) {
 		case QUIT:
 			playing = false;
@@ -165,10 +175,6 @@ void Play::run(){
                 robot->get_rtmemory()->init_data_logger();
 				robot->get_rtmemory()->reconnect_systems();
 				robot->get_rtmemory()->start_playback();
-                if(robot->get_memory()->get_float("reload_vars")){
-                    robot->get_memory()->reload_vars();
-                    toggle_var("reload_vars");
-                }
 				last_state = PLAYING;
 				break;
 			case PAUSED:

@@ -24,6 +24,7 @@ public:
     void init_tap();
     void init_play();
     void init_teach();
+    void init_flip();
     void help();
 	virtual void run();
 };

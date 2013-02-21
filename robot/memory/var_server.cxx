@@ -28,11 +28,22 @@ public:
             //cout << "found " << name << " with value " << value << endl;
             set_value(name,value);
         }
+        //fs.close();
+    }
+    void save_vars(){
+        //cout << "saving vars to " << filename << endl;
+        ofstream fs(filename.c_str());
+        typename map<string,T>::iterator itr;
+        for(itr = vars.begin(); itr != vars.end(); ++itr){
+            fs << itr->first << ":" << itr->second << endl;
+        }
+        //fs.close();
     }
     T get_value(string name){
         return vars[name];
     }
     void set_value(string name, T value){
+        //cout << name << ": " << vars[name] << "->" <<  value << endl;
         vars[name] = value;
     }
 };

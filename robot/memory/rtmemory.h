@@ -11,6 +11,7 @@ class HandSystem;
 class SensorStreamSystem;
 class Qd2CoSystem;
 class Co2QdSystem;
+class CpSystem;
 class RTControl;
 class RTControl2;
 class Memory;
@@ -137,6 +138,7 @@ protected:
     SensorStreamSystem* sss; //for realtime logging all sensor data readings 
     Qd2CoSystem* qd2co_system; //for realtime conversions between Quaternion and Matrix
     Co2QdSystem* co2qd_system; //for realtime conversions between Quaternion and Matrix
+    CpSystem* cp_system; //for realtime cartesian position control
     RTControl* rtc; //for realtime manipulation of robot 
 	
 public:

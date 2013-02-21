@@ -1,4 +1,4 @@
-# Install script for directory: /home/robot/WAM95Ctrl/bin/teach_and_play
+# Install script for directory: /home/robot/ubc-WAM95/bin/teach_and_play
 
 # Set the install prefix
 IF(NOT DEFINED CMAKE_INSTALL_PREFIX)
@@ -38,7 +38,7 @@ ELSE(CMAKE_INSTALL_COMPONENT)
   SET(CMAKE_INSTALL_MANIFEST "install_manifest.txt")
 ENDIF(CMAKE_INSTALL_COMPONENT)
 
-FILE(WRITE "/home/robot/WAM95Ctrl/bin/teach_and_play/${CMAKE_INSTALL_MANIFEST}" "")
+FILE(WRITE "/home/robot/ubc-WAM95/bin/teach_and_play/${CMAKE_INSTALL_MANIFEST}" "")
 FOREACH(file ${CMAKE_INSTALL_MANIFEST_FILES})
-  FILE(APPEND "/home/robot/WAM95Ctrl/bin/teach_and_play/${CMAKE_INSTALL_MANIFEST}" "${file}\n")
+  FILE(APPEND "/home/robot/ubc-WAM95/bin/teach_and_play/${CMAKE_INSTALL_MANIFEST}" "${file}\n")
 ENDFOREACH(file)
