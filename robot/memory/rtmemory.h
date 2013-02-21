@@ -13,6 +13,7 @@ class Qd2CoSystem;
 class Co2QdSystem;
 class CpSystem;
 class RTControl;
+class NaiveBayesSystem;
 class RTControl2;
 class Memory;
 class ControlStrategy;
@@ -80,7 +81,7 @@ systems::TupleGrouper<double,
 #undef X
         double> tg;
 
-const static int STREAM_SIZE = 1+7+7+7+3+4+4+1;
+int STREAM_SIZE;
 
     private:
 systems::PeriodicDataLogger<input_stream_type>* logger;
@@ -89,41 +90,26 @@ systems::PeriodicDataLogger<input_stream_type>* logger;
 //  1. vectors (input_type_xx) of data points are built from data samples (lines of an input file)
 //  2. splines are built from these data points
 //  3. sensorimotor trajectories are built from the splines
-//  note: see lib/wam_type_table.h
-#define X(aa, bb, cc, dd, ee) typedef boost::tuple<double, bb> input_type_##cc;
+//  note: see lib/wam_type_table.h & lib/tool_type_table.h
+#define X(aa, bb, cc, dd, ee) \
+    typedef boost::tuple<double, bb> input_type_##cc; \
+    input_type_##cc* sample_##cc; \
+    std::vector<input_type_##cc, Eigen::aligned_allocator<input_type_##cc> >* vec_##cc; \
+    math::Spline<bb>* spline_##cc; \
+    //
     #include "wam_type_table.h"
     #include "tool_type_table.h"
 #undef X
-#define X(aa, bb, cc, dd, ee) input_type_##cc* sample_##cc;
-    #include "wam_type_table.h"
-    #include "tool_type_table.h"
-#undef X
-#define X(aa, bb, cc, dd, ee) std::vector<input_type_##cc, Eigen::aligned_allocator<input_type_##cc> >* vec_##cc;
-    #include "wam_type_table.h"
-    #include "tool_type_table.h"
-#undef X
-#define X(aa, bb, cc, dd, ee) math::Spline<bb>* spline_##cc;
-    #include "wam_type_table.h"
-    #include "tool_type_table.h"
-#undef X
-
     public:
-#define X(aa, bb, cc, dd, ee) systems::Callback<double, bb>* trajectory_##cc;
+#define X(aa, bb, cc, dd, ee) \
+    systems::Callback<double, bb>* trajectory_##cc; \
+    systems::Callback<double, bb>* mean_trajectory_##cc; \
+    systems::Callback<double, bb>* std_trajectory_##cc; \
+    bb problem_count_##cc;\
+    //
     #include "wam_type_table.h"
     #include "tool_type_table.h"
 #undef X
-#define X(aa, bb, cc, dd, ee) systems::Callback<double, bb>* mean_trajectory_##cc;
-    #include "wam_type_table.h"
-    #include "tool_type_table.h"
-#undef X
-#define X(aa, bb, cc, dd, ee) systems::Callback<double, bb>* std_trajectory_##cc;
-    #include "wam_type_table.h"
-    #include "tool_type_table.h"
-#undef X
-#define X(aa, bb, cc, dd, ee) bb problem_count_##cc;
-        #include "wam_type_table.h"
-        #include "tool_type_table.h"
-#undef X   
 
 protected:
 	Robot* robot;
@@ -140,6 +126,7 @@ protected:
     Co2QdSystem* co2qd_system; //for realtime conversions between Quaternion and Matrix
     CpSystem* cp_system; //for realtime cartesian position control
     RTControl* rtc; //for realtime manipulation of robot 
+    NaiveBayesSystem* nbs; //for probability calculations
 	
 public:
 	int dataSize;
@@ -147,6 +134,7 @@ public:
     bool problem;
     stringstream hand_debug;
     stringstream rtc_debug;
+    stringstream nbs_debug;
 	RTMemory(ProductManager* _pm, Wam<DIMENSION>* _wam, Memory* _memory, Senses* _senses, RobotController* _control); 
     void init();
     //teach
