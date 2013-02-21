@@ -39,12 +39,13 @@ add_executable (unit_test unit_test.cxx)
 
 # Link the executable to dependent modules
 # Note: Order is important! place modules to the left of their respective dependents
-#target_link_libraries (demo exp control senses teach play robot mainline utils ${EXTRA_LIBS})
+# target_link_libraries (demo exp control senses teach play robot mainline utils ${EXTRA_LIBS})
 target_link_libraries (demo 
     tap teach play 
     robot 
     memory rtmemory 
-    control_strategy SaS SaA
+    naive_bayes_system
+    control_strategy SaS SaA 
     control rtcontrol 
     senses sensor_stream_system 
     mainline var_server utils ${EXTRA_LIBS})
@@ -52,6 +53,7 @@ target_link_libraries (test
     tap teach play 
     robot 
     memory rtmemory 
+    naive_bayes_system
     control_strategy SaS SaA
     control rtcontrol 
     senses sensor_stream_system 
@@ -60,6 +62,7 @@ target_link_libraries (unit_test
     tap teach play 
     robot 
     memory rtmemory 
+    naive_bayes_system
     control_strategy SaS SaA
     control rtcontrol 
     senses sensor_stream_system 

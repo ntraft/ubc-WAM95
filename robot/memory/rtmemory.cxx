@@ -6,6 +6,7 @@
 #include "co2qd_system.h"
 #include "cp_system.h"
 #include "rtcontrol.h"
+#include "naive_bayes_system.h"
 #include "hand_system.cxx"
 #include "wam_system.cxx"
 #include "utils.h"
@@ -13,9 +14,10 @@
 
 enum SENSORS{
     enum_time,
-#define X(aa, bb, cc, dd, ee) enum_##cc,
-        #include "wam_type_table.h"
-        #include "tool_type_table.h"
+#define X(aa, bb, cc, dd, ee) \
+    enum_##cc,
+#include "wam_type_table.h"
+#include "tool_type_table.h"
 #undef X
     NUM_SENSORS
 };
@@ -30,35 +32,42 @@ RTMemory::RTMemory(ProductManager* _pm, Wam<DIMENSION>* _wam,
             tmpStr("/tmp/btXXXXXX")
 { 
         log_prefix = "./data_streams/";
-#define X(aa, bb, cc, dd, ee) bb cc;
-        #include "wam_type_table.h"
-        #include "tool_type_table.h"
+#define X(aa, bb, cc, dd, ee) \
+        bb cc;
+#include "wam_type_table.h"
+#include "tool_type_table.h"
 #undef X
+        
         data_log_headers = 
             string("TIME,1;") +
-#define X(aa, bb, cc, dd, ee) aa + "," + num2str(cc.size()) + ";" +
-        #include "wam_type_table.h"
-        #include "tool_type_table.h"
+#define X(aa, bb, cc, dd, ee) \
+            aa + "," + num2str(cc.size()) + ";" +
+#include "wam_type_table.h"
+#include "tool_type_table.h"
 #undef X
             "";
-        
+         
+        STREAM_SIZE = 
+            1 +
+#define X(aa, bb, cc, dd, ee) \
+            cc.size() +
+#include "wam_type_table.h"
+#include "tool_type_table.h"
+#undef X
+            1;
+       
         cpVec = new std::vector<input_cp_type, Eigen::aligned_allocator<input_cp_type> >();
         qdVec = new std::vector<input_qd_type, Eigen::aligned_allocator<input_qd_type> >();
         coVec = new std::vector<input_co_type, Eigen::aligned_allocator<input_co_type> >();
         jpVec = new std::vector<input_jp_type, Eigen::aligned_allocator<input_jp_type> >();
         jpSample = new input_jp_type();
-#define X(aa, bb, cc, dd, ee) vec_##cc = new std::vector<input_type_##cc, Eigen::aligned_allocator<input_type_##cc> >();
+#define X(aa, bb, cc, dd, ee) \
+        vec_##cc = new std::vector<input_type_##cc, Eigen::aligned_allocator<input_type_##cc> >();\
+        sample_##cc = new input_type_##cc(); \
+        //trajectory_##cc = new systems::Callback<double,bb>(boost::ref(*spline_##cc));
         #include "wam_type_table.h"
         #include "tool_type_table.h"
 #undef X
-#define X(aa, bb, cc, dd, ee) sample_##cc = new input_type_##cc();
-        #include "wam_type_table.h"
-        #include "tool_type_table.h"
-#undef X
-//#define X(aa, bb, cc, dd, ee) trajectory_##cc = new systems::Callback<double,bb>(boost::ref(*spline_##cc));
-//    #include "wam_type_table.h"
-//    #include "tool_type_table.h"
-//#undef X
         cout << "RTMemory instantiated!" << endl;
 }
 void RTMemory::init(){
@@ -69,10 +78,12 @@ void RTMemory::init(){
     qd2co_system = new Qd2CoSystem();
     co2qd_system = new Co2QdSystem(memory);
     cp_system = new CpSystem(memory);
+    nbs = new NaiveBayesSystem(&nbs_debug, memory);
     rtc = new RTControl(&rtc_debug, 
-#define X(aa, bb, cc, dd, ee) &problem_count_##cc,
-        #include "wam_type_table.h"
-        #include "tool_type_table.h"
+#define X(aa, bb, cc, dd, ee) \
+    &problem_count_##cc,
+#include "wam_type_table.h"
+#include "tool_type_table.h"
 #undef X 
             memory, senses, control);
 	
@@ -163,16 +174,6 @@ void RTMemory::set_play_name(string _playName){
     playName = _playName;
 }
 bool RTMemory::load_trajectory(){
-    
-   // std::string filename(argv[1]);
-    // Load our vc_calibration file.
-    /*
-	libconfig::Config config;
-	std::string calibration_file;
-    calibration_file = "calibration7.conf";
-	config.readFile(calibration_file.c_str());
-	config.getRoot();
-    */
     //Create stream from input file
     string play_filename = string("recorded/") + playName + string(".csv");
 	std::ifstream fs(play_filename.c_str());
@@ -365,43 +366,39 @@ bool RTMemory::load_data_stream(bool mean){
             j++;
         }
 #define X(aa, bb, cc, dd, ee) \
-        boost::get<0>(*sample_##cc) = fLine[0];\
+        boost::get<0>(*sample_##cc) = fLine[0]; \
         bb cc; \
-        for(int i = 0; i < cc.size(); i++){\
-            cc[i] = fLine[fLine_i++];\
+        for(int i = 0; i < cc.size(); i++){ \
+            cc[i] = fLine[fLine_i++]; \
         } \
-        boost::get<1>(*sample_##cc)=cc;\
+        boost::get<1>(*sample_##cc)=cc; \
+        vec_##cc->push_back(*sample_##cc); 
         //cout<<"got "<<aa<<" at time "<<fLine[0]<<endl;fflush(stdout); 
-        #include "wam_type_table.h"
-        #include "tool_type_table.h"
-#undef X
-#define X(aa, bb, cc, dd, ee) vec_##cc->push_back(*sample_##cc); 
-        #include "wam_type_table.h"
-        #include "tool_type_table.h"
+#include "wam_type_table.h"
+#include "tool_type_table.h"
 #undef X
     }
     //Create our splines between points
-#define X(aa, bb, cc, dd, ee) spline_##cc = new math::Spline<bb>(*vec_##cc); 
-        #include "wam_type_table.h"
-        #include "tool_type_table.h"
-#undef X
-
-#define X(aa, bb, cc, dd, ee) vec_##cc->clear();
-        #include "wam_type_table.h"
-        #include "tool_type_table.h"
+#define X(aa, bb, cc, dd, ee) \
+        spline_##cc = new math::Spline<bb>(*vec_##cc); \
+        vec_##cc->clear();
+#include "wam_type_table.h"
+#include "tool_type_table.h"
 #undef X
     //cout << "\tSpline created!" << endl;
     
     if(mean){
-#define X(aa, bb, cc, dd, ee) mean_trajectory_##cc = new systems::Callback<double, bb>(boost::ref(*spline_##cc)); 
-        #include "wam_type_table.h"
-        #include "tool_type_table.h"
+#define X(aa, bb, cc, dd, ee) \
+        mean_trajectory_##cc = new systems::Callback<double, bb>(boost::ref(*spline_##cc)); 
+#include "wam_type_table.h"
+#include "tool_type_table.h"
 #undef X
     }
     else{
-#define X(aa, bb, cc, dd, ee) std_trajectory_##cc = new systems::Callback<double, bb>(boost::ref(*spline_##cc)); 
-        #include "wam_type_table.h"
-        #include "tool_type_table.h"
+#define X(aa, bb, cc, dd, ee) \
+        std_trajectory_##cc = new systems::Callback<double, bb>(boost::ref(*spline_##cc)); 
+#include "wam_type_table.h"
+#include "tool_type_table.h"
 #undef X
     }
     //cout << "\tTrajectory created!" << endl;
@@ -435,27 +432,16 @@ void RTMemory::disconnect_systems(){
     disconnect(logger->input);
     disconnect(sss->time_input);
     disconnect(tg.getInput<0>());
-#define X(aa, bb, cc, dd, ee) disconnect(tg.getInput<ee>());
-    #include "wam_type_table.h"
-    #include "tool_type_table.h"
-#undef X
     disconnect(tg.getInput<NUM_SENSORS>());
 	disconnect(rtc->input_time);
-#define X(aa, bb, cc, dd, ee) disconnect(rtc->mean_input_##cc);
-    #include "wam_type_table.h"
-    #include "tool_type_table.h"
+#define X(aa, bb, cc, dd, ee) \
+    disconnect(tg.getInput<ee>()); \
+    disconnect(rtc->mean_input_##cc); \
+    disconnect(rtc->std_input_##cc); \
+    disconnect(rtc->actual_input_##cc);
+#include "wam_type_table.h"
+#include "tool_type_table.h"
 #undef X
-#define X(aa, bb, cc, dd, ee) disconnect(rtc->std_input_##cc);
-    #include "wam_type_table.h"
-    #include "tool_type_table.h"
-#undef X
-#define X(aa, bb, cc, dd, ee) disconnect(rtc->actual_input_##cc);
-    #include "wam_type_table.h"
-    #include "tool_type_table.h"
-#undef X
-    /*
-*/
-    //wam->idle();
 	time.stop();
 	time.setOutput(0.0);
     //cout << "Systems disconnected! " << endl; fflush(stdout);
@@ -477,37 +463,25 @@ void RTMemory::reconnect_systems(){
     systems::forceConnect(time.output, sss->time_input);
     if(memory->get_float("realtime_learning")){
         systems::forceConnect(time.output, rtc->input_time);
-#define X(aa, bb, cc, dd, ee) systems::forceConnect(time.output, mean_trajectory_##cc->input);
-        #include "wam_type_table.h"
-        #include "tool_type_table.h"
-#undef X
-#define X(aa, bb, cc, dd, ee) systems::forceConnect(time.output, std_trajectory_##cc->input);
-        #include "wam_type_table.h"
-        #include "tool_type_table.h"
-#undef X
-#define X(aa, bb, cc, dd, ee) systems::forceConnect(mean_trajectory_##cc->output, rtc->mean_input_##cc);
-        #include "wam_type_table.h"
-        #include "tool_type_table.h"
-#undef X
-#define X(aa, bb, cc, dd, ee) systems::forceConnect(std_trajectory_##cc->output, rtc->std_input_##cc);
-        #include "wam_type_table.h"
-        #include "tool_type_table.h"
-#undef X
-#define X(aa, bb, cc, dd, ee) systems::forceConnect(sss->output_##cc, rtc->actual_input_##cc);
-        #include "wam_type_table.h"
-        #include "tool_type_table.h"
+#define X(aa, bb, cc, dd, ee) \
+        systems::forceConnect(time.output, mean_trajectory_##cc->input); \
+        systems::forceConnect(time.output, std_trajectory_##cc->input); \
+        systems::forceConnect(mean_trajectory_##cc->output, rtc->mean_input_##cc); \
+        systems::forceConnect(std_trajectory_##cc->output, rtc->std_input_##cc); \
+        systems::forceConnect(sss->output_##cc, rtc->actual_input_##cc);
+#include "wam_type_table.h"
+#include "tool_type_table.h"
 #undef X
     }
     else{
     }
-/*
-*/
     cout << "transform_qd_x: " << memory->get_float("transform_qd_x") << endl;	
     cout << "transform_cp_z: " << memory->get_float("transform_cp_z") << endl;	
     systems::forceConnect(time.output, tg.getInput<0>());
-#define X(aa, bb, cc, dd, ee) systems::forceConnect(sss->output_##cc, tg.getInput<ee>());
-    #include "wam_type_table.h"
-    #include "tool_type_table.h"
+#define X(aa, bb, cc, dd, ee) \
+    systems::forceConnect(sss->output_##cc, tg.getInput<ee>());
+#include "wam_type_table.h"
+#include "tool_type_table.h"
 #undef X
 	systems::forceConnect(time.output, tg.getInput<NUM_SENSORS>());
 
@@ -596,9 +570,10 @@ void RTMemory::check_for_problems(){
     //if(strcmp(rtc_dbg.c_str(),"")!=0)
     //    cout << "rtc_dbg: " << rtc_dbg << endl;
     /*
-#define X(aa, bb, cc, dd, ee) check_greater_than_reset_print(&problem_count_##cc,threshold,aa);
-        #include "wam_type_table.h"
-        #include "tool_type_table.h"
+#define X(aa, bb, cc, dd, ee) \
+    check_greater_than_reset_print(&problem_count_##cc,threshold,aa);
+#include "wam_type_table.h"
+#include "tool_type_table.h"
 #undef X   
 */
 /*    
@@ -606,9 +581,10 @@ void RTMemory::check_for_problems(){
     if(problem_count_ft[0] > 40){
         cout << "uh-oh" << endl;
     }
-#define X(aa, bb, cc, dd, ee) check_greater_than_reset(&problem_count_##cc,threshold,aa);
-        #include "wam_type_table.h"
-        #include "tool_type_table.h"
+#define X(aa, bb, cc, dd, ee) \
+    check_greater_than_reset(&problem_count_##cc,threshold,aa);
+#include "wam_type_table.h"
+#include "tool_type_table.h"
 #undef X   
 */
 }

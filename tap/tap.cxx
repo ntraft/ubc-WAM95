@@ -59,8 +59,9 @@ void TeachAndPlay::run(){
     while (!quit){
         step();
         switch (line[0]) {
-#define X(aa, bb, cc, dd, ee) case bb: cc; break;
-            #include "tap_table.h"
+#define X(aa, bb, cc, dd, ee) \
+            case bb: cc; break;
+#include "tap_table.h"
 #undef X
             default:
                 help();
@@ -72,8 +73,9 @@ void TeachAndPlay::run(){
 
 void TeachAndPlay::help(){
         printf("\n");
-#define X(aa, bb, cc, dd, ee) cout << "     " << bb << ": " << dd << endl; //printf("     bb dd\n");
-        #include "tap_table.h"
+#define X(aa, bb, cc, dd, ee) \
+        cout << "     " << bb << ": " << dd << endl; //printf("     bb dd\n");
+#include "tap_table.h"
 #undef X
 }
 

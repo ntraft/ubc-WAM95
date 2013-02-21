@@ -39,8 +39,9 @@ void RobotController::run(){
     while (!back){//robot->get_pm()->getSafetyModule()->getMode() == SafetyModule::ACTIVE) {
         step();
         switch (line[0]) {
-#define X(aa, bb, cc, dd, ee) case bb: cc; break;
-            #include "control_table.h"
+#define X(aa, bb, cc, dd, ee) \
+            case bb: cc; break;
+#include "control_table.h"
 #undef X
             default: help(); break;
         }
@@ -49,8 +50,9 @@ void RobotController::run(){
 }
 void RobotController::help(){
     printf("\n");
-#define X(aa, bb, cc, dd, ee) printf("     bb dd\n");
-    #include "control_table.h"
+#define X(aa, bb, cc, dd, ee) \
+    printf("     bb dd\n");
+#include "control_table.h"
 #undef X
 }
 //Close all fingers

@@ -29,6 +29,7 @@ link_directories (${ubc-WAM95_SOURCE_DIR}/robot/control)
 
 add_library (control control.cxx)
 add_library (rtcontrol rtcontrol.cxx)
+add_library (naive_bayes_system naive_bayes_system.cxx)
 add_library (control_strategy control_strategy.cxx)
 add_library (SaS SaS.cxx)
 add_library (SaA SaA.cxx)

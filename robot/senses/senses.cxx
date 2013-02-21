@@ -32,8 +32,9 @@ void Senses::run(){
     while (!back){//robot->get_pm()->getSafetyModule()->getMode() == SafetyModule::ACTIVE) {
         step();
         switch (line[0]) {
-#define X(aa, bb, cc, dd, ee) case bb: cc; break;
-            #include "senses_table.h"
+#define X(aa, bb, cc, dd, ee) \
+            case bb: cc; break;
+#include "senses_table.h"
 #undef X
             default: help(); break;
         }
@@ -42,8 +43,9 @@ void Senses::run(){
 }
 void Senses::help(){
     printf("\n");
-#define X(aa, bb, cc, dd, ee) printf("     bb dd\n");
-    #include "senses_table.h"
+#define X(aa, bb, cc, dd, ee) \
+    printf("     bb dd\n");
+#include "senses_table.h"
 #undef X
 }
 

@@ -52,8 +52,9 @@ void Robot::run(){
     while (!back){//robot->get_pm()->getSafetyModule()->getMode() == SafetyModule::ACTIVE) {
         step();
         switch (line[0]) {
-#define X(aa, bb, cc, dd, ee) case bb: cc; break;
-            #include "robot_table.h"
+#define X(aa, bb, cc, dd, ee) \
+        case bb: cc; break;
+#include "robot_table.h"
 #undef X
             default: help(); break;
         }
@@ -62,8 +63,9 @@ void Robot::run(){
 }
 void Robot::help(){
     printf("\n");
-#define X(aa, bb, cc, dd, ee) printf("     bb dd\n");
-    #include "robot_table.h"
+#define X(aa, bb, cc, dd, ee) \
+    printf("     bb dd\n");
+#include "robot_table.h"
 #undef X
 }
 

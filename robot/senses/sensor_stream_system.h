@@ -8,15 +8,17 @@ public:
     Input<double> time_input;
     float time_count;
 
-#define X(aa, bb, cc, dd, ee) Output<bb> output_##cc;
-    #include "wam_type_table.h"
-    #include "tool_type_table.h"
+#define X(aa, bb, cc, dd, ee) \
+    Output<bb> output_##cc;
+#include "wam_type_table.h"
+#include "tool_type_table.h"
 #undef X   
 
 protected:
-#define X(aa, bb, cc, dd, ee) Output<bb>::Value* output_value_##cc;
-    #include "wam_type_table.h"
-    #include "tool_type_table.h"
+#define X(aa, bb, cc, dd, ee) \
+    Output<bb>::Value* output_value_##cc;
+#include "wam_type_table.h"
+#include "tool_type_table.h"
 #undef X
     Memory* memory;
     Senses* senses;
@@ -29,9 +31,10 @@ public:
 		systems::System(sysName),
         memory(_memory),
         senses(_senses),
-#define X(aa, bb, cc, dd, ee) output_##cc(this, &output_value_##cc),
-        #include "wam_type_table.h"
-        #include "tool_type_table.h"
+#define X(aa, bb, cc, dd, ee) \
+        output_##cc(this, &output_value_##cc),
+#include "wam_type_table.h"
+#include "tool_type_table.h"
 #undef X   
         time_input(this)
 		{
@@ -43,9 +46,10 @@ public:
     //Hand::jp_type fingertip_torque_readings;
 
 protected:
-#define X(aa, bb, cc, dd, ee) bb readings_##cc;
-    #include "wam_type_table.h"
-    #include "tool_type_table.h"
+#define X(aa, bb, cc, dd, ee) \
+    bb readings_##cc;
+#include "wam_type_table.h"
+#include "tool_type_table.h"
 #undef X
 	
     virtual void operate(); 

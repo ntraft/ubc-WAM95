@@ -40,74 +40,33 @@ void RTControl::init(){
         AngleAxisd(memory->get_float("transform_qd_z"), Vector3d::UnitZ());
 }
 void RTControl::operate() {
+        
+    //declarations
         int num_sigmas = (int)memory->get_float("num_sigmas");
-#define X(aa, bb, cc, dd, ee) const bb& expected_mean_##cc = mean_input_##cc.getValue();
-        #include "wam_type_table.h"
-        #include "tool_type_table.h"
-#undef X
-#define X(aa, bb, cc, dd, ee) const bb& expected_std_##cc = std_input_##cc.getValue();
-        #include "wam_type_table.h"
-        #include "tool_type_table.h"
-#undef X
-#define X(aa, bb, cc, dd, ee) const bb& actual_##cc = actual_input_##cc.getValue();
-        #include "wam_type_table.h"
-        #include "tool_type_table.h"
-#undef X
-#define X(aa, bb, cc, dd, ee) bb upper_bound_##cc;
-        #include "wam_type_table.h"
-        #include "tool_type_table.h"
-#undef X
-#define X(aa, bb, cc, dd, ee) bb lower_bound_##cc;
-        #include "wam_type_table.h"
-        #include "tool_type_table.h"
-#undef X
-#define X(aa, bb, cc, dd, ee) bb margin_##cc;
+#define X(aa, bb, cc, dd, ee) \
+        const bb& expected_mean_##cc = mean_input_##cc.getValue(); \
+        const bb& expected_std_##cc = std_input_##cc.getValue(); \
+        const bb& actual_##cc = actual_input_##cc.getValue(); \
+        bb upper_bound_##cc; copy_matrix(&upper_bound_##cc,&expected_mean_##cc); \
+        bb lower_bound_##cc; copy_matrix(&lower_bound_##cc,&expected_mean_##cc); \
+        bb margin_##cc; copy_matrix(&margin_##cc,&expected_std_##cc);
         #include "wam_type_table.h"
         #include "tool_type_table.h"
 #undef X
 
-#define X(aa, bb, cc, dd, ee) copy_matrix(&margin_##cc,&expected_std_##cc);
+        //calculations
+#define X(aa, bb, cc, dd, ee) \
+        mult_vector_values(&margin_##cc,num_sigmas,0); \
+        add_vector_values(&upper_bound_##cc,&margin_##cc); \
+        sub_vector_values(&lower_bound_##cc,&margin_##cc); \
+        rtc_entries_greater_or_less_than_count(problem_count_##cc,&actual_##cc,&upper_bound_##cc,&lower_bound_##cc); \
+        //rtc_entries_less_than_count(         problem_count_##cc,&actual_##cc,&lower_bound_##cc); \
+        //output_value_##cc->setData(problem_count_##cc);
         #include "wam_type_table.h"
         #include "tool_type_table.h"
 #undef X
-#define X(aa, bb, cc, dd, ee) mult_vector_values(&margin_##cc,num_sigmas,0);
-        #include "wam_type_table.h"
-        #include "tool_type_table.h"
-#undef X
-#define X(aa, bb, cc, dd, ee) copy_matrix(&upper_bound_##cc,&expected_mean_##cc);
-        #include "wam_type_table.h"
-        #include "tool_type_table.h"
-#undef X
-#define X(aa, bb, cc, dd, ee) copy_matrix(&lower_bound_##cc,&expected_mean_##cc);
-        #include "wam_type_table.h"
-        #include "tool_type_table.h"
-#undef X
-#define X(aa, bb, cc, dd, ee) add_vector_values(&upper_bound_##cc,&margin_##cc);
-        #include "wam_type_table.h"
-        #include "tool_type_table.h"
-#undef X
-#define X(aa, bb, cc, dd, ee) sub_vector_values(&lower_bound_##cc,&margin_##cc);
-        #include "wam_type_table.h"
-        #include "tool_type_table.h"
-#undef X
-#define X(aa, bb, cc, dd, ee) rtc_entries_greater_or_less_than_count( problem_count_##cc,     &actual_##cc, &upper_bound_##cc, &lower_bound_##cc);
-        #include "wam_type_table.h"
-        #include "tool_type_table.h"
-#undef X
-        /*
-#define X(aa, bb, cc, dd, ee) rtc_entries_less_than_count(    problem_count_##cc,     &actual_##cc, &lower_bound_##cc);
-        #include "wam_type_table.h"
-        #include "tool_type_table.h"
-#undef X
-*/
-        /*
-*/
-        /*
-#define X(aa, bb, cc, dd, ee) output_value_##cc->setData(problem_count_##cc);
-        #include "wam_type_table.h"
-        #include "tool_type_table.h"
-#undef X
-*/
+
+        //debug
         debug->str("");
 /*
 #define X(aa, bb, cc, dd, ee) \
