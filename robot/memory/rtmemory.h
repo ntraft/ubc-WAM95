@@ -128,7 +128,18 @@ protected:
     Co2QdSystem* co2qd_system; //for realtime conversions between Quaternion and Matrix
     CpSystem* cp_system; //for realtime cartesian position control
     RTControl* rtc; //for realtime manipulation of robot 
-    NaiveBayesSystem* nbs; //for probability calculations
+
+//parameter estimation
+#define X(aa, bb, cc, dd, ee) \
+    NaiveBayesSystem* nbs_##cc; //for probability calculations
+    #include "parameter_table.h"
+#undef X
+ParameterEstimator< 
+#define X(aa, bb, cc, dd, ee) \
+        bb,
+#include "parameter_table.h"
+#undef X
+        double> param_estimator;
 	
 public:
 	int dataSize;
@@ -139,6 +150,9 @@ public:
     stringstream nbs_debug;
 	RTMemory(ProductManager* _pm, Wam<DIMENSION>* _wam, Memory* _memory, Senses* _senses, RobotController* _control); 
     void init();
+    //learn (naive bayes)
+    double get_probability_non_normalized(int environment_parameter_i);
+    double get_probability(int environment_parameter_i);
     //teach
     void set_teach_name(string saveName);
     bool prepare_log_file();

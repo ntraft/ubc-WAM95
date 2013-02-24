@@ -22,6 +22,7 @@ enum SENSORS{
     NUM_SENSORS
 };
 
+
 RTMemory::RTMemory(ProductManager* _pm, Wam<DIMENSION>* _wam, 
         Memory* _memory, Senses* _senses, RobotController* _control) :
 			pm(_pm), wam(_wam), memory(_memory), senses(_senses), control(_control),
@@ -71,17 +72,17 @@ RTMemory::RTMemory(ProductManager* _pm, Wam<DIMENSION>* _wam,
         cout << "RTMemory instantiated!" << endl;
 }
 void RTMemory::init(){
-    //hand system deals with realtime sensor reading
-    //hand_system = new HandSystem(hand,&problem,&hand_debug);
     wam_system = new WamSystem(wam);
     sss = new SensorStreamSystem(memory, senses);
     qd2co_system = new Qd2CoSystem();
     co2qd_system = new Co2QdSystem(memory);
     cp_system = new CpSystem(memory);
-    nbs = new NaiveBayesSystem(&nbs_debug, memory);
+    for(int l = 0; l < memory->get_float("num_environment_parameters"); l++){
+        nbs_vec.push_back(new NaiveBayesSystem(memory));
+    }
     rtc = new RTControl(&rtc_debug, 
 #define X(aa, bb, cc, dd, ee) \
-    &problem_count_##cc,
+            &problem_count_##cc,
 #include "wam_type_table.h"
 #include "tool_type_table.h"
 #undef X 
@@ -89,6 +90,17 @@ void RTMemory::init(){
 	
     pm->getExecutionManager()->startManaging(time); //starting time management
     cout << "RTMemory initialized!" << endl;
+}
+double RTMemory::get_probability_non_normalized(int environment_parameter_i){
+    return *nbs_vec[environment_parameter_i]->output_probability.getValueObject()->getData();
+}
+double RTMemory::get_probability(int environment_parameter_i){
+    double normalizer = 0.0;
+    for(size_t i = 0; i < nbs_vec.size(); i++){
+        normalizer += get_probability_non_normalized(i);
+    }
+    double probability = get_probability_non_normalized(environment_parameter_i) / normalizer;
+    return probability;
 }
 
 //*********TEACH*********
@@ -442,6 +454,12 @@ void RTMemory::disconnect_systems(){
 #include "wam_type_table.h"
 #include "tool_type_table.h"
 #undef X
+    for(size_t i = 0; i < nbs_vec.size(); i++){
+#define X(aa, bb, cc, dd, ee) //
+#include "wam_type_table.h"
+#include "tool_type_table.h"
+#undef X
+    }
 	time.stop();
 	time.setOutput(0.0);
     //cout << "Systems disconnected! " << endl; fflush(stdout);

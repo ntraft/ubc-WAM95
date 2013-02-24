@@ -16,3 +16,4 @@ transform_cp_z:-0.018
 transform_qd_x:0.125
 transform_qd_y:0
 transform_qd_z:0
+num_environment_parameters:4
