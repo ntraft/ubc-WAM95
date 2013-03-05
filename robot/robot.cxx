@@ -42,6 +42,12 @@ void Robot::init_fts(){
 void Robot::init_rt(){
     get_rtmemory()->init();
 }
+void Robot::shutdown(){
+    cout << "Robot shut down activated." << endl;
+	// Wait for the user to press Shift-idle
+	pm->getSafetyModule()->waitForMode(SafetyModule::IDLE);
+    std::exit(0);
+}
 
 //MAINLINE
 void Robot::validate_args(){

@@ -33,7 +33,7 @@ enum VAR_TOGGLE{
 static int loop_count = 0;
 
 Play::Play(Robot* robot) : inputType(robot->get_memory()->get_float("trajectory_type")), time(robot->get_pm()->getExecutionManager()), is_init(false), loop_flag(false), playing(false), playName("") {                       
-    cout << "Play instantiating...";
+    //cout << "Play instantiating...";
     this->robot = robot; 
     pm = robot->get_pm();
     wam = robot->get_wam();
@@ -45,15 +45,19 @@ void Play::instantiate_control_strategies(){
 #define X(aa, bb, cc, dd) control_strategies.push_back(new cc(robot->get_memory(),robot->get_controller()));
     #include "ctrl_table.h"
 #undef X
-    cout << "Control strategies instantiated!" << endl;
+    //cout << "Control strategies instantiated!" << endl;
 }
 // Initialization - Gravity compensating, setting safety limits, parsing input file and creating trajectories
 bool Play::init() {
     robot->get_rtmemory()->set_play_name(playName);
     robot->get_rtmemory()->load_trajectory();
     if(robot->get_memory()->get_float("realtime_learning")){
-        bool success = robot->get_rtmemory()->load_data_stream(true);
-        if(success) robot->get_rtmemory()->load_data_stream(false);
+        bool success = false;
+#define P(aa, bb, cc, dd, ee) \
+        success = robot->get_rtmemory()->load_data_stream(true,enum_##cc); \
+        if(success) robot->get_rtmemory()->load_data_stream(false,enum_##cc);
+#include "parameter_table.h"
+#undef P 
     }
     set_control_strategy(robot->get_memory()->get_float("default_control_strategy"));
     cout << "Play initialized!" << endl;
@@ -69,7 +73,7 @@ void Play::move_to_start() {
         }
 		wam->moveTo( robot->get_rtmemory()->get_initial_tp() , true, 0.5, 0.5);
     }
-		//wam->moveTo( robot->get_rtmemory()->get_initial_tp());//, true, 0.5, 0.5);
+    //wam->moveTo( robot->get_rtmemory()->get_initial_tp());//, true, 0.5, 0.5);
     //cout << "playback started!" << endl; fflush(stdout);
 }
 void Play::toggle_var(string name){
@@ -157,7 +161,7 @@ void Play::run(){
     float sleep_s = 0.002;
 	playing = true;
 	while (playing) {
-        robot->get_rtmemory()->check_for_problems();
+        //cout << "playing" << endl;fflush(stdout);
         if(robot->get_memory()->get_float("reload_vars")){
             robot->get_memory()->reload_vars();
             //toggle_var("reload_vars");
@@ -170,29 +174,33 @@ void Play::run(){
 		case PLAYING:
 			switch (last_state) {
 			case STOPPED:
-                //cout << "STOPPED -> PLAYING" << endl;
+                cout << "STOPPED -> PLAYING" << endl; fflush(stdout);
 				move_to_start();
-                robot->get_rtmemory()->init_data_logger();
+                //if(robot->get_memory()->get_float("data_stream_out"))
+                    robot->get_rtmemory()->init_data_logger();
+                //robot->get_rtmemory()->init_param_logger();
 				robot->get_rtmemory()->reconnect_systems();
 				robot->get_rtmemory()->start_playback();
 				last_state = PLAYING;
 				break;
 			case PAUSED:
-                //cout << "PAUSED -> PLAYING" << endl;
+                //cout << "PAUSED -> PLAYING" << endl;fflush(stdout);
 				robot->get_rtmemory()->start_playback();
 				last_state = PLAYING;
 				break;
 			case PLAYING:
-                //cout << "PLAYING -> PLAYING" << endl;
+                cout << "PLAYING -> PLAYING" << endl;fflush(stdout);
 				if (robot->get_rtmemory()->playback_active()) {
 					btsleep(sleep_s);
                     robot->update_sensors(); //important!!
+                    robot->get_rtmemory()->check_for_problems();
                     if(robot->get_memory()->get_float("realtime_control_break")){
                         robot->get_memory()->set_float("realtime_control_break",0);
                         loop();
                     }
 					break;
 				} else if (loop_flag) {
+                    cout << "PLAYING -> PLAYING (loop)" << endl;fflush(stdout);
                     loop();
 					break;
                 } else {

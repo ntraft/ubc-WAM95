@@ -93,12 +93,12 @@ void RTControl::operate() {
                 //control_strategy->invoke(&offsets_cp, &transform_qd, &expected_mean_ct, &actual_ct, problem_count_ct);
                 //*debug << "invoke" << endl;
             }
-            out_cp = actual_cp + offsets_cp;
-            actual_qd = co2qd(&actual_co);
-            new_qd = transform_qd * actual_qd;
-            out_co = qd2co(&new_qd);
-            output_value_cp->setData(&out_cp);
-            output_value_co->setData(&out_co);
+            //out_cp = actual_cp + offsets_cp;
+            //actual_qd = co2qd(&actual_co);
+            //new_qd = transform_qd * actual_qd;
+            //out_co = qd2co(&new_qd);
+            //output_value_cp->setData(&out_cp);
+            //output_value_co->setData(&out_co);
             //*debug << "transform_qd: " << transform_qd.w() << ", " << transform_qd.x() << ", " << transform_qd.y() << ", " << transform_qd.z() << endl;
             //*debug << "new_qd: " << out_co << endl;
             //output_value_qd->setData(&new_qd);

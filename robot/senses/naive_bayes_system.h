@@ -19,16 +19,16 @@ public:
 #undef X   
 protected:
     Output<double>::Value* output_value_probability;
-    double running_probability; //probability at current timestep * previous timestep
+    double alpha; //probability at current timestep * previous timestep
 
 protected:
     Memory* memory;
-    bool* problem;
 
 public:
     void init();
-	NaiveBayesSystem(Memory* _memory, const std::string& sysName = "NaiveBayesSystem") :
-		systems::System(sysName), memory(_memory),
+    double get_probability();
+	NaiveBayesSystem(ExecutionManager* em, Memory* _memory, const std::string& sysName = "NaiveBayesSystem") :
+		systems::System(sysName), 
 #define X(aa, bb, cc, dd, ee) \
         mean_input_##cc(this), \
         std_input_##cc(this), \
@@ -36,9 +36,12 @@ public:
         #include "wam_type_table.h"
         #include "tool_type_table.h"
 #undef X   
-        output_probability(this, &output_value_probability),
-        input_time(this)
+        memory(_memory),
+        input_time(this),
+        output_probability(this, &output_value_probability)
+        //input_time(this)
 		{
+            //em->startManaging(*this);
         }
 
 	virtual ~NaiveBayesSystem() { mandatoryCleanUp(); }

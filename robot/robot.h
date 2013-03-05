@@ -31,6 +31,7 @@ class Robot: public MainLine{
         void init_hand();
         void init_fts();
         void init_rt();
+        void shutdown();
 
         //mainline
         virtual void help();

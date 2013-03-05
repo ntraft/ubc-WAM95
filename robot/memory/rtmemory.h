@@ -17,7 +17,7 @@ class NaiveBayesSystem;
 class RTControl2;
 class Memory;
 class ControlStrategy;
-//class co_type;
+#include "parameter_estimator.h"
 
 //RTMemory Class
 class RTMemory {
@@ -67,6 +67,7 @@ systems::Ramp time;
     
 //realtime data logging
 string data_log_headers;
+/*
 typedef boost::tuple<double, 
 #define X(aa, bb, cc, dd, ee) \
         bb,
@@ -82,7 +83,20 @@ systems::TupleGrouper<double,
 #include "tool_type_table.h"
 #undef X
         double> tg;
+*/
+typedef boost::tuple<double, 
+#define P(aa, bb, cc, dd, ee) \
+        bb,
+#include "parameter_table.h"
+#undef P
+        double> input_stream_type;
 
+systems::TupleGrouper<double, 
+#define P(aa, bb, cc, dd, ee) \
+        bb,
+#include "parameter_table.h"
+#undef P
+        double> tg;
 int STREAM_SIZE;
 
     private:
@@ -97,8 +111,7 @@ systems::PeriodicDataLogger<input_stream_type>* logger;
     typedef boost::tuple<double, bb> input_type_##cc; \
     input_type_##cc* sample_##cc; \
     std::vector<input_type_##cc, Eigen::aligned_allocator<input_type_##cc> >* vec_##cc; \
-    math::Spline<bb>* spline_##cc; \
-    //
+    math::Spline<bb>* spline_##cc;
     #include "wam_type_table.h"
     #include "tool_type_table.h"
 #undef X
@@ -107,11 +120,17 @@ systems::PeriodicDataLogger<input_stream_type>* logger;
     systems::Callback<double, bb>* trajectory_##cc; \
     systems::Callback<double, bb>* mean_trajectory_##cc; \
     systems::Callback<double, bb>* std_trajectory_##cc; \
-    bb problem_count_##cc;\
-    //
+    bb problem_count_##cc;
     #include "wam_type_table.h"
     #include "tool_type_table.h"
 #undef X
+#define X(aa, bb, cc, dd, ee) \
+    vector<systems::Callback<double, bb>* > mean_trajectory_vec_##cc; \
+    vector<systems::Callback<double, bb>* > std_trajectory_vec_##cc;
+    #include "wam_type_table.h"
+    #include "tool_type_table.h"
+#undef X
+
 
 protected:
 	Robot* robot;
@@ -130,17 +149,41 @@ protected:
     RTControl* rtc; //for realtime manipulation of robot 
 
 //parameter estimation
-#define X(aa, bb, cc, dd, ee) \
-    NaiveBayesSystem* nbs_##cc; //for probability calculations
-    #include "parameter_table.h"
-#undef X
-ParameterEstimator< 
-#define X(aa, bb, cc, dd, ee) \
+    vector<NaiveBayesSystem*> nbs_vec;
+    ParameterEstimator* param_estimator;
+    /*typedef ParameterEstimator< 
+#define P(aa, bb, cc, dd, ee) \
+        bb,
+#include "parameter_table.h"
+#undef P 
+        double> pe_type;
+    pe_type param_estimator;
+    systems::TupleSplitter< 
+#define P(aa, bb, cc, dd, ee) \
+        bb,
+#include "parameter_table.h"
+#undef P 
+        double> param_splitter;
+    typedef typename pe_type::tuple_type tuple_type;
+    */
+typedef boost::tuple<
+#define P(aa, bb, cc, dd, ee) \
         bb,
 #include "parameter_table.h"
 #undef X
-        double> param_estimator;
-	
+        double> parameter_tuple_type;
+systems::TupleGrouper<
+#define P(aa, bb, cc, dd, ee) \
+        bb,
+#include "parameter_table.h"
+#undef P 
+        double> pg;
+#define P(aa, bb, cc, dd, ee) \
+    ostringstream param_ostream_##cc;\
+	PrintToStream<bb>* param_outputter_##cc;
+#include "parameter_table.h"
+#undef P
+systems::PeriodicDataLogger<parameter_tuple_type>* param_logger;
 public:
 	int dataSize;
 	bool loop;
@@ -150,9 +193,6 @@ public:
     stringstream nbs_debug;
 	RTMemory(ProductManager* _pm, Wam<DIMENSION>* _wam, Memory* _memory, Senses* _senses, RobotController* _control); 
     void init();
-    //learn (naive bayes)
-    double get_probability_non_normalized(int environment_parameter_i);
-    double get_probability(int environment_parameter_i);
     //teach
     void set_teach_name(string saveName);
     bool prepare_log_file();
@@ -162,13 +202,17 @@ public:
     void set_play_name(string playName);
     bool load_trajectory();
 	void init_data_logger();
+	void init_param_logger();
     void output_data_stream();
     bool load_data_stream(bool);
+    bool load_data_stream(bool, enum parameters);
     void start_playback();
     void pause_playback();
     bool playback_active();
     void disconnect_systems();
     void reconnect_systems();
+    double get_probability_non_normalized(enum parameters parameter);
+    double get_probability(enum parameters parameter);
     void check_for_problems();
     void set_control_strategy(ControlStrategy* strategy);
     //accessor

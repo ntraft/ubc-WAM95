@@ -27,3 +27,5 @@ link_directories (${ubc-WAM95_SOURCE_DIR}/robot/control)
 
 add_library (senses senses.cxx)
 add_library (sensor_stream_system sensor_stream_system.cxx)
+add_library (naive_bayes_system naive_bayes_system.cxx)
+add_library (parameter_estimator parameter_estimator.cxx)

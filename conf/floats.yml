@@ -1,13 +1,13 @@
-data_stream_out:1
+data_stream_out:0
 default_control_strategy:1
 memory_test:0
 num_sigmas:3
 problem_count_threshold:50
 qd_address:0
 realtime_control_break:0
-realtime_learning:0
+realtime_learning:1
 reload_vars:0
-track_rtc_c:1
+track_rtc_c:0
 track_rtc_jp:0
 trajectory_type:1
 transform_cp_x:-0.0
