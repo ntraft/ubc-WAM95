@@ -17,12 +17,10 @@ enum SENSORS{
     enum_time,
 #define X(aa, bb, cc, dd, ee) \
     enum_##cc,
-#include "wam_type_table.h"
-#include "tool_type_table.h"
+#include "input_type_table.h"
 #undef X
     NUM_SENSORS
 };
-
 
 RTMemory::RTMemory(ProductManager* _pm, Wam<DIMENSION>* _wam, 
         Memory* _memory, Senses* _senses, RobotController* _control) :
@@ -36,28 +34,34 @@ RTMemory::RTMemory(ProductManager* _pm, Wam<DIMENSION>* _wam,
         log_prefix = "./data_streams/";
 #define X(aa, bb, cc, dd, ee) \
         bb cc;
-#include "wam_type_table.h"
-#include "tool_type_table.h"
+#include "input_type_table.h"
 #undef X
         
         data_log_headers = 
             string("TIME,1;") +
 #define X(aa, bb, cc, dd, ee) \
             aa + "," + num2str(cc.size()) + ";" +
-#include "wam_type_table.h"
+#include "input_type_table.h"
 #include "tool_type_table.h"
 #undef X
+#define P(aa, bb, cc, dd, ee) \
+            aa + "," + num2str(1) + ";" +
+#include "parameter_table.h"
+#undef P 
             "";
          
         STREAM_SIZE = 
             1 +
 #define X(aa, bb, cc, dd, ee) \
             cc.size() +
-#include "wam_type_table.h"
+#include "input_type_table.h"
 #include "tool_type_table.h"
 #undef X
             1;
-       
+        
+        PERIOD_MULTIPLIER = memory->get_float("period_multiplier");
+        cout << "Control loop running at " << 1.0 / PERIOD_MULTIPLIER * pm->getExecutionManager()->getPeriod() << endl;
+
         cpVec = new std::vector<input_cp_type, Eigen::aligned_allocator<input_cp_type> >();
         qdVec = new std::vector<input_qd_type, Eigen::aligned_allocator<input_qd_type> >();
         coVec = new std::vector<input_co_type, Eigen::aligned_allocator<input_co_type> >();
@@ -67,20 +71,21 @@ RTMemory::RTMemory(ProductManager* _pm, Wam<DIMENSION>* _wam,
         vec_##cc = new std::vector<input_type_##cc, Eigen::aligned_allocator<input_type_##cc> >();\
         sample_##cc = new input_type_##cc(); \
         //trajectory_##cc = new systems::Callback<double,bb>(boost::ref(*spline_##cc));
-        #include "wam_type_table.h"
+        #include "input_type_table.h"
         #include "tool_type_table.h"
 #undef X
         for(int l = 0; l < NUM_PARAMETERS; l++){
 #define X(aa, bb, cc, dd, ee) \
             mean_trajectory_vec_##cc.push_back(NULL); \
             std_trajectory_vec_##cc.push_back(NULL);
-#include "wam_type_table.h"
+#include "input_type_table.h"
 #include "tool_type_table.h"
 #undef X
         }
         cout << "RTMemory instantiated!" << endl;
 }
 void RTMemory::init(){
+    output_counter = 0;
     wam_system = new WamSystem(wam);
     sss = new SensorStreamSystem(memory, senses);
     qd2co_system = new Qd2CoSystem();
@@ -93,14 +98,15 @@ void RTMemory::init(){
     rtc = new RTControl(&rtc_debug, 
 #define X(aa, bb, cc, dd, ee) \
             &problem_count_##cc,
-#include "wam_type_table.h"
+#include "input_type_table.h"
 #include "tool_type_table.h"
 #undef X 
             memory, senses, control);
     //param_estimator = new ParameterEstimator();
+    //param_output_system = new Parameter<pv_type>();
     
 #define P(aa, bb, cc, dd, ee) \
-	param_outputter_##cc = new PrintToStream<bb>(pm->getExecutionManager(), aa, param_ostream_##cc);
+	//param_outputter_##cc = new PrintToStream<bb>(pm->getExecutionManager(), aa, param_ostream_##cc);
 #include "parameter_table.h"
 #undef P
 
@@ -190,6 +196,16 @@ void RTMemory::create_spline(){
 //*********PLAY*********
 void RTMemory::set_play_name(string _playName){
     playName = _playName;
+}
+void RTMemory::reset_output_counter(int base){
+    output_counter = base;
+}
+void RTMemory::record_zero_values(){
+#define X(aa, bb, cc, dd, ee) \
+    senses->tare_all();
+#include "input_type_table.h"
+#include "tool_type_table.h"
+#undef X
 }
 bool RTMemory::load_trajectory(){
     //Create stream from input file
@@ -318,7 +334,6 @@ bool RTMemory::load_trajectory(){
 
     //if(loop_count > 0)
     //    logger->closeLog();
-    const size_t PERIOD_MULTIPLIER = 1;
     logger = new systems::PeriodicDataLogger<input_stream_type> (
 			pm->getExecutionManager(),
 			new log::RealTimeWriter<input_stream_type>(
@@ -350,7 +365,6 @@ bool RTMemory::load_trajectory(){
 
     //if(loop_count > 0)
     //    logger->closeLog();
-    const size_t PERIOD_MULTIPLIER = 1;
     param_logger = new systems::PeriodicDataLogger<parameter_tuple_type> (
 			pm->getExecutionManager(),
 			new log::RealTimeWriter<parameter_tuple_type>(
@@ -359,7 +373,21 @@ bool RTMemory::load_trajectory(){
     cout << "Parameter logger initialized!" << endl;
 }
 
-//export to csv files
+// converts a vector of doubles into a string of sep_str-separated doubles with optional prefix/suffix
+template<int R, int C, typename Units>
+std::string to_string(math::Matrix<R,C, Units>* src, string sep_str, string prefix = "", string suffix = ""){
+    for (int i = 0; i < src->size(); ++i) {
+        char buff[50];
+        sprintf(buff, "%f",(*src)[i]);
+        prefix.append(buff);
+        if(i < src->size()-1)
+            prefix.append(sep_str);
+        else
+            prefix.append(suffix);
+    }
+    return prefix;
+}
+//export to separate csv files
 void RTMemory::output_data_stream(){
     logger->closeLog(); //clost outstanding log
     //save headers for data log of entire trajectory
@@ -368,12 +396,20 @@ void RTMemory::output_data_stream(){
     std::string header_filename = log_prefix+log_name+".h";
     std::ofstream out(header_filename.c_str());
     out << data_log_headers << std::endl;
+    /*
+    out << "0," <<
+#define X(aa, bb, cc, dd, ee) \
+        to_string(&zero_value_##cc,",","",",") << 
+#include "input_type_table.h"
+#include "tool_type_table.h"
+#undef X
+        "0," << "0," <<
+        std::endl;*/
     out.close();
-    int counter = 0;
     std::vector<std::string>::iterator tmp_filename_it;	
     for (tmp_filename_it=tmp_filenames.begin(); tmp_filename_it < tmp_filenames.end(); tmp_filename_it++){
         std::string tmp_filename = *tmp_filename_it;
-        std::string out_filename = log_prefix+itoa(counter++)+log_name+".csv";
+        std::string out_filename = log_prefix+itoa(output_counter++)+log_name+".csv";
         log::Reader<input_stream_type> lr((tmp_filename).c_str());
         lr.exportCSV(out_filename.c_str()); 
         std::remove((tmp_filename).c_str());
@@ -383,6 +419,66 @@ void RTMemory::output_data_stream(){
     std::cout <<  "All data logs saved successfully!" << std::endl;
 }
 
+void append_to_file(string app_filename, string in_filename){
+    ofstream appfile;
+    ifstream infile;
+
+    appfile.open(app_filename.c_str(), ios_base::app);
+    infile.open(in_filename.c_str(), ios_base::in);
+    appfile << infile.rdbuf(); 
+    appfile.close();
+    infile.close();
+}
+void append_to_filebuf(string app_filename, string in_filename){
+    std::filebuf appfile, infile;
+
+    appfile.open(app_filename.c_str(), ios_base::app | ios_base::binary);
+    infile.open(in_filename.c_str(), ios_base::in | ios_base::binary);
+
+    appfile.pubsetbuf(NULL, 1024 * 1024 * 1024);
+    infile.pubsetbuf(NULL, 5 * 1024 * 1024);
+
+    boost::iostreams::copy(appfile, infile);
+}
+
+//append to one large csv file
+void RTMemory::append_data_stream(){
+    logger->closeLog(); //clost outstanding log
+    //save headers for data log of entire trajectory
+    //std::string log_name = playName.substr(9,playName.length()-4-9); //strip recorded/ and .csv from playName
+    string log_name = playName;
+    string header_filename = log_prefix+log_name+".h";
+
+    //output data header (do NOT OVERWRITE if exists)
+    ifstream header_exists(header_filename.c_str());
+    if(!header_exists){
+        ofstream header_file(header_filename.c_str());
+        header_file << data_log_headers << std::endl;
+        /*
+        header_file << "0," <<
+#define X(aa, bb, cc, dd, ee) \
+            to_string(&zero_value_##cc,",","",",") << 
+#include "input_type_table.h"
+#include "tool_type_table.h"
+#undef X
+            "0," << "0," <<
+            std::endl;*/
+        header_file.close();
+    }
+    std::vector<std::string>::iterator tmp_filename_it;	
+    for (tmp_filename_it=tmp_filenames.begin(); tmp_filename_it < tmp_filenames.end()-1; tmp_filename_it++){
+        std::string tmp_filename = *tmp_filename_it;
+        std::string out_filename = log_prefix+itoa(output_counter++)+log_name+".csv";
+        std::string app_filename = log_prefix+log_name+".csv";
+        log::Reader<input_stream_type> lr((tmp_filename).c_str());
+        lr.exportCSV(out_filename.c_str()); 
+        append_to_file(app_filename, out_filename);
+        std::remove((tmp_filename).c_str());
+        printf("Data log saved to the location: %s and appended to %s\n", out_filename.c_str(), app_filename.c_str());
+    }
+    tmp_filenames.clear();
+    std::cout <<  "All data logs saved successfully!" << std::endl;
+}
 bool RTMemory::load_data_stream(bool mean, enum parameters parameter){
     //Create stream from input file
     string stream_prefix = "";
@@ -426,7 +522,7 @@ bool RTMemory::load_data_stream(bool mean, enum parameters parameter){
         boost::get<1>(*sample_##cc)=cc; \
         vec_##cc->push_back(*sample_##cc); \
         //cout<<"got "<<aa<<" at time "<<fLine[0]<<endl;fflush(stdout); 
-#include "wam_type_table.h"
+#include "input_type_table.h"
 #include "tool_type_table.h"
 #undef X
     }
@@ -434,7 +530,7 @@ bool RTMemory::load_data_stream(bool mean, enum parameters parameter){
 #define X(aa, bb, cc, dd, ee) \
         spline_##cc = new math::Spline<bb>(*vec_##cc); \
         vec_##cc->clear();
-#include "wam_type_table.h"
+#include "input_type_table.h"
 #include "tool_type_table.h"
 #undef X
     //cout << "\tSpline created!" << endl;
@@ -442,14 +538,14 @@ bool RTMemory::load_data_stream(bool mean, enum parameters parameter){
     if(mean){
 #define X(aa, bb, cc, dd, ee) \
         mean_trajectory_vec_##cc[param_i] = new systems::Callback<double, bb>(boost::ref(*spline_##cc)); 
-#include "wam_type_table.h"
+#include "input_type_table.h"
 #include "tool_type_table.h"
 #undef X
     }
     else{
 #define X(aa, bb, cc, dd, ee) \
         std_trajectory_vec_##cc[param_i] = new systems::Callback<double, bb>(boost::ref(*spline_##cc));
-#include "wam_type_table.h"
+#include "input_type_table.h"
 #include "tool_type_table.h"
 #undef X
     }
@@ -498,7 +594,7 @@ bool RTMemory::load_data_stream(bool mean){
         boost::get<1>(*sample_##cc)=cc; \
         vec_##cc->push_back(*sample_##cc); 
         //cout<<"got "<<aa<<" at time "<<fLine[0]<<endl;fflush(stdout); 
-#include "wam_type_table.h"
+#include "input_type_table.h"
 #include "tool_type_table.h"
 #undef X
     }
@@ -506,7 +602,7 @@ bool RTMemory::load_data_stream(bool mean){
 #define X(aa, bb, cc, dd, ee) \
         spline_##cc = new math::Spline<bb>(*vec_##cc); \
         vec_##cc->clear();
-#include "wam_type_table.h"
+#include "input_type_table.h"
 #include "tool_type_table.h"
 #undef X
     //cout << "\tSpline created!" << endl;
@@ -514,14 +610,14 @@ bool RTMemory::load_data_stream(bool mean){
     if(mean){
 #define X(aa, bb, cc, dd, ee) \
         mean_trajectory_##cc = new systems::Callback<double, bb>(boost::ref(*spline_##cc)); 
-#include "wam_type_table.h"
+#include "input_type_table.h"
 #include "tool_type_table.h"
 #undef X
     }
     else{
 #define X(aa, bb, cc, dd, ee) \
         std_trajectory_##cc = new systems::Callback<double, bb>(boost::ref(*spline_##cc)); 
-#include "wam_type_table.h"
+#include "input_type_table.h"
 #include "tool_type_table.h"
 #undef X
     }
@@ -555,20 +651,20 @@ void RTMemory::disconnect_systems(){
         disconnect(cpTrajectory->input);
         disconnect(coTrajectory->input);
     }
-    cout << "1";
+    //cout << "1";
 	disconnect(wam->input);
-    //if(memory->get_float("data_stream_out"))
+    if(memory->get_float("data_stream_out"))
         disconnect(logger->input);
     //disconnect(param_logger->input);
     disconnect(sss->time_input);
 	disconnect(rtc->input_time);
     disconnect(tg.getInput<0>());
-    cout << "2";
+    //cout << "2";
 #define X(aa, bb, cc, dd, ee) \
     disconnect(rtc->mean_input_##cc); \
     disconnect(rtc->std_input_##cc); \
     disconnect(rtc->actual_input_##cc);
-#include "wam_type_table.h"
+#include "input_type_table.h"
 #include "tool_type_table.h"
 #undef X
 #define P(aa, bb, cc, dd, ee) \
@@ -582,20 +678,21 @@ void RTMemory::disconnect_systems(){
         disconnect(nbs_vec[l]->mean_input_##cc); \
         disconnect(nbs_vec[l]->std_input_##cc); \
         disconnect(nbs_vec[l]->actual_input_##cc);
-#include "wam_type_table.h"
+#include "input_type_table.h"
 #include "tool_type_table.h"
 #undef X
     }
-    cout << "3";
+    //cout << "3";
+    /*
 #define P(aa, bb, cc, dd, ee) \
     disconnect(param_outputter_##cc->input);
     //disconnect(pg.getInput<ee>()); \
     //disconnect(param_estimator->input_##cc); \
     //disconnect(param_estimator.getInput<ee>());
 #include "parameter_table.h"
-#undef P
-    cout << "4";
-    disconnect(pg.getInput<NUM_PARAMETERS>());
+#undef P*/
+    //cout << "4";
+    //disconnect(pg.getInput<NUM_PARAMETERS>());
 	time.stop();
 	time.setOutput(0.0);
     cout << "Systems disconnected! " << endl; fflush(stdout);
@@ -626,7 +723,7 @@ void RTMemory::reconnect_systems(){
         //systems::forceConnect(time.output, std_trajectory_##cc->input); \
         //systems::forceConnect(mean_trajectory_##cc->output, rtc->mean_input_##cc); \
         //systems::forceConnect(std_trajectory_##cc->output, rtc->std_input_##cc);
-#include "wam_type_table.h"
+#include "input_type_table.h"
 #include "tool_type_table.h"
 #undef X
         cout << "NBS "; fflush(stdout);
@@ -641,7 +738,7 @@ void RTMemory::reconnect_systems(){
             systems::forceConnect(std_trajectory_vec_##cc[l]->output, nbs_vec[l]->std_input_##cc); \
             //systems::forceConnect(mean_trajectory_##cc->output, nbs_vec[l]->mean_input_##cc); \
             //systems::forceConnect(std_trajectory_##cc->output, nbs_vec[l]->std_input_##cc);
-#include "wam_type_table.h"
+#include "input_type_table.h"
 #include "tool_type_table.h"
 #undef X
         }
@@ -659,21 +756,24 @@ void RTMemory::reconnect_systems(){
     }
     //cout << "transform_qd_x: " << memory->get_float("transform_qd_x") << endl;	
     //cout << "transform_cp_z: " << memory->get_float("transform_cp_z") << endl;	
-    /*systems::forceConnect(time.output, tg.getInput<0>());
+    cout << "tg "; fflush(stdout);
+    if(memory->get_float("data_stream_out")){
+        systems::forceConnect(time.output, tg.getInput<0>());
 #define X(aa, bb, cc, dd, ee) \
-    systems::forceConnect(sss->output_##cc, tg.getInput<ee>());
-#include "wam_type_table.h"
+        systems::forceConnect(sss->output_##cc, tg.getInput<ee>());
+#include "input_type_table.h"
 #include "tool_type_table.h"
 #undef X
-	systems::forceConnect(time.output, tg.getInput<NUM_SENSORS>());
-    */
-    cout << "tg "; fflush(stdout);
-    systems::forceConnect(time.output, tg.getInput<0>());
+        systems::forceConnect(sss->output_param, tg.getInput<NUM_SENSORS>());
+    }
+    /*else{
+        systems::forceConnect(time.output, tg.getInput<0>());
 #define P(aa, bb, cc, dd, ee) \
-    systems::forceConnect(nbs_vec[ee]->output_probability, tg.getInput<ee>());
+        systems::forceConnect(nbs_vec[ee]->output_probability, tg.getInput<ee>());
 #include "parameter_table.h"
 #undef P 
-	systems::forceConnect(time.output, tg.getInput<NUM_PARAMETERS>());
+        systems::forceConnect(time.output, tg.getInput<NUM_PARAMETERS>());
+    }*/
     
 /*
 #define P(aa, bb, cc, dd, ee) \
@@ -780,4 +880,7 @@ void RTMemory::check_for_problems(){
 }
 void RTMemory::set_control_strategy(ControlStrategy* strategy){
     rtc->set_control_strategy(strategy);
+}
+void RTMemory::set_environment_param(pv_type param){
+    param_output_system->setValue(param);
 }

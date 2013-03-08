@@ -2,6 +2,7 @@
 #define RTMEMORY_H_
 
 #include "stdheader.h"
+#include <boost/iostreams/copy.hpp>
 #include "control_mode_switcher.h"
 class Robot;
 class Senses;
@@ -18,6 +19,7 @@ class RTControl2;
 class Memory;
 class ControlStrategy;
 #include "parameter_estimator.h"
+
 
 //RTMemory Class
 class RTMemory {
@@ -67,52 +69,86 @@ systems::Ramp time;
     
 //realtime data logging
 string data_log_headers;
+/**/
+//input_streams' type definitions
+typedef boost::tuple<double, 
+#define X(aa, bb, cc, dd, ee) bb,
+#include "input_type_table.h"
+#include "tool_type_table.h"
+#undef X
+        pv_type> input_stream_type;
+typedef boost::tuple<double, 
+#define X(aa, bb, cc, dd, ee) bb,
+#include "input_type_table.h"
+#undef X
+        double> input_stream_wam_type;
+typedef boost::tuple<double, 
+#define X(aa, bb, cc, dd, ee) bb,
+#include "tool_type_table.h"
+#undef X
+        double> input_stream_tool_type;
+typedef boost::tuple<double, 
+#define X(aa, bb, cc, dd, ee) bb,
+#include "hand_type_table.h"
+#undef X
+        double> input_stream_hand_type;
+//tuple groupers
+systems::TupleGrouper<double, 
+#define X(aa, bb, cc, dd, ee) bb,
+#include "input_type_table.h"
+#include "tool_type_table.h"
+#undef X
+        pv_type> tg;
+systems::TupleGrouper<double, 
+#define X(aa, bb, cc, dd, ee) bb,
+#include "input_type_table.h"
+#undef X
+        double> wam_tg;
+systems::TupleGrouper<double, 
+#define X(aa, bb, cc, dd, ee) bb,
+#include "tool_type_table.h"
+#undef X
+        double> tool_tg;
+systems::TupleGrouper<double, 
+#define X(aa, bb, cc, dd, ee) bb,
+#include "hand_type_table.h"
+#undef X
+        double> hand_tg;
+
 /*
 typedef boost::tuple<double, 
-#define X(aa, bb, cc, dd, ee) \
+#define P(aa, bb, cc, dd, ee) \
         bb,
-#include "wam_type_table.h"
-#include "tool_type_table.h"
-#undef X
+#include "parameter_table.h"
+#undef P
         double> input_stream_type;
 
 systems::TupleGrouper<double, 
-#define X(aa, bb, cc, dd, ee) \
+#define P(aa, bb, cc, dd, ee) \
         bb,
-#include "wam_type_table.h"
-#include "tool_type_table.h"
-#undef X
+#include "parameter_table.h"
+#undef P
         double> tg;
 */
-typedef boost::tuple<double, 
-#define P(aa, bb, cc, dd, ee) \
-        bb,
-#include "parameter_table.h"
-#undef P
-        double> input_stream_type;
-
-systems::TupleGrouper<double, 
-#define P(aa, bb, cc, dd, ee) \
-        bb,
-#include "parameter_table.h"
-#undef P
-        double> tg;
 int STREAM_SIZE;
+int PERIOD_MULTIPLIER;
+int output_counter;
 
     private:
 systems::PeriodicDataLogger<input_stream_type>* logger;
+pv_type param_vec;
 
 //realtime logfile reading:
 //  1. vectors (input_type_xx) of data points are built from data samples (lines of an input file)
 //  2. splines are built from these data points
 //  3. sensorimotor trajectories are built from the splines
-//  note: see lib/wam_type_table.h & lib/tool_type_table.h
+//  note: see lib/input_type_table.h & lib/tool_type_table.h
 #define X(aa, bb, cc, dd, ee) \
     typedef boost::tuple<double, bb> input_type_##cc; \
     input_type_##cc* sample_##cc; \
     std::vector<input_type_##cc, Eigen::aligned_allocator<input_type_##cc> >* vec_##cc; \
     math::Spline<bb>* spline_##cc;
-    #include "wam_type_table.h"
+    #include "input_type_table.h"
     #include "tool_type_table.h"
 #undef X
     public:
@@ -121,13 +157,13 @@ systems::PeriodicDataLogger<input_stream_type>* logger;
     systems::Callback<double, bb>* mean_trajectory_##cc; \
     systems::Callback<double, bb>* std_trajectory_##cc; \
     bb problem_count_##cc;
-    #include "wam_type_table.h"
+    #include "input_type_table.h"
     #include "tool_type_table.h"
 #undef X
 #define X(aa, bb, cc, dd, ee) \
     vector<systems::Callback<double, bb>* > mean_trajectory_vec_##cc; \
     vector<systems::Callback<double, bb>* > std_trajectory_vec_##cc;
-    #include "wam_type_table.h"
+    #include "input_type_table.h"
     #include "tool_type_table.h"
 #undef X
 
@@ -147,10 +183,11 @@ protected:
     Co2QdSystem* co2qd_system; //for realtime conversions between Quaternion and Matrix
     CpSystem* cp_system; //for realtime cartesian position control
     RTControl* rtc; //for realtime manipulation of robot 
+    ExposedOutput<pv_type>* param_output_system; //to record environment parameters
 
 //parameter estimation
     vector<NaiveBayesSystem*> nbs_vec;
-    ParameterEstimator* param_estimator;
+    //ParameterEstimator* param_estimator;
     /*typedef ParameterEstimator< 
 #define P(aa, bb, cc, dd, ee) \
         bb,
@@ -184,6 +221,14 @@ systems::TupleGrouper<
 #include "parameter_table.h"
 #undef P
 systems::PeriodicDataLogger<parameter_tuple_type>* param_logger;
+
+
+#define X(aa, bb, cc, dd, ee) \
+    bb zero_value_##cc;
+    #include "input_type_table.h"
+    #include "tool_type_table.h"
+#undef X
+
 public:
 	int dataSize;
 	bool loop;
@@ -200,10 +245,13 @@ public:
     void create_spline();
     //play
     void set_play_name(string playName);
+    void reset_output_counter(int base = 0);
+    void record_zero_values();
     bool load_trajectory();
 	void init_data_logger();
 	void init_param_logger();
     void output_data_stream();
+    void append_data_stream();
     bool load_data_stream(bool);
     bool load_data_stream(bool, enum parameters);
     void start_playback();
@@ -215,6 +263,8 @@ public:
     double get_probability(enum parameters parameter);
     void check_for_problems();
     void set_control_strategy(ControlStrategy* strategy);
+    void set_environment_param(pv_type param);
+    void set_data_stream_index(int index);
     //accessor
     jp_type get_initial_jp();
     pose_type get_initial_tp();

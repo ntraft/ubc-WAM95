@@ -13,6 +13,8 @@ std::string num2str(int number);
 std::string num2str(float number);
 std::string num2str(double number);
 //The following two functions convert between a 4-element vector and quaternion
+qd_type co2qd(const co_type* co, co_type* tare_values);
+co_type qd2co(const qd_type* qd, co_type* tare_values);
 qd_type co2qd(const co_type* co);
 co_type qd2co(const qd_type* qd);
 Eigen::Quaterniond jp2quaternion(jp_type* p);

@@ -50,7 +50,7 @@ void RTControl::operate() {
         bb upper_bound_##cc; copy_matrix(&upper_bound_##cc,&expected_mean_##cc); \
         bb lower_bound_##cc; copy_matrix(&lower_bound_##cc,&expected_mean_##cc); \
         bb margin_##cc; copy_matrix(&margin_##cc,&expected_std_##cc);
-        #include "wam_type_table.h"
+        #include "input_type_table.h"
         #include "tool_type_table.h"
 #undef X
 
@@ -62,7 +62,7 @@ void RTControl::operate() {
         rtc_entries_greater_or_less_than_count(problem_count_##cc,&actual_##cc,&upper_bound_##cc,&lower_bound_##cc); \
         //rtc_entries_less_than_count(         problem_count_##cc,&actual_##cc,&lower_bound_##cc); \
         //output_value_##cc->setData(problem_count_##cc);
-        #include "wam_type_table.h"
+        #include "input_type_table.h"
         #include "tool_type_table.h"
 #undef X
 
@@ -76,7 +76,7 @@ void RTControl::operate() {
         *debug << "ac_" << aa << ": " << actual_##cc[0] << endl;\
         *debug << "pc_" << aa << ": " << (*problem_count_##cc)[0] << endl;\
         *debug << "~~~~" << endl;
-        #include "wam_type_table.h"
+        #include "input_type_table.h"
         #include "tool_type_table.h"
 #undef X
         *debug << "~~~~~~~~~~" << endl;

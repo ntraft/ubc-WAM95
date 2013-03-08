@@ -1,7 +1,9 @@
-P("MASS_0_FRICTION_0: ", double, m0f0, 0, 0)   
+P("MASS", double, mass, "param_mass", 0)
+P("FRICTION", double, friction, "param_friction", 1)
+//P("MASS_0_FRICTION_0: ", double, m0f0, 0, 0)   
 //P("MASS_1_FRICTION_0: ", double, m1f0, P1, 1)   
 //P("MASS_2_FRICTION_0: ", double, m2f0, P2, 2)   
-P("MASS_3_FRICTION_0: ", double, m3f0, 3, 1)   
+//P("MASS_3_FRICTION_0: ", double, m3f0, 3, 1)   
 /*
 P("MASS_4_FRICTION_0: ", double, m4f0, P4, 4)   
 P("MASS_5_FRICTION_0: ", double, m5f0, P5, 5)   

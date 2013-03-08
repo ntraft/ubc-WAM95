@@ -32,6 +32,11 @@ class Senses: public MainLine{
         ForceTorqueSensor* fts;
 
         Hand::jv_type sensor_vars[NUM_SENSOR_VARS]; 
+
+#define X(aa, bb, cc, dd, ee) \
+        bb tare_value_##cc;
+#include "input_type_table.h"
+#undef X
     public:
         EIGEN_MAKE_ALIGNED_OPERATOR_NEW 
         Senses(ProductManager* pm, Wam<DIMENSION>* wam);
@@ -55,6 +60,7 @@ class Senses: public MainLine{
         cf_type get_force();
         ct_type get_torque();
         ca_type get_accel();
+        jp_type get_tool_pose();
         co_type get_tool_orientation();
         Eigen::Quaterniond get_tool_orientation_q();
         Hand::jp_type get_tool_orientation_m();
@@ -63,12 +69,14 @@ class Senses: public MainLine{
         int get_fingertip_torque_value(int finger_num);
         int get_fingertip_torque_value(int finger_num,bool realtime);
         Hand::jp_type get_tactile_sums();
+        tv_type get_tactile_vector();
         bool check_tactile_contact(int finger_num);
         bool check_tactile_contact(int finger_num, float threshold);
         bool check_tactile_contact();
         bool check_fingertip_torque_contact(int finger_num, int fingertip_torque_thresh);
         bool check_fingertip_torque_contact(int fingertip_torque_thresh);
         bool check_fingertip_torque_contact();
+        void tare_all();
         //reset zero-value of tactile sensors
         void tare_tactile();
         //reset zero-value of fingertip torque sensors

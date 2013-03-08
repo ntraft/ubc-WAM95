@@ -18,18 +18,22 @@ enum STATE {
     #include "play_table.h"
 #undef X
 } curr_state = STOPPED, last_state = STOPPED;
-
 enum STRATEGY{
 #define X(aa, bb, cc, dd) aa,
     #include "ctrl_table.h"
 #undef X
 };
-
 enum VAR_TOGGLE{
 #define X(aa, bb, cc, dd) aa,
     #include "var_table.h"
 #undef X
 };
+enum MISC{
+#define X(aa, bb, cc, dd) aa,
+    #include "misc_table.h"
+#undef X
+};
+
 static int loop_count = 0;
 
 Play::Play(Robot* robot) : inputType(robot->get_memory()->get_float("trajectory_type")), time(robot->get_pm()->getExecutionManager()), is_init(false), loop_flag(false), playing(false), playName("") {                       
@@ -50,6 +54,7 @@ void Play::instantiate_control_strategies(){
 // Initialization - Gravity compensating, setting safety limits, parsing input file and creating trajectories
 bool Play::init() {
     robot->get_rtmemory()->set_play_name(playName);
+    robot->get_rtmemory()->reset_output_counter();
     robot->get_rtmemory()->load_trajectory();
     if(robot->get_memory()->get_float("realtime_learning")){
         bool success = false;
@@ -86,10 +91,14 @@ void Play::set_control_strategy(int type){
 }
 void Play::loop(){
     loop_count++;
+    cout << "loop# " << loop_count << endl;
     robot->get_rtmemory()->disconnect_systems();
     //robot->get_memory()->reload_vars();
     last_state = STOPPED;
     curr_state = PLAYING;
+}
+void Play::output_data_stream(){
+    robot->get_rtmemory()->append_data_stream();
 }
 // This function will run in a different thread and control displaying to the screen and user input
 void Play::user_control() {
@@ -97,6 +106,11 @@ void Play::user_control() {
 	Hand::jp_type currentPos(0.0);
 	Hand::jp_type nextPos(M_PI);
 	nextPos[3] = 0;
+    
+    printf("Please press [Enter] to tare sensors: ");
+    barrett::detail::waitForEnter();
+    robot->get_rtmemory()->record_zero_values();
+
 
 // Instructions displayed to screen.
 	printf("\n");
@@ -105,6 +119,7 @@ void Play::user_control() {
     #include "play_table.h"
     #include "ctrl_table.h"
     #include "var_table.h"
+    #include "misc_table.h"
 #undef X
 	printf("  At any time, press [Enter] to open or close the Hand.\n");
 	printf("\n");
@@ -130,6 +145,9 @@ void Play::user_control() {
 #define X(aa, bb, cc, dd) case bb: toggle_var(cc);break;
             #include "var_table.h"
 #undef X
+#define X(aa, bb, cc, dd) case bb: cc;break;
+            #include "misc_table.h"
+#undef X
 			default:
 				break;
 			}
@@ -139,6 +157,7 @@ void Play::user_control() {
 
 void Play::run(){
 	BARRETT_UNITS_TEMPLATE_TYPEDEFS(DIMENSION);
+
     
 	std::string line;
     printf("Please type name of trajectory to be played (press [Enter] for default): ");
@@ -157,15 +176,19 @@ void Play::run(){
 	
     boost::thread displayThread(&Play::user_control, this);
 
+    int num_loops = 0;
+
     curr_state = STOPPED;
     float sleep_s = 0.002;
 	playing = true;
 	while (playing) {
+        robot->update_sensors(); //important!!
         //cout << "playing" << endl;fflush(stdout);
         if(robot->get_memory()->get_float("reload_vars")){
             robot->get_memory()->reload_vars();
             //toggle_var("reload_vars");
             robot->get_memory()->set_float("reload_vars", 0);
+            robot->get_rtmemory()->reset_output_counter(robot->get_memory()->get_float("data_stream_index"));
         }
 		switch (curr_state) {
 		case QUIT:
@@ -174,7 +197,7 @@ void Play::run(){
 		case PLAYING:
 			switch (last_state) {
 			case STOPPED:
-                cout << "STOPPED -> PLAYING" << endl; fflush(stdout);
+                //cout << "STOPPED -> PLAYING" << endl; fflush(stdout);
 				move_to_start();
                 //if(robot->get_memory()->get_float("data_stream_out"))
                     robot->get_rtmemory()->init_data_logger();
@@ -189,18 +212,20 @@ void Play::run(){
 				last_state = PLAYING;
 				break;
 			case PLAYING:
-                cout << "PLAYING -> PLAYING" << endl;fflush(stdout);
+                //cout << "PLAYING -> PLAYING" << endl;fflush(stdout);
 				if (robot->get_rtmemory()->playback_active()) {
 					btsleep(sleep_s);
-                    robot->update_sensors(); //important!!
-                    robot->get_rtmemory()->check_for_problems();
+                    //robot->update_sensors();
+                    if(robot->get_memory()->get_float("realtime_learning")){
+                        robot->get_rtmemory()->check_for_problems();
+                    }
                     if(robot->get_memory()->get_float("realtime_control_break")){
                         robot->get_memory()->set_float("realtime_control_break",0);
                         loop();
                     }
 					break;
 				} else if (loop_flag) {
-                    cout << "PLAYING -> PLAYING (loop)" << endl;fflush(stdout);
+                    //cout << "PLAYING -> PLAYING (loop)" << endl;fflush(stdout);
                     loop();
 					break;
                 } else {
@@ -250,7 +275,8 @@ void Play::run(){
 	}
 	robot->get_rtmemory()->disconnect_systems();
     if(robot->get_memory()->get_float("data_stream_out")){
-        robot->get_rtmemory()->output_data_stream();
+        output_data_stream();
+        //robot->get_rtmemory()->output_data_stream();
     }
     else
         cout << "NOT writing out data streams" << endl;

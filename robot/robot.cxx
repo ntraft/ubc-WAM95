@@ -37,7 +37,7 @@ void Robot::init_wam(){
 void Robot::init_hand(){
 }
 void Robot::init_fts(){
-   fts->tare();
+   //fts->tare();
 }
 void Robot::init_rt(){
     get_rtmemory()->init();

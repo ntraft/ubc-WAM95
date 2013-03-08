@@ -5,6 +5,7 @@
 #include "play.h"
 #include "rtmemory.h"
 #include "memory.h"
+#include "control.h"
 
 
 //Move WAM to joint position specified by string str (7 numbers separated by whitespace)
@@ -46,8 +47,11 @@ void TeachAndPlay::init_play(){
 }
 void TeachAndPlay::init_flip(){
     jp_type jp;
-    string str = robot->get_memory()->get_string("init_flip_jp");
-    move_to_str(robot->get_wam(),&jp,str); 
+    Hand::jp_type hjp;
+    string jp_str = robot->get_memory()->get_string("init_flip_jp");
+    string hjp_str = robot->get_memory()->get_string("init_flip_hjp");
+    move_to_str(robot->get_wam(),&jp,jp_str);
+    robot->get_controller()->move_hand_to_str(&hjp,"",hjp_str); 
     robot->get_wam()->idle();
 }
 

@@ -48,7 +48,7 @@ void NaiveBayesSystem::operate() {
     bb mu_##cc; copy_matrix(&mu_##cc,&mean_##cc); \
     bb sig_##cc; copy_matrix(&sig_##cc,&std_##cc); \
     bb sig2_##cc; copy_matrix(&sig2_##cc,&std_##cc); 
-    #include "wam_type_table.h"
+    #include "input_type_table.h"
     #include "tool_type_table.h"
 #undef X
     double emission_probability = 0; //in log domain
@@ -80,7 +80,7 @@ void NaiveBayesSystem::operate() {
     log_vector_values(&y_##cc); \
     /*sum to obtain emission probability across all sensors*/\
     emission_probability += sum_vector_values(&y_##cc); 
-    #include "wam_type_table.h"
+    #include "input_type_table.h"
     #include "tool_type_table.h"
 #undef X
 #define X(aa, bb, cc, dd, ee) \
@@ -90,7 +90,7 @@ void NaiveBayesSystem::operate() {
     //alpha = logsumexp(emission_probability + transition_probability + alpha);
     //alpha += sum_vector_values(&y_##cc);
     //alpha += sum_vector_values(&sig_##cc);
-    #include "wam_type_table.h"
+    #include "input_type_table.h"
     #include "tool_type_table.h"
 #undef X
     //cout << "probability: " << alpha << endl;*/

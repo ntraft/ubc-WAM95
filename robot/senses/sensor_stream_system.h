@@ -1,6 +1,7 @@
 #include "stdheader.h"
 #include "senses.h"
 #include "memory.h"
+#include "parameter_estimator.h"
 
 class SensorStreamSystem : public systems::System {
 
@@ -10,21 +11,25 @@ public:
 
 #define X(aa, bb, cc, dd, ee) \
     Output<bb> output_##cc;
-#include "wam_type_table.h"
+#include "input_type_table.h"
 #include "tool_type_table.h"
 #undef X   
+Output<pv_type> output_param;
+
 
 protected:
 #define X(aa, bb, cc, dd, ee) \
     Output<bb>::Value* output_value_##cc;
-#include "wam_type_table.h"
+#include "input_type_table.h"
 #include "tool_type_table.h"
 #undef X
+    Output<pv_type>::Value* output_value_param;
     Memory* memory;
     Senses* senses;
     bool* problem;
     int problem_count;
     stringstream* debug;
+    pv_type params;
 
 public:
 	SensorStreamSystem(Memory* _memory, Senses* _senses, const std::string& sysName = "SensorStreamSystem") :
@@ -33,9 +38,10 @@ public:
         senses(_senses),
 #define X(aa, bb, cc, dd, ee) \
         output_##cc(this, &output_value_##cc),
-#include "wam_type_table.h"
+#include "input_type_table.h"
 #include "tool_type_table.h"
 #undef X   
+        output_param(this, &output_value_param),
         time_input(this)
 		{
         }
@@ -48,7 +54,7 @@ public:
 protected:
 #define X(aa, bb, cc, dd, ee) \
     bb readings_##cc;
-#include "wam_type_table.h"
+#include "input_type_table.h"
 #include "tool_type_table.h"
 #undef X
 	

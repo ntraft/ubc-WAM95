@@ -29,6 +29,19 @@ std::string num2str(double number){
    return ss.str();//return a string with the contents of the stream
 }
 //The following two functions convert between a 4-element vector and quaternion
+qd_type co2qd(const co_type* co, co_type* tare_values){
+    qd_type qd(
+            (*co)[0]-(*tare_values)[0], 
+            (*co)[1]-(*tare_values)[1], 
+            (*co)[2]-(*tare_values)[2], 
+            (*co)[3]-(*tare_values)[3]);
+    qd.normalize();
+	return qd; 
+}
+co_type qd2co(const qd_type* qd, co_type* tare_values){
+	return Hand::jp_type(qd->w(), qd->x(), qd->y(), qd->z()) - *tare_values;
+}
+//The following two functions convert between a 4-element vector and quaternion
 qd_type co2qd(const co_type* co){
     qd_type qd((*co)[0], (*co)[1], (*co)[2], (*co)[3]);
     qd.normalize();

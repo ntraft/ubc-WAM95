@@ -15,14 +15,14 @@ public:
     Input<bb> actual_input_##cc; \
     bb* problem_count_##cc; \
     //Output<bb> output_##cc;
-#include "wam_type_table.h"
+#include "input_type_table.h"
 #include "tool_type_table.h"
 #undef X   
 
 protected:
 #define X(aa, bb, cc, dd, ee) \
     //Output<bb>::Value* output_value_##cc;
-#include "wam_type_table.h"
+#include "input_type_table.h"
 #include "tool_type_table.h"
 #undef X
 
@@ -56,7 +56,7 @@ public:
 	RTControl(stringstream* _debug, 
 #define X(aa, bb, cc, dd, ee) \
         bb* _problem_count_##cc,
-#include "wam_type_table.h"
+#include "input_type_table.h"
 #include "tool_type_table.h"
 #undef X   
             Memory* memory, Senses* senses, RobotController* control, const std::string& sysName = "RTControl") :
@@ -67,7 +67,7 @@ public:
         actual_input_##cc(this), \
         problem_count_##cc(_problem_count_##cc), \
         //output_##cc(this, &output_value_##cc),       
-#include "wam_type_table.h"
+#include "input_type_table.h"
 #include "tool_type_table.h"
 #undef X   
         input_time(this),

@@ -35,6 +35,7 @@ public:
     void instantiate_control_strategies();
 	bool init();
     void loop();
+    void output_data_stream();
     void user_control();
     void run();
 	void move_to_start();

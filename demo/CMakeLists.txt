@@ -15,19 +15,19 @@ set (EXTRA_LIBS ${EXTRA_LIBS} boost_system boost_filesystem)
 include_directories (${ubc-WAM95_SOURCE_DIR}/lib)
 include_directories (${ubc-WAM95_SOURCE_DIR}/exp)
 include_directories (${ubc-WAM95_SOURCE_DIR}/tap)
-include_directories (${ubc-WAM95_SOURCE_DIR}/tap)
 include_directories (${ubc-WAM95_SOURCE_DIR}/robot)
 include_directories (${ubc-WAM95_SOURCE_DIR}/robot/memory)
 include_directories (${ubc-WAM95_SOURCE_DIR}/robot/senses)
 include_directories (${ubc-WAM95_SOURCE_DIR}/robot/control)
+include_directories (${ubc-WAM95_SOURCE_DIR}/tap)
 # Make sure the linker can find the libraries once they are built. 
 link_directories (${ubc-WAM95_BINARY_DIR}/lib)
 link_directories (${ubc-WAM95_BINARY_DIR}/exp)
-link_directories (${ubc-WAM95_BINARY_DIR}/tap)
 link_directories (${ubc-WAM95_SOURCE_DIR}/robot)
 link_directories (${ubc-WAM95_SOURCE_DIR}/robot/memory)
 link_directories (${ubc-WAM95_SOURCE_DIR}/robot/senses)
 link_directories (${ubc-WAM95_SOURCE_DIR}/robot/control)
+link_directories (${ubc-WAM95_BINARY_DIR}/tap)
 
 #add in compile flags
 #set(GCC_COMPILE_FLAGS "-DEIGEN_DONT_ALIGN=1") #prevent eigen unaligned array assertion

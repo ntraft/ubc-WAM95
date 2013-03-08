@@ -4,9 +4,9 @@ include_directories(${BARRETT_INCLUDE_DIRS})
 #link_directories(${BARRETT_LIBRARY_DIRS})
 add_definitions(${BARRETT_DEFINITIONS})
 
-add_subdirectory (memory)
 add_subdirectory (senses)
 add_subdirectory (control)
+add_subdirectory (memory)
 
 # Make sure the compiler can find include header files from our library. 
 include_directories (${ubc-WAM95_SOURCE_DIR}/lib)

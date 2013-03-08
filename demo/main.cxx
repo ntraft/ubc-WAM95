@@ -46,8 +46,8 @@ public:
 #include "main_table.h"
 #undef X
                 default:
-                    //unsigned char in = atoi(line.c_str());
-                    //controller->hand_command(in);
+                    unsigned char in = atoi(line.c_str());
+                    robot->get_controller()->hand_command(in);
                     help();
                     break;
             }

@@ -85,6 +85,7 @@ BARRETT_UNITS_TYPEDEFS(DIMENSION);
 typedef Quaterniond qd_type;
 typedef Hand::jp_type co_type;
 typedef TactilePuck::v_type tact_array_type;
+typedef barrett::math::Matrix<48, 1> tv_type;
 //typedef systems::Wam<DIMENSION>::jv_type jv_type;
 //typedef systems::Wam<DIMENSION>::jp_type jp_type;
 //typedef systems::Wam<DIMENSION>::jt_type jt_type;

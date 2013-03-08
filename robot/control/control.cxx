@@ -26,8 +26,8 @@ void RobotController::init_wam(){
     //wam->gravityCompensate(true);
 }
 void RobotController::init_hand(){
-    printf(">>> Press [Enter] to initialize Hand. (Make sure it has room!)");
-    waitForEnter();
+    //printf(">>> Initializing Hand. (Make sure it has room!)");
+    //waitForEnter();
     hand->initialize();
 }
 //MAINLINE

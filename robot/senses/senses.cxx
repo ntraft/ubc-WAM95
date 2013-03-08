@@ -15,7 +15,7 @@ Senses::Senses(ProductManager* pm, Wam<DIMENSION>* wam){
     this->pm = pm;
     this->wam = wam;
     this->fts = pm->getForceTorqueSensor();
-    fts->tare();
+    //fts->tare();
     this->hand = pm->getHand();
 
     module_name = "Senses";
@@ -56,15 +56,28 @@ ForceTorqueSensor* Senses::get_fts(){ return fts; }
 Hand* Senses::get_hand(){ return hand; }
 cf_type Senses::get_force(){
     //fts->update();
-    return fts->getForce();
+    return fts->getForce() - tare_value_cf;
 }
 ct_type Senses::get_torque(){
     //fts->update();
-    return fts->getTorque();
+    return fts->getTorque() - tare_value_ct;
 }
 ca_type Senses::get_accel(){
     //fts->updateAccel();
     return fts->getAccel();
+}
+jp_type Senses::get_tool_pose(){
+    jp_type jp; 
+    cp_type cp = wam->getToolPosition(); 
+    co_type co = get_tool_orientation();
+    int count = 0;
+    for(int i = 0 ; i < cp.size(); i++){
+        jp[count++] = cp[i];
+    }
+    for(int i = 0 ; i < co.size(); i++){
+        jp[count++] = co[i];
+    }
+    return jp;
 }
 co_type Senses::get_tool_orientation(){
     Eigen::Quaterniond q = get_tool_orientation_q();
@@ -83,7 +96,7 @@ Hand::jp_type Senses::get_fingertip_torques(){
     for(int i = 0; i < 4; i++){ //for each fingertip torque sensor
         torques[i] = vtorques[i];
     }
-    return torques;
+    return torques - tare_value_ft;
 }
 Hand::jp_type Senses::get_fingertip_torques(bool realtime){
     hand->update(Hand::S_FINGERTIP_TORQUE,realtime);
@@ -92,20 +105,19 @@ Hand::jp_type Senses::get_fingertip_torques(bool realtime){
     for(int i = 0; i < 4; i++){ //for each fingertip torque sensor
         torques[i] = vtorques[i];
     }
-    return torques;
+    return torques - tare_value_ft;
 }
 int Senses::get_fingertip_torque_value(int finger_num){
     std::vector<int> fingertip_torque = hand->getFingertipTorque();
-    return fingertip_torque[finger_num];
+    return fingertip_torque[finger_num] - tare_value_ft[finger_num];
 }
 int Senses::get_fingertip_torque_value(int finger_num,bool realtime){
     hand->update(Hand::S_FINGERTIP_TORQUE,realtime);
     std::vector<int> fingertip_torque = hand->getFingertipTorque();
-    return fingertip_torque[finger_num];
+    return fingertip_torque[finger_num] - tare_value_ft[finger_num];
 }
 Hand::jp_type Senses::get_tactile_sums(){
     Hand::jp_type tact_sums;
-    //hand->update(Hand::S_TACT_FULL);//, true);
     std::vector<TactilePuck*> tps;
     tps = hand->getTactilePucks();
     for(int j = 0; j < 4; j++){ //for each tactile pad
@@ -116,6 +128,19 @@ Hand::jp_type Senses::get_tactile_sums(){
         }
     }
     return tact_sums;
+}
+tv_type Senses::get_tactile_vector(){
+    tv_type tact_vec;
+    std::vector<TactilePuck*> tps;
+    tps = hand->getTactilePucks();
+    int count = 0;
+    for(int j = 0; j < 2; j++){ //for finger 1 and 2 tactile pads ONLY
+        tact_array_type finger_tact = tps[j]->getFullData();
+        for(int i = 0; i < finger_tact.size(); i++){
+            tact_vec[count++] = finger_tact[i];
+        }
+    }
+    return tact_vec - tare_value_tv;
 }
 bool Senses::check_tactile_contact(int finger_num){
     //std::cout << "check_tactile_contact!" << std::endl;
@@ -169,6 +194,22 @@ bool Senses::check_fingertip_torque_contact(){
         return check_fingertip_torque_contact(0, sensor_vars[FT_TORQUE_BASE_VAL][0])
                 || check_fingertip_torque_contact(1, sensor_vars[FT_TORQUE_BASE_VAL][1])
                 || check_fingertip_torque_contact(2, sensor_vars[FT_TORQUE_BASE_VAL][2]);
+}
+//zeros all values in matrix
+template<int R, int C, typename Units>
+void zero_matrix(math::Matrix<R,C, Units>* dest){
+    for (int i = 0; i < dest->size(); ++i) {
+        (*dest)[i] = 0;
+    }
+}
+void Senses::tare_all(){
+    Senses* senses = this;
+#define X(aa, bb, cc, dd, ee) \
+        zero_matrix(&tare_value_##cc); \
+        tare_value_##cc = dd; \
+        cout << "tare_value_" << aa << " = " << tare_value_##cc << endl;
+#include "input_type_table.h"
+#undef X
 }
 void Senses::tare_tactile(){
         //std::cout << "check_tactile_contact!" << std::endl;

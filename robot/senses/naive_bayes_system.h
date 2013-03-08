@@ -14,7 +14,7 @@ public:
     Input<bb> mean_input_##cc; \
     Input<bb> std_input_##cc; \
     Input<bb> actual_input_##cc;
-    #include "wam_type_table.h"
+    #include "input_type_table.h"
     #include "tool_type_table.h"
 #undef X   
 protected:
@@ -33,7 +33,7 @@ public:
         mean_input_##cc(this), \
         std_input_##cc(this), \
         actual_input_##cc(this),
-        #include "wam_type_table.h"
+        #include "input_type_table.h"
         #include "tool_type_table.h"
 #undef X   
         memory(_memory),
