@@ -38,32 +38,48 @@ void Memory::toggle_float(std::string name){
     //cout << "set " << name << " to " << get_float(name) << endl;
 }
 
+jp_type Memory::get_initial_jp(){
+    jp_type init_jp;
+    parseDoubles(&init_jp, get_string("initial_jp"));
+    return init_jp;
+}
 void Memory::set_transform_qd(float x, float y, float z){
     set_float("transform_qd_x", x);
     set_float("transform_qd_y", y);
     set_float("transform_qd_z", z);
-}
-qd_type Memory::get_transform_qd(){
-    transform_qd =
-            AngleAxisd(get_float("transform_qd_x"),Vector3d::UnitX()) *
-            AngleAxisd(get_float("transform_qd_y"),Vector3d::UnitY()) *
-            AngleAxisd(get_float("transform_qd_z"),Vector3d::UnitZ()) ;
-    return transform_qd;
 }
 void Memory::set_transform_cp(float x, float y, float z){
     set_float("transform_cp_x", x);
     set_float("transform_cp_y", y);
     set_float("transform_cp_z", z);
 }
-cp_type Memory::get_transform_cp(){
-    transform_cp = cp_type(
-            get_float("transform_cp_x") ,
-            get_float("transform_cp_y") , 
-            get_float("transform_cp_z"));
-    return transform_cp;
+void Memory::set_transform_qd(cp_type* qd){
+    set_string("transform_qd_"+get_string("traj_name"), to_string(qd," "));
 }
-jp_type Memory::get_initial_jp(){
-    jp_type init_jp;
-    parseDoubles(&init_jp, get_string("initial_jp"));
-    return init_jp;
+void Memory::set_transform_cp(cp_type* cp){
+    set_string("transform_cp_"+get_string("traj_name"), to_string(cp," "));
+}
+qd_type Memory::get_transform_qd(){
+    return get_transform_qd(get_string("traj_name"));
+}
+cp_type Memory::get_transform_qd_euler(){
+    cp_type cp;
+    parseDoubles(&cp, get_string(string("transform_qd_")+get_string("traj_name")));
+    return cp;
+}
+cp_type Memory::get_transform_cp(){
+    return get_transform_cp(get_string("traj_name"));
+}
+qd_type Memory::get_transform_qd(string traj_name){
+    cp_type cp;
+    parseDoubles(&cp, get_string(string("transform_qd_")+traj_name));
+    transform_qd =
+            AngleAxisd(cp[0],Vector3d::UnitX()) *
+            AngleAxisd(cp[1],Vector3d::UnitY()) *
+            AngleAxisd(cp[2],Vector3d::UnitZ()) ;
+    return transform_qd;
+}
+cp_type Memory::get_transform_cp(string traj_name){
+    parseDoubles(&transform_cp, get_string(string("transform_cp_")+traj_name));
+    return transform_cp;
 }

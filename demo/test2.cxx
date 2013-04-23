@@ -19,6 +19,7 @@ bool validate_args(int argc, char** argv) { return true; }
 template<size_t DOF>
 int wam_main(int argc, char** argv, ProductManager& pm, systems::Wam<DOF>& wam) {
     BARRETT_UNITS_TEMPLATE_TYPEDEFS(DOF);
+    //jp_type::size();
 /*
     rtm->set_play_name("tp");
     //rtm->load_trajectory();

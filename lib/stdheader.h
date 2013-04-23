@@ -68,7 +68,23 @@
 #define ZERO_FINGERTIP_TORQUE_THRESHOLD 2000    //required threshold to be considered non-noise reading
 #define ZERO_TACTILE_THRESHOLD 0.5      //required threshold to be considered non-noise reading
 #define BARRETT_SMF_VALIDATE_ARGS
+#define SIZE_jp 7
+#define SIZE_jv 7
+#define SIZE_jt 7
+#define SIZE_cp 7
+#define SIZE_cf 3
+#define SIZE_ct 3
+#define SIZE_ca 3
+#define SIZE_ft 4
+#define SIZE_tv 48
 
+enum parameters{
+#define P(aa, bb, cc, dd, ee) \
+        enum_##cc,
+#include "parameter_table.h"
+#undef P
+   NUM_PARAMETERS
+};
 
 //#define EIGEN_DONT_VECTORIZE 
 //#define EIGEN_DISABLE_UNALIGNED_ARRAY_ASSERT
@@ -90,6 +106,20 @@ typedef barrett::math::Matrix<48, 1> tv_type;
 //typedef systems::Wam<DIMENSION>::jp_type jp_type;
 //typedef systems::Wam<DIMENSION>::jt_type jt_type;
 
+
+typedef barrett::math::Matrix<
+#define X(aa, bb, cc, dd, ee) \
+        SIZE_##cc +
+#include "input_type_table.h"
+#undef X
+        1,1> in_type;
+typedef barrett::math::Matrix<
+#define X(aa, bb, cc, dd, ee) \
+        SIZE_##cc +
+#include "input_type_table.h"
+#undef X
+        1,NUM_PARAMETERS> bt_type;
+typedef barrett::math::Matrix<NUM_PARAMETERS,1> pv_type;
 
 //Function defns
 

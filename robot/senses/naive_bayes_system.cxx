@@ -2,26 +2,7 @@
 #include "naive_bayes_system.h"
 #include "utils.h"
 #include "utils-inl.h"
-#include <cfloat>
 
-//store e^dest[i] for each i in dest
-template<int R, int C, typename Units> void exp_vector_values(math::Matrix<R,C, Units>* dest){
-    for(int i = 0; i < dest->size(); i++){ (*dest)[i] = ((*dest)[i] < -20) ? (2.06e-9) : exp((*dest)[i]); } }
-//store dest[i]^2 for each i in dest
-template<int R, int C, typename Units> void square_vector_values(math::Matrix<R,C, Units>* dest){
-    for(int i = 0; i < dest->size(); i++){ (*dest)[i] = pow((*dest)[i],2); } }
-//divide v from dest and store result in dest
-template<int R, int C, typename Units> void div_vector_values(math::Matrix<R,C, Units>* dest, math::Matrix<R,C, Units>* v){
-    for(int i = 0; i < v->size(); i++){ (*dest)[i] /= (*v)[i]; } }
-//store log(dest[i]) for each i in dest. If dest[i] = 0 then log(dest[i]) = -99
-template<int R, int C, typename Units> void log_vector_values(math::Matrix<R,C, Units>* dest){
-    for(int i = 0; i < dest->size(); i++){ (*dest)[i] = ((*dest)[i] == 0) ? (-99) : (std::log((*dest)[i])); } }
-//return sum(dest)
-template<int R, int C, typename Units> float sum_vector_values(math::Matrix<R,C, Units>* dest){
-    float sum = 0; for(int i = 0; i < dest->size(); i++){ sum += (*dest)[i]; } return sum; }
-//return max(dest)
-template<int R, int C, typename Units> float max_vector_values(math::Matrix<R,C, Units>* dest){
-    float max = FLT_MIN; for(int i = 0; i < dest->size(); i++){ max = (*dest)[i] > max ? (*dest)[i] : max; } return max; }
 /*//return logsumexp(dest)
 template<int R, int C, typename Units> float logsumexp_vector_values(math::Matrix<R,C, Units>* dest){
     float sum = 0; for(int i = 0; i < dest->size(); i++){ sum += (*dest)[i]; } return sum; }*/
@@ -85,7 +66,7 @@ void NaiveBayesSystem::operate() {
 #undef X
 #define X(aa, bb, cc, dd, ee) \
     /*obtain joint probability between parameters and sensors*/\
-    alpha = y_ft[0];\
+    //alpha = y_ft[0];\
     //alpha = emission_probability + transition_probability + alpha;\
     //alpha = logsumexp(emission_probability + transition_probability + alpha);
     //alpha += sum_vector_values(&y_##cc);

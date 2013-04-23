@@ -44,7 +44,7 @@ target_link_libraries (demo
     tap teach play 
     robot 
     memory rtmemory 
-    naive_bayes_system parameter_estimator 
+    naive_bayes_system parameter_estimator pls_system
     control_strategy SaS SaA 
     control rtcontrol 
     senses sensor_stream_system 
@@ -53,7 +53,7 @@ target_link_libraries (test
     tap teach play 
     robot 
     memory rtmemory 
-    naive_bayes_system parameter_estimator 
+    naive_bayes_system parameter_estimator pls_system
     control_strategy SaS SaA
     control rtcontrol 
     senses sensor_stream_system 
@@ -62,7 +62,7 @@ target_link_libraries (unit_test
     tap teach play 
     robot 
     memory rtmemory 
-    naive_bayes_system parameter_estimator 
+    naive_bayes_system parameter_estimator pls_system
     control_strategy SaS SaA
     control rtcontrol 
     senses sensor_stream_system 

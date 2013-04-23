@@ -36,6 +36,7 @@ protected:
     qd_type transform_qd;
 	
     virtual void operate(){
+        init();
         readings_co = input.getValue();
         readings_qd = transform_qd * co2qd(&readings_co);
         output_value->setData(&readings_qd);

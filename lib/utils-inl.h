@@ -2,7 +2,15 @@
 #define UTILS_INL_H_
 
 #include "stdheader.h"
+#include <cfloat>
 
+//zeros all values in matrix
+template<int R, int C, typename Units>
+void zero_matrix(math::Matrix<R,C, Units>* dest){
+    for (int i = 0; i < dest->size(); ++i) {
+        (*dest)[i] = 0;
+    }
+}
 // parses a string of space-separated doubles into a vector of doubles
 template<int R, int C, typename Units>
 inline bool parseDoubles(math::Matrix<R,C, Units>* dest, const std::string& str){
@@ -43,6 +51,20 @@ std::string to_string(math::Matrix<R,C, Units>* src){
                         str.append("\n");
         }
         return str;
+}
+// converts a vector of doubles into a string of sep_str-separated doubles with optional prefix/suffix
+template<int R, int C, typename Units>
+std::string to_string(math::Matrix<R,C, Units>* src, string sep_str, string prefix = "", string suffix = ""){
+    for (int i = 0; i < src->size(); ++i) {
+        char buff[50];
+        sprintf(buff, "%f",(*src)[i]);
+        prefix.append(buff);
+        if(i < src->size()-1)
+            prefix.append(sep_str);
+        else
+            prefix.append(suffix);
+    }
+    return prefix;
 }
 //copies values from one matrix to another (must both be same size)
 template<int R, int C, typename Units>
@@ -143,5 +165,22 @@ void get_interpolating_steps(     math::Matrix<R,C, Units>* step,
                 (*step)[i] = ((*to)[i] - (*from)[i]) / num_steps;
         }
 }
-
+//store e^dest[i] for each i in dest
+template<int R, int C, typename Units> void exp_vector_values(math::Matrix<R,C, Units>* dest){
+    for(int i = 0; i < dest->size(); i++){ (*dest)[i] = ((*dest)[i] < -20) ? (2.06e-9) : exp((*dest)[i]); } }
+//store dest[i]^2 for each i in dest
+template<int R, int C, typename Units> void square_vector_values(math::Matrix<R,C, Units>* dest){
+    for(int i = 0; i < dest->size(); i++){ (*dest)[i] = pow((*dest)[i],2); } }
+//divide v from dest and store result in dest
+template<int R, int C, typename Units> void div_vector_values(math::Matrix<R,C, Units>* dest, math::Matrix<R,C, Units>* v){
+    for(int i = 0; i < v->size(); i++){ (*dest)[i] /= (*v)[i]; } }
+//store log(dest[i]) for each i in dest. If dest[i] = 0 then log(dest[i]) = -99
+template<int R, int C, typename Units> void log_vector_values(math::Matrix<R,C, Units>* dest){
+    for(int i = 0; i < dest->size(); i++){ (*dest)[i] = ((*dest)[i] == 0) ? (-99) : (std::log((*dest)[i])); } }
+//return sum(dest)
+template<int R, int C, typename Units> float sum_vector_values(math::Matrix<R,C, Units>* dest){
+    float sum = 0; for(int i = 0; i < dest->size(); i++){ sum += (*dest)[i]; } return sum; }
+//return max(dest)
+template<int R, int C, typename Units> float max_vector_values(math::Matrix<R,C, Units>* dest){
+    float max = FLT_MIN; for(int i = 0; i < dest->size(); i++){ max = (*dest)[i] > max ? (*dest)[i] : max; } return max; }
 #endif /* UTILS_INL_H_ */

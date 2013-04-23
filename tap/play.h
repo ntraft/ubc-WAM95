@@ -37,6 +37,10 @@ public:
     void loop();
     void output_data_stream();
     void user_control();
+    void increase_cp(int ind);
+    void increase_qd(int ind);
+    void decrease_cp(int ind);
+    void decrease_qd(int ind);
     void run();
 	void move_to_start();
     void toggle_var(string name);

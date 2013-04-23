@@ -32,11 +32,16 @@ public:
     void set_string(std::string name, std::string value);
     void set_float(std::string name, float value);
     void toggle_float(std::string name);
-    void set_transform_qd(float x, float y, float z);
-    qd_type get_transform_qd();
-    void set_transform_cp(float x, float y, float z);
-    cp_type get_transform_cp();
     jp_type get_initial_jp();
+    void set_transform_qd(float x, float y, float z);
+    void set_transform_cp(float x, float y, float z);
+    void set_transform_qd(cp_type* qd_euler);
+    void set_transform_cp(cp_type* cp);
+    qd_type get_transform_qd();
+    cp_type get_transform_qd_euler();
+    cp_type get_transform_cp();
+    cp_type get_transform_cp(string traj_name);
+    qd_type get_transform_qd(string traj_name);
 };
 
 #endif /* IO_H_ */

@@ -32,6 +32,7 @@ void Teach::run(){
 
 	printf("\nPress [Enter] to start teaching.\n");
 	waitForEnter();
+	robot->get_rtmemory()->reset_time();
 	robot->get_rtmemory()->record();
 	//boost::thread t(&Teach::display, &teach);
 

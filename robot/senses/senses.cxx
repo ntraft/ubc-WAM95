@@ -14,9 +14,12 @@ const int TACT_BOARD_STRIDE = TACT_BOARD_COLS * TACT_CELL_WIDTH + 2;
 Senses::Senses(ProductManager* pm, Wam<DIMENSION>* wam){
     this->pm = pm;
     this->wam = wam;
-    this->fts = pm->getForceTorqueSensor();
-    //fts->tare();
-    this->hand = pm->getHand();
+	this->fts = NULL;
+	if (pm->foundForceTorqueSensor())
+        this->fts = pm->getForceTorqueSensor();
+	this->hand = NULL;
+	if (pm->foundHand())
+        this->hand = pm->getHand();
 
     module_name = "Senses";
 
@@ -54,6 +57,7 @@ ProductManager* Senses::get_pm(){ return pm; }
 Wam<DIMENSION>* Senses::get_wam(){ return wam; }
 ForceTorqueSensor* Senses::get_fts(){ return fts; }
 Hand* Senses::get_hand(){ return hand; }
+bool Senses::has_hand(){ return hand != NULL; }
 cf_type Senses::get_force(){
     //fts->update();
     return fts->getForce() - tare_value_cf;
@@ -194,13 +198,6 @@ bool Senses::check_fingertip_torque_contact(){
         return check_fingertip_torque_contact(0, sensor_vars[FT_TORQUE_BASE_VAL][0])
                 || check_fingertip_torque_contact(1, sensor_vars[FT_TORQUE_BASE_VAL][1])
                 || check_fingertip_torque_contact(2, sensor_vars[FT_TORQUE_BASE_VAL][2]);
-}
-//zeros all values in matrix
-template<int R, int C, typename Units>
-void zero_matrix(math::Matrix<R,C, Units>* dest){
-    for (int i = 0; i < dest->size(); ++i) {
-        (*dest)[i] = 0;
-    }
 }
 void Senses::tare_all(){
     Senses* senses = this;

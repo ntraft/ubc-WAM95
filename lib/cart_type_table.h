@@ -1,0 +1,6 @@
+X("CARTESIAN_POSITION",       cp_type,            cp, senses->get_wam()->getToolPosition(),1)   
+X("CARTESIAN_ORIENTATION",    co_type,            co, senses->get_tool_orientation(),2)   
+//X("CARTESIAN_ORIENTATION_QD", Eigen::Quaterniond, qd, senses->get_tool_orientation_q(), 3)   
+X("CARTESIAN_FORCE",          cf_type,            cf, senses->get_force(), 4)
+X("CARTESIAN_TORQUE",         ct_type,            ct, senses->get_torque(), 5)
+X("CARTESIAN_ACCELERATION",   ca_type,            ca, senses->get_accel(), 6)   

@@ -59,6 +59,8 @@ public:
     void home();
     void grasp();
     void ungrasp();
+    void move_wam_relative_z(float amount);
+    void move_wam_relative_x(float amount);
 
 };
 #endif

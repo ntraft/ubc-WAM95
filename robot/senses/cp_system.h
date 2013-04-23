@@ -35,6 +35,7 @@ protected:
     cp_type transformed_cp;
 	
     virtual void operate(){
+        init();
         readings_cp = input.getValue();
         transformed_cp = transform_cp + readings_cp;
         output_value->setData(&transformed_cp);

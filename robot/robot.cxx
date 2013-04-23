@@ -88,7 +88,10 @@ RobotController* Robot::get_controller(){return controller;}
 
 //MUTATORS
 void Robot::update_sensors(){
-    get_hand()->update(Hand::S_ALL,true); //update hand sensors
-    get_fts()->update(true); //update f/t sensor 
-    get_fts()->updateAccel(true); //update f/t acceleration sensor 
+    if(senses->has_hand())
+        get_hand()->update(Hand::S_ALL,true); //update hand sensors
+    //if(senses->has_fts()){
+        get_fts()->update(true); //update f/t sensor 
+        get_fts()->updateAccel(true); //update f/t acceleration sensor 
+    //}
 }

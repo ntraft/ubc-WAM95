@@ -18,7 +18,9 @@ class NaiveBayesSystem;
 class RTControl2;
 class Memory;
 class ControlStrategy;
+class PartialLeastSquaresSystem;
 #include "parameter_estimator.h"
+
 
 
 //RTMemory Class
@@ -29,6 +31,7 @@ class RTMemory {
 std::string tmpStr, saveName, fileOut;
 char* tmpFile;
 std::vector<std::string> tmp_filenames;
+string pose_tmp_filename;
 std::string log_prefix;
 
     public:
@@ -151,6 +154,13 @@ pv_type param_vec;
     #include "input_type_table.h"
     #include "tool_type_table.h"
 #undef X
+#define P(aa, bb, cc, dd, ee) \
+    typedef boost::tuple<double, in_type> input_type_##cc; \
+    input_type_##cc* sample_##cc; \
+    std::vector<input_type_##cc, Eigen::aligned_allocator<input_type_##cc> >* vec_##cc; \
+    math::Spline<in_type>* spline_##cc;
+    #include "parameter_table.h"
+#undef P
     public:
 #define X(aa, bb, cc, dd, ee) \
     systems::Callback<double, bb>* trajectory_##cc; \
@@ -160,6 +170,10 @@ pv_type param_vec;
     #include "input_type_table.h"
     #include "tool_type_table.h"
 #undef X
+#define P(aa, bb, cc, dd, ee) \
+    systems::Callback<double, in_type>* beta_trajectory_##cc; 
+    #include "parameter_table.h"
+#undef P
 #define X(aa, bb, cc, dd, ee) \
     vector<systems::Callback<double, bb>* > mean_trajectory_vec_##cc; \
     vector<systems::Callback<double, bb>* > std_trajectory_vec_##cc;
@@ -184,6 +198,8 @@ protected:
     CpSystem* cp_system; //for realtime cartesian position control
     RTControl* rtc; //for realtime manipulation of robot 
     ExposedOutput<pv_type>* param_output_system; //to record environment parameters
+    PartialLeastSquaresSystem* pls_system; //to record environment parameters
+    //bt_type pls_beta;
 
 //parameter estimation
     vector<NaiveBayesSystem*> nbs_vec;
@@ -220,7 +236,7 @@ systems::TupleGrouper<
 	PrintToStream<bb>* param_outputter_##cc;
 #include "parameter_table.h"
 #undef P
-systems::PeriodicDataLogger<parameter_tuple_type>* param_logger;
+systems::PeriodicDataLogger<pose_sample_type>* pose_logger;
 
 
 #define X(aa, bb, cc, dd, ee) \
@@ -242,18 +258,21 @@ public:
     void set_teach_name(string saveName);
     bool prepare_log_file();
     void record();
-    void create_spline();
+    void create_spline(string suffix = "");
     //play
     void set_play_name(string playName);
     void reset_output_counter(int base = 0);
     void record_zero_values();
     bool load_trajectory();
 	void init_data_logger();
-	void init_param_logger();
+	void init_pose_logger();
     void output_data_stream();
+    void output_pose_stream();
     void append_data_stream();
     bool load_data_stream(bool);
+    bool load_beta_stream(bool);
     bool load_data_stream(bool, enum parameters);
+    void reset_time();
     void start_playback();
     void pause_playback();
     bool playback_active();

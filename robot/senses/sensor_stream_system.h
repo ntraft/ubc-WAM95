@@ -15,6 +15,7 @@ public:
 #include "tool_type_table.h"
 #undef X   
 Output<pv_type> output_param;
+Output<in_type> output_sensor_vec;
 
 
 protected:
@@ -24,12 +25,14 @@ protected:
 #include "tool_type_table.h"
 #undef X
     Output<pv_type>::Value* output_value_param;
+    Output<in_type>::Value* output_value_sensor_vec;
     Memory* memory;
     Senses* senses;
     bool* problem;
     int problem_count;
     stringstream* debug;
     pv_type params;
+    in_type sensor_vec;
 
 public:
 	SensorStreamSystem(Memory* _memory, Senses* _senses, const std::string& sysName = "SensorStreamSystem") :
@@ -42,6 +45,7 @@ public:
 #include "tool_type_table.h"
 #undef X   
         output_param(this, &output_value_param),
+        output_sensor_vec(this, &output_value_sensor_vec),
         time_input(this)
 		{
         }

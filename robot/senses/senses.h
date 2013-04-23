@@ -32,7 +32,8 @@ class Senses: public MainLine{
         ForceTorqueSensor* fts;
 
         Hand::jv_type sensor_vars[NUM_SENSOR_VARS]; 
-
+        tv_type tare_value_tv;
+        Hand::jp_type tare_value_ft;
 #define X(aa, bb, cc, dd, ee) \
         bb tare_value_##cc;
 #include "input_type_table.h"
@@ -55,6 +56,7 @@ class Senses: public MainLine{
         systems::Wam<DIMENSION>* get_wam();
         ForceTorqueSensor* get_fts();
         Hand* get_hand();
+        bool has_hand();
         
         //Sensor utilities
         cf_type get_force();
