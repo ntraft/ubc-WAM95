@@ -1,10 +1,401 @@
-configure: cmake .
-compile: make
-run: demo/demo
+The WAM95 Controller Software v1.0
+Date: 2013
+Author: Daniel M. Troniak
 
+===================
+QUICKSTART
+
+Compile
+~~~~~~~
+cmake .
+make
+
+Run
+~~~
+demo/demo
+===================
+
+===================
+USER's MANUAL
+
+1       Introduction
+~~~~~~~~~~~~~~~~~~~~~~~~
+This software allows a user to command the WAM95 robot with optional Barrett BH-280 Hand and Haptic Ball attachments. Currently the software is designed to serve the following functions:
+Act as an interface between the user and the WAM95 robot at UBC
+Act as a closed-loop controller for peforming dynamic manipulation tasks with the robot.
+
+1.1     Purpose/Audience
+The purpose of this document is to guide students/researchers who would like to interact with the WAM95 robot using the WAM95 controller software. 
+
+1.3     Points of Contact
+The original software designer/operator is Daniel M. Troniak (troniak at cs.ubc.ca). Supervisors of the system are Dinesh K. Pai (pai at cs.ubc.ca) and Michiel van de Panne (van at cs.ubc.ca). The supporting organization is Department of Computer Science at the University of British Columbia. This project has been sponsored by the National Sciences and Engineering Research Council of Canada (NSERC).
+
+2       Getting Started
+~~~~~~~~~~~~~~~~~~~~~~~~
+2.1     Configure External PC
+First, it is necessary to obtain an external PC that is configured with support for SSH, and Octave (http://www.gnu.org/software/octave/) supporting software. Windows users are recommended to use Cygwin (cygwin.com) for terminal support. Linux users receive SSH by default and can download Octave separately. Mac should work similarly to Linux. 
+
+2.2     Connect to WAM95
+Connecting to the WAM95 robot can be accomplished via SSH. From your external PC (which needs to be on the ICICS subnet) type the following at the terminal: __ssh robot@198.162.54.132__ with password:WAM. If you are outside the ICICS subnet, you will first need to login to remote.cs.ubc.ca using your CS username and password via SSH via a remote terminal.
+
+3       Installation
+~~~~~~~~~~~~~~~~~~~~~~~~
+3.1     First-Time 
+For first-time users, installation requirements are minimum since the internal PC is pre-configured. Please be sure you have support for SSH on your external PC. SSH is available via terminal in Linux and Mac or can be installed as part of Cygwin (cygwin.com) for Windows.
+
+3.2     Access Controls
+Super-user privileges are required to install the libbarrett library to the internal PC, but NOT required to install/run the WAM95 controller software. The software is contained on bitbucket, which is publicly accessible (please see instructions below).
+
+3.3     Installation
+Note: The steps in this section are ONLY required if there are issues with the internal PC. By default, the WAM95 internal PC should already be configured properly. 
+Barrett has supplied instructions for fresh-installation of a new system to the robot's internal PC. If the instructions in this section fail (e.g. you have a different distribution of linux from what is supported), please contact Barrett tech support (support at barrett.com).
+
+3.3.1   Install Libbarrett to WAM95 Compact Flash drive.
+
+0) Remove the CF card from the internal PC (unscrew 4 screws from the backplate of the WAM, unscrew two screws from board covering and remove the compact flash disk from the internal board, card just pops out)
+1) Connect the CF Card with a CF card adapter to an Ubuntu 12.04 PC.
+2) Download the Barrett CF Installation Script (via terminal on Ubuntu PC):
+$ wget http://web.barrett.com/support/WAM_Installer/cf_install_1204.sh
+$ chmod +x cf_install_1204.sh
+3) Run the CF Installation Script (via terminal on Ubuntu PC):
+$ sudo ./cf_install_1204.sh
+4) Success! Start the WAM with your new CF Card. 
+
+3.3.2   Install WAM95 controller to WAM95 internal PC
+(Via the terminal on external PC)
+0) Login: ssh robot@198.162.54.132 (pw:WAM)
+1) Create:  mkdir WAM95
+2)          cd WAM95
+3) Initalize: git init
+4) Download: git clone git@github.com:troniak/ubc-WAM95.git
+5) Configure: cmake .
+6) Compile: make
+
+3.3.3   Install Octave to external PC
+Note: Octave is only required for statistical data analysis.
+Follow instructions located at http://www.gnu.org/software/octave/download.html
+
+3.5     Starting The System
+At the terminal within the ubc-WAM95 root directory type the following:
+$ demo/demo
+
+3.6     Stopping The System
+Type Q and press [ENTER] to stop the system at the main menu. Please refrain from killing the process (e.g. via ctrl-c) as this will induce a hard-fault to the WAM system.
+
+3.7     Suspending The System
+Note: this should not be done during realtime execution of the system.
+Type ctrl-z to suspend the system and return to the terminal. To bring back the menu, type fg and press [ENTER]. 
+
+4       Usage
+~~~~~~~~~~~~~~~~~~~~~~~~
+The WAM95 controller software's user interface is organized into a series of menus and submenus and is interfaced exclusively via the command line. The menu contents are abstracted from the code into various files suffixed with _table which contain a series of X-macros which are merged with the code upon compilation. The following sections explain each menu and their respective functions in detail.
+
+4.1     The Main Menu 
+
+4.1.1   The contents of demo/main_table.h:
+//Submenus
+1    X(T, 't', tap->run(), "run teach and play interface", "N/A")
+//WAM
+2    X(G, 'g', robot->get_wam()->gravityCompensate(), "compensate for Gravity with WAM", "N/A")
+3    X(J, 'j', robot->get_controller()->move_wam_to_str(new jp_type(), "joint positions", line.substr(1)), "go to joint position", "7 #s separated by spaces")
+4    X(I, 'i', robot->get_controller()->idle(), "idle wam", "N/A")
+5    X(H, 'h', robot->get_controller()->home(), "return to home position", "N/A")
+//Hand
+6    X(A, 'a', robot->get_controller()->init_hand(), "initialize hand", "N/A")
+7    X(B, 'b', robot->get_controller()->backdrive_hand(), "toggle hand backdrivability", "N/A")
+//Miscellaneous
+8    X(S, 's', robot->get_senses()->display(), "show realtime sensor output (q to quit)", "N/A")
+9    X(Q, 'q', quit = true, "quit program", "N/A")
+
+4.1.2   Function of each menu item 
+Submenus:
+Menu item 1) launches the Teach-and-Play sub-menu interface (see below). Automatically places WAM into gravity compensation mode (see next menu item).
+WAM-related items:
+Menu item 2) places the WAM into gravity compensation mode, making the WAM light enough to be easily moved around by a human
+Menu item 3) moves each of the 7 joints of the WAM to a user-specified position (must include 7 floating point numbers separated by white space)
+Menu item 4) places the the WAM in an IDLE state which effectively deactivates any active actuation
+Menu item 5) concurrently moves all of the 7 joints of the WAM to their zero positions (as were pre-specified by the user)
+Hand-related items:
+Menu item 6) initializes the hand, which resets its state to a known configuration. It is usually only necessary to initialize the Hand when problems occur.
+Menu item 7) places the BH-280 hand (if attached) into an actively backdrivable state wherein a user can induce the fingers to open/close by applying force to them (effectively torque at the joints). 
+Menu item 8) displays values of all available sensors in realtime at the terminal. It is best to widen your terminal window before entering this mode to display the formatting correctly.
+Menu item 9) safely terminates the interface, at which point the user is asked to <SHIFT>-<IDLE> the WAM via its control pendant.
+
+4.2     Teach-and-Play menu
+The Teach-and-Play (TaP) module allows a user to demonstrate a motion to the robot via kinesthetic teaching and then playback the encoded motion.
+
+4.2.1   Contents of tap/tap_menu.h 
+1   X(T,        't', teach->run(),       "Teach",                  N/A)
+2   X(P,        'p', play->run(),        "Play",                   N/A)
+3   X(E,        'e', exit(),             "Exit",                   N/A)
+
+4.2.2   Function of each TaP menu item
+Menu item 1) launches the kinesthetic teaching interface. Saves trajectories for future playback to disk.
+Menu item 2) launches the trajectory playback interface. Commands the WAM through the trajectory that was previously saved to disk.
+Menu item 3) returns the user to the main menu.
+
+4.3     Teach interface
+
+The teach interface is unique in that one interacts with the interface in a sequential manner. Simply follow the prompts to encode a trajectory into a time-series of robot pose estimates and save to disk. The original libbarrett TaP version allows for one to choose between both Cartesian and joint space trajectories, however currently only Cartesian space trajectory generation is available via the interface. Included in the trajectory is the initial position of the robot in joint space which is saved to disk as part of the trajectory.
+
+4.4     Play interface 
+The play interface brings a combination of several categories of functions, each contained within an independent _table.h file. 
+
+4.4.1   Play menu
+The Play menu (play_menu.h) deals with recorded-trajectory playback and looping. 
+
+4.4.1.1 Contents of tap/play_menu.h 
+1   X(Playing, 'i', false,      "Initialize Motion")
+2   X(PLAYING, 'p', false,      "Play")
+3   X(PAUSED,  'a', loop_flag,  "Pause")
+4   X(STOPPED, 's', false,      "Stop")
+5   X(LOOPING, 'l', true,       "Loop")
+6   X(QUIT,    'q', false,      "Quit")
+
+4.4.1.2   Function of each play menu item
+Menu item 1) moves the WAM to the initial joint-position configuration contained in the specified trajectory data file.
+Menu item 2) performs a single playback of the trajectory contained in the specified data file.
+Menu item 3) pauses the motion at a precise point in time during playback of a trajectory, which can be resumed/stopped via this interface.
+Menu item 4) stops the WAM, at which point the motion can only be restarted from the beginning of the trajectory via this interface.
+Menu item 5) performs multiple loops of the recorded trajectory. The number of loops is specified within the conf/floats configuration file
+Menu item 6) quits the playback interface, returning to the Teach-and-Play interface.
+
+4.4.2   Control menu
+The Control menu (ctrl_menu.h) allows the user to specify an autonomous adaptation control strategy for the WAM. k
+Currently not implemented.
+
+4.4.3   Variable menu
+The Variable menu (var_menu.h) gives users some control over saving/loading and setting variables (contained within files in the conf directory) without having to restart the program. 
+
+4.4.3.1 Contents of tap/var_menu.h 
+1   X(RTL, 'r', "realtime_learning","Toggle Realtime Learning")
+2   X(TJP, 'j', "track_rtc_jp",     "Toggle Realtime Controller JP Tracking")
+3   X(RLV, 'x', "reload_vars",      "Reload variables from disk")
+
+4.4.3.2 Function of each var menu item
+Menu item 1) moves the WAM to the initial joint-position configuration contained in the specified trajectory data file.
+Menu item 2) performs a single playback of the trajectory contained in the specified data file.
+Menu item 3) pauses the motion at a precise point in time during playback of a trajectory, which can be resumed/stopped via this interface.
+
+4.4.4   Miscellaneous menu
+The Miscellaneous menu (misc_menu.h) contains other functions which have not yet been categorized.
+
+4.4.4.1 Contents of tap/misc_menu.h 
+0   X(OUTPUT_DATA, 'o', output_data_stream(),      "Output Data Stream")
+1   X(RECORD_ZERO, 'z', robot->get_rtmemory()->record_zero_values(),      "Record Zero Values")
+2   X(INCREASE_CP_Z, '8', increase_cp(2),      "Increase CP Z")
+3   X(INCREASE_CP_X, '6', increase_cp(0),      "Increase CP X")
+4   X(DECREASE_CP_Z, '2', decrease_cp(2),      "Decrease CP Z")
+5   X(DECREASE_CP_X, '4', decrease_cp(0),      "Decrease CP X")
+6   X(INCREASE_QD_Y, '9', increase_qd(1),      "Increase QD Y")
+7   X(INCREASE_QD_X, '3', increase_qd(0),      "Increase QD X")
+8   X(DECREASE_QD_Y, '7', decrease_qd(1),      "Decrease QD Y")
+9   X(DECREASE_QD_X, '1', decrease_qd(0),      "Decrease QD X")
+
+4.4.4.2 Function of each misc menu item
+Menu item 0) 
+Menu item 1) 
+Menu items 2 through 9) 
+
+5       Configuration
+~~~~~~~~~~~~~~~~~~~~~~~~
+Configuring the robot for your environment can be done by modifying the contents within the conf directory. The following sections explain each type of configuration file:
+
+--*.yml--
+The .yml extension signifies a YAML file. The file contains parameters and their values on each line of the file. The file is read as follows:
+parameter_name:parameter_value
+There are two separate .yml files that contain parameters:
+floats.yml: contains parameters that are loaded as floating point numbers.
+strings.yml: contains paramters that are loaded as character strings.
+
+--calibration*.conf--
+These files are generated by the automated gravity compensation calibration routine onboard the robot. To update these files when changes to the robot configuration have been made (e.g. the haptic ball replaces the Barrett Hand), please re-run the calibration routine. [TODO: refer to calibration executable]
+
+=======================
+
+=======================
+
+MAINTENANCE MANUAL
+
+1 Introduction
+~~~~~~~~~~~~~~
+1.1     Purpose
+The purpose of this document is to give programmers information on how to maintain/extend the functionality of the WAM95 controller software. The controller works on-board the WAM robotic system from Barrett in conjunction with Libbarrett (and its supporting libraries).
+
+1.2     Audience
+This manual is designed for students and researchers who are working with the Barrett WAM/Hand system.
+
+1.3     Points of Contact
+The original software designer/operator is Daniel M. Troniak (e: troniak at cs.ubc.ca). Supervisors of the system are Dinesh K. Pai (pai at cs.ubc.ca) and Michiel van de Panne (van at cs.ubc.ca). The supporting organization is Department of Computer Science (poon at cs.ubc.ca) at the University of British Columbia. This project has been sponsored by the National Sciences and Engineering Research Council of Canada (NSERC).
+
+1.4     Project Reference [TODO]
+This section provides a bibliography of key project references and deliverables produced during the information system development life cycle. 
+
+1.5     Glossary [TODO?]
+Provide a glossary with definitions of all terms, abbreviations, and acronyms used in the manual.  If the glossary is several pages in length, place it as an appendix.
+
+2   System Description
+~~~~~~~~~~~~~~~~~~~~~~
+This section provides an overview of the system to be maintained.
+
+2.1     System Application
+For a complete description of the purpose of the system, the functions it performs and the processes it is intended to support, please refer to the WAM95 controller User's Manual.
+
+2.2     System Organization/Architecture
+For a description of the system structure, major system components, and the functions of each major system component, please see appendix 1.  [TODO: Include charts, diagrams, and graphics as necessary.]
+
+2.3     Security
+Access to the system is open to anyone with access to the CS internal network at UBC. Remote access is granted to the robot by first logging into remote.cs.ubc.ca (using your CS username and password) and then logging into the robot at ip address 198.162.54.132 using username:robot and password:WAM. Please note that the robot must be locally switched on before it can be accessed remotely.
+
+2.4     Inventory
+For a list of inventory of local system files and hardware, please refer to the 'Part list' sheet of the following document: https://docs.google.com/spreadsheet/ccc?key=0AuAhaEIkLVzGdEhRSWw3QVVZc0JfQ3BhYlktejRkQUE#gid=2. Barrett official component list can be found here: http://support.barrett.com/wiki/WAM/SystemComponentList.
+
+2.5     Environment
+[Enter information describing the hardware, software, operational activities, and other resources needed to perform actions described in this manual or provide a reference to where it is stored.]
+
+2.6     System Operations
+For information describing normal system operational usage and activities, please refer to the WAM95 User's Manual.
+
+3   Support Environment
+~~~~~~~~~~~~~~~~~~~~~~~
+This section describes the operating and support environment for the system and program(s). Included is a discussion of the equipment, support software, database characteristics, and personnel requirements for supporting maintenance of the system and its programs.
+
+3.1     Equipment Environment
+
+3.1.1 Computer Hardware
+    The WAM95 robot comes with an embedded linux operating system based on Ubuntu 12.04 (Host). It can be accessed via ssh at the following ip address within the UBC CS subnet: 198.162.54.132. If your client computer is running Windows, please install cygwin and include ssh binaries in the installation. Mac and Linux users get ssh via the terminal. If access via internal ip address is non-functional, there is a d-link wireless router supplied with the WAM, which is connected directly to the WAM via ethernet and which should broadcast with ssid wam95 (no password required). Please note that in this mode, Internet access is not available from the host computer.
+
+3.1.2 Facilities
+    For normal operation of the system, a physical test environment is required, which depends on the task the robot is required to perform. The current environment contains a pegboard upon which various wooden constraint rails are attached. There is a free-moving object (whose movement is constrained by the wooden rails) that is manipulated by the robot to perform a certain task e.g. object topple-and-slide.
+
+3.2     Support Software
+
+3.2.1 Libbarrett and Dependencies
+    The WAM95 controller leverages the libbarrett library version 1.1.0 (http://web.barrett.com/svn/libbarrett/tags/libbarrett-1.1.0/), including most of libbarrett's dependencies. It runs on Linux kernel 2.6.32 patched with Xenomai 2.5.5.2 (to support realtime execution) and Ubuntu distro 12.04. 
+
+3.2.2 Octave/Matlab
+    Statistical analyses are done via the GNU alternative to matlab: Octave (http://www.gnu.org/software/octave/). Current version number is [TODO]. Matlab can also be used however is not required (has a much larger footprint than Octave). 
+
+3.2.3 Git
+    Git is required for version control of the system and for downloading the software for the first time.
+
+3.3     Personnel
+Personnel should have a fair understanding of the Linux command line. Recommended editor is vim, however code can be downloaded from the robot, edited then reuploaded with a proper ftp client. An excellent knowledge of C++ is required, so brush up on that! I use X-Macros in parts of my code, however I admit they could be replaced with C++ templates (and probably should be!). For program compilation, I use cmake (http://www.cmake.org/), so please follow the basic tutorials. 
+
+4       Software Installation
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+For information on how to install, configure and run the WAM95 controller, please refer to the WAM95 controller User's Manual.
+
+5       System Usage
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+Usage of the system is straightforward. Via cmake and make, a number of binaries should be created. The most important of which is the demo (contained in the demo directory). This binary presents a UI for interactions with the robot. Other binaries are test suites which include scaffolding so they can simply be run with minimal input from users. For more information of system usage, the reader is directed to the WAM95 controller User's Manual.
+
+6    System Maintenance Procedures
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+6.1 Conventions
+This section describes coding and organizational conventions used by the original author which are not contained within  standard programming practices. Adherence to these conventions is optional, however please make a note here if this content becomes out of date.
+
+6.1.1   Robot module hierarchy [TODO]
+    robot
+      WAM
+      PM
+      Memory
+       Long-term
+       Short-term
+      Control
+      Senses 
+
+6.1.2   Header files
+The most important header file is lib/stdheader.h. This file contains references to supporting libraries and other definitions which are safe to be present in the global scope. Most components of the WAM95 controller include this header file.
+
+6.2 Error Conditions
+TODO
+"This section describes all system-wide error conditions that may be encountered within the system, including an explanation of the source(s) of each error and recommended methods to correct each error."
+
+6.3 Known Bugs
+TODO
+
+6.4 Verification Procedures
+Testing suite.
+TODO
+"Present in detail, system-wide testing procedures.  Reference the original development test plan if the testing replicates development testing.  Describe the types and source(s) of test data in detail."
+
+6.6     Maintenance Procedure
 when adding new modules
 1. Include new subdirectory (if any) in topmost CMakeLists.txt
 2. Include new subdirectory (if any) in demo/CMakeLists.txt
 3. Link new subdirectory (if any) in demo/CMakeLists.txt
 4. Include module source file inside its respective subdirectory
 5. Include module binary file in demo/CMakeLists.txt
+TODO
+"This section describes step-by-step, system-wide maintenance procedures, such as procedures for setting up and sequencing inputs for testing.  In addition, present standards for documenting modifications to the system.
+"
+
+7   Safety Considerations
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+7.1 WAM Control/Display Pendants
+When working with the WAM hardware, the most important safety related device is the control/display pendant. These devices are perpetually attached to the robot and provide large red buttons with which a user can stop the operation of the robot in an emergency. Hardware faults/errors are communicated via these pendants. Full information regarding safety protocol can be found here: http://support.barrett.com/wiki/WAM/SafetyFeaturesPrecautions
+
+7.2 Resetting WAM following a hard fault
+WARNING: failure to manually place the WAM to its home position following a hard-fault may result in hardware damage.
+If the WAM suffers a hard-fault during its execution (e.g. its control software has crashed), it must be reset to its home position before being activated again. This is due to the WAM having lost the position of its joints. Libbarrett will correctly identify when the WAM must be reset to its home position, so please follow their instructions. 
+
+8   System Backup and Recovery
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+TODO
+
+9   FAQs and Troubleshooting
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+TODO    
+
+Appendix 1: WAM95 Controller Architecture
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+The software is divided into high-level components, each having its own directory in the project. 
+
+--demo--
+Short for Demonstration: contains the main programs, including all test programs. This is where the main executables for running the robot user interface reside.
+
+--robot--
+Contains the high-level robot object which mainly acts as a container of specific robotic component controllers (e.g. logic which deals with the sensors) and acts as a bridge between the main program and these components. Note that while coupling was minimized as much as possible, for code simplicity some memory-related functions, for example, may be contained within control modules.
+
+---Memory---
+Contains all modules associated with the working memory of the robot.
+
+---Control---
+Contains all modules associated with controlling the robot.
+
+---Senses---
+Contains all modules associated with reading and processing the robot's sensors.
+
+
+--lib--
+Short for Libraries: miscellaneous utilities. The following is a short description of each file:
+mainline.h/cxx: abstract class for command-line user-interfaces
+*_type_table.h: (XMacros support files) used to modify source files when changes to the robot configuration (i.e. physical components, sensors) has been made, or for when certain sensors are to be ignored during execution.
+utils.h/cxx: static support functions globally available to all components of framework.
+utils-inl.h: static support functions that use C++ Templates. Globally available to all components of framework.
+stdheader.h: for convenience, contains standard includes that is included by every object within the framework. Contains mostly includes relevant to libbarrett and its supporting libraries, plus some additional constants, etc.
+
+--tap--
+Short for Teach-and-Play: the main teach-and-play library. I adapted this from the libbarrett teach-and-play source code to function within my framework. The main duties are to record and playback trajectories that are kinesthetically taught to the robot.
+
+--recorded--
+Contains data recorded during kinesthetic teaching. The format is as follows:
+1. one line specifying the coordinate system in which the robot was recorded, which can either be jp_type (joint space) or cp_type (Cartesian space)
+2. one line for each timestep of the recorded motion. The first column contains the time step, followed by N columns: one for each sensor reading
+There should also be a header file corresponding to each recorded motion which contains information on how to parse the columns.
+
+--bin--
+Short for Binary: Contains other stand-alone executables and other third-party software packages.
+
+--conf--
+Short for Configuration: contains parameters and other information pertaining to the current configuration of the robot and its environment. 
+*.yml: Can be changed at the user's discretion. They signify input parameters which are loaded by the robot's persistent memory to be used within the main program.
+*.conf: Should not be modified. They are pre-generated by the built-in calibration routine on the WAM.
+*.h: Should be changed if the user is interested in a different combination of sensors attached to different components of the WAM.
+
+--exp--
+Short for Experiments: Currently contains deprecated code that was once used for experiments with the WAM. These need to be refactored before they can be introduced into the new framework. Nevertheless the code is still valid.
+
+========================
