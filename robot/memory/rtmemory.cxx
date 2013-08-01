@@ -43,15 +43,15 @@ RTMemory::RTMemory(ProductManager* _pm, Wam<DIMENSION>* _wam,
         
         data_log_headers = 
             string("TIME,1;") +
+#define P(aa, bb, cc, dd, ee) \
+            aa + "," + num2str(1) + ";" +
+#include "parameter_table.h"
+#undef P 
 #define X(aa, bb, cc, dd, ee) \
             aa + "," + num2str(cc.size()) + ";" +
 #include "input_type_table.h"
 #include "tool_type_table.h"
 #undef X
-#define P(aa, bb, cc, dd, ee) \
-            aa + "," + num2str(1) + ";" +
-#include "parameter_table.h"
-#undef P 
             "";
          
         STREAM_SIZE = 
@@ -851,12 +851,13 @@ void RTMemory::reconnect_systems(){
     //cout << "tg "; fflush(stdout);
     if(memory->get_float("data_stream_out")){
         systems::forceConnect(time.output, tg.getInput<0>());
+        systems::forceConnect(sss->output_param, tg.getInput<1>());
 #define X(aa, bb, cc, dd, ee) \
         systems::forceConnect(sss->output_##cc, tg.getInput<ee>());
 #include "input_type_table.h"
 #include "tool_type_table.h"
 #undef X
-        systems::forceConnect(sss->output_param, tg.getInput<NUM_SENSORS>());
+        systems::forceConnect(time.output, tg.getInput<NUM_SENSORS+1>()); //add one for parameters
     }
     /*else{
         systems::forceConnect(time.output, tg.getInput<0>());

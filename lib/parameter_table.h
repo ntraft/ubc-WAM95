@@ -1,5 +1,5 @@
-//when adding new parameters, follow the below template (replace <description> with appropriate string)
-//P("<human-readable name>, <data type>, <variable name>, <parameter name (within conf/floats.yml)>, <count (increasing)>")
+//when adding new parameters, follow the below template (replace <description> with appropriate string, avoid spaces)
+//P("<human-readable name>, <data type>, <variable name (used within the code)>, <parameter name (within conf/floats.yml)>, <count (increasing)>")
 P("MASS", double, mass, "param_mass", 0)
 P("FRICTION", double, friction, "param_friction", 1)
 P("COMPLIANCE", double, compliance, "param_compliance", 2)

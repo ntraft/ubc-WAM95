@@ -16,8 +16,10 @@ void SensorStreamSystem::operate() {
     params[ee] = memory->get_float(dd);
 #include "parameter_table.h"
 #undef P 
-    //parseDoubles(&sensor_vec, sensor_stringstream.str());
     output_value_param->setData(&params);
+    
+    //DEPRECATED...
+    //parseDoubles(&sensor_vec, sensor_stringstream.str());
     //output_value_sensor_vec->setData(&sensor_vec);
     //robot->get_rtmemory()->set_environment_param(params);
 }

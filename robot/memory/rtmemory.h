@@ -74,12 +74,12 @@ systems::Ramp time;
 string data_log_headers;
 /**/
 //input_streams' type definitions
-typedef boost::tuple<double, 
+typedef boost::tuple<double, pv_type,
 #define X(aa, bb, cc, dd, ee) bb,
 #include "input_type_table.h"
 #include "tool_type_table.h"
 #undef X
-        pv_type> input_stream_type;
+        double> input_stream_type;
 typedef boost::tuple<double, 
 #define X(aa, bb, cc, dd, ee) bb,
 #include "input_type_table.h"
@@ -97,11 +97,12 @@ typedef boost::tuple<double,
         double> input_stream_hand_type;
 //tuple groupers
 systems::TupleGrouper<double, 
+        pv_type,
 #define X(aa, bb, cc, dd, ee) bb,
 #include "input_type_table.h"
 #include "tool_type_table.h"
 #undef X
-        pv_type> tg;
+        double> tg;
 systems::TupleGrouper<double, 
 #define X(aa, bb, cc, dd, ee) bb,
 #include "input_type_table.h"

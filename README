@@ -334,6 +334,9 @@ TODO
 6.7     Adding new parameters (TODO)
 lib/parameter_table.h & follow instructions in the file
 
+6.8     Configuration parameters (TODO)
+explanation of all parameters contained within conf/*.yml files
+
 7   Safety Considerations
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
