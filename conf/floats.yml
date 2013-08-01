@@ -12,7 +12,6 @@ record_pose:0
 track_rtc_c:0
 track_rtc_jp:0
 trajectory_type:1
-num_environment_parameters:4
 period_multiplier:4
 data_stream_index:0
 transform_cp_x:-0.0
@@ -22,8 +21,13 @@ transform_qd_x:0.08
 transform_qd_y:0.1
 transform_qd_z:0.05
 cp_step:0.02
-qd_step:0.05
+cp_rt_step:0.0002
+qd_step:0.08
+qd_rt_step:0.0008
 data_stream_out:1
-param_mass:6
-param_friction:3
+pls_ncomp:10
+num_environment_parameters:3
+param_mass:0.2
+param_friction:0.4413
+param_compliance:0.1699
 loop_max:20

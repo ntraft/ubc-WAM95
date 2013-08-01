@@ -13,6 +13,7 @@
 #include "utils.h"
 #include "control_strategy.cxx"
 #include "pls_system.h"
+#include "boost/filesystem.hpp"
 
 //typedef ::boost::tuple<cp_type, ::Eigen::Quaterniond> pose_type
 
@@ -129,6 +130,9 @@ void RTMemory::init(){
 void RTMemory::set_teach_name(string _teachName){
     saveName = _teachName;
 }
+void RTMemory::set_initial_jp(){
+   initial_jp = senses->get_wam()->getJointPositions();
+}
 bool RTMemory::prepare_log_file(){
 	tmpFile = new char[tmpStr.length() + 1];
 	strcpy(tmpFile, tmpStr.c_str());
@@ -196,6 +200,7 @@ void RTMemory::create_spline(string suffix){
 		out << "jp_type\n";
 	else
 		out << "pose_type\n";
+    out << to_string(&initial_jp);
 	out << in.rdbuf();
 	out.close();
 	in.close();
@@ -204,6 +209,13 @@ void RTMemory::create_spline(string suffix){
 }
 //**********************
 //*********PLAY*********
+string RTMemory::get_log_directory(){
+    string log_directory = log_prefix + playName + "/";
+    if( !boost::filesystem::exists( log_directory ) ){
+        boost::filesystem::create_directory( log_directory );
+    }
+    return log_directory;
+}
 void RTMemory::set_play_name(string _playName){
     playName = _playName;
 }
@@ -222,14 +234,19 @@ bool RTMemory::load_trajectory(){
     string play_filename = string("recorded/") + playName + string(".csv");
 	std::ifstream fs(play_filename.c_str());
 	std::string line;
+	std::string data_type;
+	std::string initial_jp_str;
 	// Check to see the data type specified on the first line (jp_type or pose_type)
 	// this will inform us if we are tracking 4DIMENSION WAM Joint Angles, 7DIMENSION WAM Joint Angles, or WAM Poses
-	std::getline(fs, line);
+	std::getline(fs, data_type);
+    // get the initial joint positions that the robot should enter at the start of the motion
+	std::getline(fs, initial_jp_str);
 	// Using a boost tokenizer to parse the data of the file into our vector.
 	boost::char_separator<char> sep(",");
 	typedef boost::tokenizer<boost::char_separator<char> > t_tokenizer;
 	t_tokenizer tok(line, sep);
-	if (strcmp(line.c_str(), "pose_type") == 0) {
+    parseDoubles(&initial_jp, initial_jp_str);
+	if (strcmp(data_type.c_str(), "pose_type") == 0) {
         
 		// Create our spline and trajectory if the first line of the parsed file informs us of a pose_type
 		inputType = 1;
@@ -278,7 +295,7 @@ bool RTMemory::load_trajectory(){
 		//qdTrajectory = new systems::Callback<double, Eigen::Quaterniond>(boost::ref(*qdSpline));
 		coTrajectory = new systems::Callback<double, co_type>(boost::ref(*coSpline));
         //cout << "created trajectories" << endl;
-	} else if (strcmp(line.c_str(), "jp_type") == 0) {
+	} else if (strcmp(data_type.c_str(), "jp_type") == 0) {
 		// Create our spline and trajectory if the first line of the parsed file informs us of a jp_type
 		//std::vector<input_jp_type, Eigen::aligned_allocator<input_jp_type> > vec_jp;
 		float fLine[8];
@@ -392,7 +409,7 @@ void RTMemory::output_data_stream(){
     //save headers for data log of entire trajectory
     //std::string log_name = playName.substr(9,playName.length()-4-9); //strip recorded/ and .csv from playName
     std::string log_name = playName;
-    std::string header_filename = log_prefix+log_name+".h";
+    std::string header_filename = get_log_directory()+log_name+".h";
     std::ofstream out(header_filename.c_str());
     out << data_log_headers << std::endl;
     /*
@@ -408,7 +425,7 @@ void RTMemory::output_data_stream(){
     std::vector<std::string>::iterator tmp_filename_it;	
     for (tmp_filename_it=tmp_filenames.begin(); tmp_filename_it < tmp_filenames.end(); tmp_filename_it++){
         std::string tmp_filename = *tmp_filename_it;
-        std::string out_filename = log_prefix+itoa(output_counter++)+log_name+".csv";
+        std::string out_filename = get_log_directory()+itoa(output_counter++)+log_name+".csv";
         log::Reader<input_stream_type> lr((tmp_filename).c_str());
         lr.exportCSV(out_filename.c_str()); 
         std::remove((tmp_filename).c_str());
@@ -446,7 +463,7 @@ void RTMemory::append_data_stream(){
     //save headers for data log of entire trajectory
     //std::string log_name = playName.substr(9,playName.length()-4-9); //strip recorded/ and .csv from playName
     string log_name = playName;
-    string header_filename = log_prefix+log_name+".h";
+    string header_filename = get_log_directory()+log_name+".h";
 
     //output data header (do NOT OVERWRITE if exists)
     ifstream header_exists(header_filename.c_str());
@@ -467,8 +484,8 @@ void RTMemory::append_data_stream(){
     std::vector<std::string>::iterator tmp_filename_it;	
     for (tmp_filename_it=tmp_filenames.begin(); tmp_filename_it < tmp_filenames.end()-1; tmp_filename_it++){
         std::string tmp_filename = *tmp_filename_it;
-        std::string out_filename = log_prefix+itoa(output_counter++)+log_name+".csv";
-        std::string app_filename = log_prefix+log_name+".csv";
+        std::string out_filename = get_log_directory()+itoa(output_counter++)+log_name+".csv";
+        std::string app_filename = get_log_directory()+log_name+".csv";
         log::Reader<input_stream_type> lr((tmp_filename).c_str());
         lr.exportCSV(out_filename.c_str()); 
         append_to_file(app_filename, out_filename);
@@ -485,7 +502,7 @@ bool RTMemory::load_data_stream(bool mean, enum parameters parameter){
     cout << "loading data stream " << param_i << endl;
     if(mean){stream_prefix = string("mean_") + num2str(param_i) + "_";}
     else{stream_prefix = string("std_") + num2str(param_i) + "_";}
-    string stream_filename = log_prefix + stream_prefix + playName + ".csv";
+    string stream_filename = get_log_directory() + stream_prefix + playName + ".csv";
     std::ifstream* fs = new std::ifstream(stream_filename.c_str());
 
     if(!fs->is_open()){
@@ -557,7 +574,7 @@ bool RTMemory::load_data_stream(bool mean){
     string stream_prefix = "";
     if(mean){stream_prefix = "mean_";}
     else{stream_prefix = "std_";}
-    string stream_filename = log_prefix + stream_prefix + playName + ".csv";
+    string stream_filename = get_log_directory() + stream_prefix + playName + ".csv";
     std::ifstream* fs = new std::ifstream(stream_filename.c_str());
 
     if(!fs->is_open()){
@@ -627,7 +644,7 @@ bool RTMemory::load_data_stream(bool mean){
 bool RTMemory::load_beta_stream(bool flag){
     //Create stream from input file
     string stream_prefix = "beta_";
-    string stream_filename = log_prefix + stream_prefix + playName + ".csv";
+    string stream_filename = get_log_directory() + stream_prefix + playName + ".csv";
     std::ifstream* fs = new std::ifstream(stream_filename.c_str());
 
     if(!fs->is_open()){
@@ -887,6 +904,7 @@ void RTMemory::reconnect_systems(){
             systems::forceConnect(cp_system->output, poseTg.getInput<0>());
             systems::forceConnect(coTrajectory->output, co2qd_system->input);
             systems::forceConnect(co2qd_system->output, poseTg.getInput<1>());
+            //cout << "using cp_system..." << endl;
             wam->trackReferenceSignal(poseTg.output);
        //}
     }

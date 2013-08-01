@@ -29,6 +29,10 @@ void Teach::run(){
         saveName = robot->get_memory()->get_string("default_teach_name");
 
     robot->get_rtmemory()->set_teach_name(saveName);
+	
+    printf("\nPlease move the WAM to its initial joint configuration and press [Enter].\n");
+	waitForEnter();
+    robot->get_rtmemory()->set_initial_jp();
 
 	printf("\nPress [Enter] to start teaching.\n");
 	waitForEnter();

@@ -3,6 +3,8 @@
 
 #define EIGEN_DONT_VECTORIZE
 #define EIGEN_DISABLE_UNALIGNED_ARRAY_ASSERT
+//#define HAND_AVAILABLE
+const int NoHandFound = 10;
 
 //system includes
 #include <stdexcept>
@@ -120,6 +122,7 @@ typedef barrett::math::Matrix<
 #undef X
         1,NUM_PARAMETERS> bt_type;
 typedef barrett::math::Matrix<NUM_PARAMETERS,1> pv_type;
+
 
 //Function defns
 

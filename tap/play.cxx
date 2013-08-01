@@ -44,6 +44,8 @@ Play::Play(Robot* robot) : inputType(robot->get_memory()->get_float("trajectory_
     hand = robot->get_hand();
     instantiate_control_strategies();
     playName = robot->get_memory()->get_string("traj_name");
+    zero_matrix(&qd_increase_count);
+    zero_matrix(&cp_increase_count);
     cout << "Play instantiated!" << endl;
 }
 void Play::instantiate_control_strategies(){
@@ -163,25 +165,56 @@ void Play::user_control() {
 	}
 }
 
-void Play::increase_cp(int ind){
+//cause robot to make a real-time step toward ultimate transformation goal
+void Play::transform_cp(){
+    //cout << "transform cp" << endl;
     cp_type cp = robot->get_memory()->get_transform_cp();
-    cp[ind] += robot->get_memory()->get_float("cp_step");
+    for(int i = 0; i < cp_increase_count.size(); i++){
+        //cout << "in for: " << i << endl;
+        if(cp_increase_count[i] > 0){
+            //cout << cp_increase_count[i] << ">0" << endl;
+            cp[i] += robot->get_memory()->get_float("cp_rt_step");
+            cp_increase_count[i]--;
+        }
+        else if(cp_increase_count[i] < 0){
+            //cout << cp_increase_count[i] << "<0" << endl;
+            cp[i] -= robot->get_memory()->get_float("cp_rt_step");
+            cp_increase_count[i]++;
+        }
+    }
     robot->get_memory()->set_transform_cp(&cp);
+}
+void Play::transform_qd(){
+    cp_type qd_euler = robot->get_memory()->get_transform_qd_euler();
+    for(int i = 0; i < qd_increase_count.size(); i++){
+        if(qd_increase_count[i] > 0){
+            qd_euler[i] += robot->get_memory()->get_float("qd_rt_step");
+            qd_increase_count[i]--;
+        }
+        else if(qd_increase_count[i] < 0){
+            qd_euler[i] -= robot->get_memory()->get_float("qd_rt_step");
+            qd_increase_count[i]++;
+        }
+    }
+    robot->get_memory()->set_transform_qd(&qd_euler);
+}
+//ind: index of cartesian vector (0=x,1=y,2=z)
+void Play::increase_cp(int ind){
+    int step_count = robot->get_memory()->get_float("cp_step") / robot->get_memory()->get_float("cp_rt_step");
+    cout << "increase cp " << ind << " by " << step_count << endl;
+    cp_increase_count[ind] += step_count; 
 }
 void Play::increase_qd(int ind){
-    cp_type cp_euler = robot->get_memory()->get_transform_qd_euler();
-    cp_euler[ind] += robot->get_memory()->get_float("qd_step");
-    robot->get_memory()->set_transform_qd(&cp_euler);
+    int step_count = robot->get_memory()->get_float("qd_step") / robot->get_memory()->get_float("qd_rt_step");
+    qd_increase_count[ind] += step_count; 
 }
 void Play::decrease_cp(int ind){
-    cp_type cp = robot->get_memory()->get_transform_cp();
-    cp[ind] -= robot->get_memory()->get_float("cp_step");
-    robot->get_memory()->set_transform_cp(&cp);
+    int step_count = robot->get_memory()->get_float("cp_step") / robot->get_memory()->get_float("cp_rt_step");
+    cp_increase_count[ind] -= step_count; 
 }
 void Play::decrease_qd(int ind){
-    cp_type cp_euler = robot->get_memory()->get_transform_qd_euler();
-    cp_euler[ind] -= robot->get_memory()->get_float("qd_step");
-    robot->get_memory()->set_transform_qd(&cp_euler);
+    int step_count = robot->get_memory()->get_float("qd_step") / robot->get_memory()->get_float("qd_rt_step");
+    qd_increase_count[ind] -= step_count; 
 }
 
 void Play::run(){
@@ -216,6 +249,9 @@ void Play::run(){
     while (playing) {
         //cout << "updating sensors..." << endl;fflush(stdout);
         robot->update_sensors(); //important!!
+        //perform any outstanding modifications to realtime robot pose
+        transform_qd();
+        transform_cp();
         //cout << "playing" << endl;fflush(stdout);
         if(robot->get_memory()->get_float("reload_vars")){
             robot->get_memory()->reload_vars();

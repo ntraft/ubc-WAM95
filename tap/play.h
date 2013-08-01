@@ -25,6 +25,8 @@ protected:
     //bool sas_toggle;
     bool is_init;
     bool playing;
+    cp_type qd_increase_count;
+    cp_type cp_increase_count;
 	    
 public:
 	bool loop_flag;
@@ -37,6 +39,8 @@ public:
     void loop();
     void output_data_stream();
     void user_control();
+    void transform_cp();
+    void transform_qd();
     void increase_cp(int ind);
     void increase_qd(int ind);
     void decrease_cp(int ind);

@@ -36,20 +36,9 @@ public:
     int get_fingertip_torque_value(Hand* hand, int finger_num);
     void backdrive_hand_thread();
     void backdrive_hand();
-    /*
-    template<size_t DOF, int R, int C, typename Units>
-    void move_wam_to_str(math::Matrix<R,C, Units>* dest,
-            const std::string& description, const std::string& str)
-    {
-        if (parseDoubles(dest, str)) {
-            std::cout << "Moving to " << description << ": " << *dest << std::endl;
-            wam->moveTo(*dest);
-        } else {
-            printf("ERROR: Please enter exactly %d numbers separated by "
-                    "whitespace.\n", dest->size());
-        }
-    }
-    */
+    
+    void move_wam_to_str(jp_type* dest, const std::string& description, const std::string& str);
+        
     void move_hand_to_str(Hand::jp_type* dest,
             const std::string& description, const std::string& str);
     double vel_command(bool open, bool close, double speed = 1.25);

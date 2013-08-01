@@ -2,6 +2,7 @@
 #include "stdheader.h"
 #include "utils.h"
 #include "utils-inl.h"
+#include <boost/thread.hpp>
 //#include "robot.h"
 
 const int TACT_CELL_HEIGHT = 3;
@@ -9,6 +10,8 @@ const int TACT_CELL_WIDTH = 6;
 const int TACT_BOARD_ROWS = 8;
 const int TACT_BOARD_COLS = 3;
 const int TACT_BOARD_STRIDE = TACT_BOARD_COLS * TACT_CELL_WIDTH + 2;
+
+bool displaysemastop = false;
 
 
 Senses::Senses(ProductManager* pm, Wam<DIMENSION>* wam){
@@ -56,7 +59,13 @@ void Senses::help(){
 ProductManager* Senses::get_pm(){ return pm; }
 Wam<DIMENSION>* Senses::get_wam(){ return wam; }
 ForceTorqueSensor* Senses::get_fts(){ return fts; }
-Hand* Senses::get_hand(){ return hand; }
+Hand* Senses::get_hand(){ 
+    if(!has_hand()){
+        cout << "Throwing nohandfound" << endl;
+        throw NoHandFound;
+    }
+    return hand; 
+}
 bool Senses::has_hand(){ return hand != NULL; }
 cf_type Senses::get_force(){
     //fts->update();
@@ -236,7 +245,15 @@ void Senses::tare_fingertip_torque(){
                  std::cout << "    F" << finger_num+1 << ": " << fingertip_torque[finger_num] << std::endl;
         }
 }
+
+void poll_input(char to_poll){
+    while(getchar() != to_poll);
+    displaysemastop = true;
+}
+
 void Senses::display(){
+
+	boost::thread* poll_input_q = new boost::thread(poll_input, 'x');
     
 	BARRETT_UNITS_TEMPLATE_TYPEDEFS(DIMENSION);
     /*
@@ -331,9 +348,12 @@ void Senses::display(){
 
 	Hand::jp_type hjp;
 
+    //ncurses do update to return to curses mode
+    doupdate();
 
 	// Fall out of the loop once the user Shift-idles
-	while (pm->getSafetyModule()->getMode() == SafetyModule::ACTIVE) {
+	while (!displaysemastop){//pm->getSafetyModule()->getMode() == SafetyModule::ACTIVE) {
+
 		// WAM
 		line = wamY;
 
@@ -414,11 +434,15 @@ void Senses::display(){
 			}
 		}
 
-
 		refresh();  // Ask ncurses to display the new text
 		usleep(100000);  // Slow the loop rate down to roughly 10 Hz
 	}
-
+    displaysemastop = false;
+    poll_input_q->interrupt();
+    poll_input_q->join();
+    delete poll_input_q;
+    poll_input_q = NULL;
+    endwin();
 }
 void Senses::drawBoard(WINDOW *win, int starty, int startx, int rows, int cols,
 		int tileHeight, int tileWidth) {

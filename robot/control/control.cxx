@@ -8,7 +8,7 @@ Hand::jp_type finger_contacts;        //entries are 0 if no contact, 1 if contac
 bool backdrivesemastop = true;
 
 RobotController::RobotController(ProductManager* _pm, Wam<DIMENSION>* _wam, Senses* _senses):MainLine(){
-    //, pm(_pm),wam(_wam),hand(_pm->getHand()),fts(_pm->getForceTorqueSensor()),senses(_senses){
+    //, pm(_pm),wam(_wam),hand(_pm->get_hand()),fts(_pm->getForceTorqueSensor()),senses(_senses){
     
     this->pm = _pm;
     this->wam = _wam;
@@ -28,7 +28,7 @@ void RobotController::init_wam(){
 void RobotController::init_hand(){
     //printf(">>> Initializing Hand. (Make sure it has room!)");
     //waitForEnter();
-    hand->initialize();
+    senses->get_hand()->initialize();
 }
 //MAINLINE
 void RobotController::validate_args(){
@@ -59,13 +59,13 @@ void RobotController::help(){
 void RobotController::close_hand(){
         Hand::jv_type velocities;
         set_vector_values(&velocities, 3.0, -1);
-        hand->velocityMove(velocities);
+        senses->get_hand()->velocityMove(velocities);
 }
 //Open all fingers
 void RobotController::open_hand(){
         Hand::jv_type velocities;
         set_vector_values(&velocities, -3.0, 0);
-        hand->velocityMove(velocities);
+        senses->get_hand()->velocityMove(velocities);
 }
 //Close all fingers until contacts detected
 void RobotController::grasp_object(){
@@ -86,7 +86,7 @@ void RobotController::grasp_object(){
                                 done = false;
                         }
                 }
-                hand->velocityMove(velocities);
+                senses->get_hand()->velocityMove(velocities);
         }
 }
 //open all fingers and reset finger contact flags
@@ -114,8 +114,8 @@ enum FINGER_IDS{
 };
 
 int RobotController::get_fingertip_torque_value(Hand* hand, int finger_num){
-    hand->update(Hand::S_FINGERTIP_TORQUE,true);
-    std::vector<int> fingertip_torque = hand->getFingertipTorque();
+    senses->get_hand()->update(Hand::S_FINGERTIP_TORQUE,true);
+    std::vector<int> fingertip_torque = senses->get_hand()->getFingertipTorque();
     cout << "got torque value" << fingertip_torque[finger_num] << endl;fflush(stdout);
     return fingertip_torque[finger_num];
     return 0;
@@ -144,7 +144,7 @@ void RobotController::backdrive_hand_thread(){
 
     cout << "vars instantiated" << endl;fflush(stdout);
 
-    //hand->setTorqueMode();
+    //senses->get_hand()->setTorqueMode();
     while(!backdrivesemastop){
         for(int i = 0; i < NUM_FINGERS; i++){
             cout << "in for" << endl;fflush(stdout);
@@ -153,21 +153,21 @@ void RobotController::backdrive_hand_thread(){
             cout << "got torque value" << endl;fflush(stdout);
             if(torque > torque_threshold_max){
                 //std::cout << "move by " << small_negative_torque[i] << std::endl;fflush(stdout);
-                //hand->setTorqueCommand(small_negative_torque,i);
+                //senses->get_hand()->setTorqueCommand(small_negative_torque,i);
                 std::cout << "move by " << small_positive_velocity[i] << std::endl;fflush(stdout);
-                hand->velocityMove(small_negative_velocity, 1 << i);
+                senses->get_hand()->velocityMove(small_negative_velocity, 1 << i);
                 usleep(200);
             }
             else if(torque < torque_threshold_min){
                 //std::cout << "move by " << small_positive_torque[i] << std::endl;fflush(stdout);
-                //hand->setTorqueCommand(small_positive_torque,i);
+                //senses->get_hand()->setTorqueCommand(small_positive_torque,i);
                 std::cout << "move by " << small_positive_velocity[i] << std::endl;fflush(stdout);
-                hand->velocityMove(small_positive_velocity, 1 << i);
+                senses->get_hand()->velocityMove(small_positive_velocity, 1 << i);
                 usleep(200);
             }
             else if(torque < torque_threshold_zero_min || torque > torque_threshold_zero_max){
                 std::cout << "stop moving " << small_positive_velocity[i] << std::endl;fflush(stdout);
-                hand->velocityMove(zero_velocity, 1 << i);
+                senses->get_hand()->velocityMove(zero_velocity, 1 << i);
             }
         }
 		usleep(10000);	//run @ 100 Hz
@@ -175,6 +175,8 @@ void RobotController::backdrive_hand_thread(){
     std::cout << "Hand Backdrivability OFF" << std::endl;
 }
 void RobotController::backdrive_hand(){
+    if(!pm->foundHand())
+        throw NoHandFound;
     if(backdrivesemastop){
         boost::thread* backDriveHandThread;
         backdrivesemastop = false;
@@ -184,11 +186,21 @@ void RobotController::backdrive_hand(){
         backdrivesemastop = true;
     }
 }
+void RobotController::move_wam_to_str(jp_type* dest, const std::string& description, const std::string& str)
+{
+    if (parseDoubles(dest, str)) {
+        std::cout << "Moving to " << description << ": " << *dest << std::endl;
+        wam->moveTo(*dest);
+    } else {
+        printf("ERROR: Please enter exactly %d numbers separated by "
+                "whitespace.\n", dest->size());
+    }
+}
 void RobotController::move_hand_to_str(Hand::jp_type* dest, const std::string& description, const std::string& str)
 {
 	if (parseDoubles(dest, str)) {
 		std::cout << "Moving Hand to " << description << ": " << *dest << std::endl;
-		hand->trapezoidalMove(*dest);
+		senses->get_hand()->trapezoidalMove(*dest);
 	} else {
 		printf("ERROR: Please enter exactly 4 numbers separated by whitespace.\n");
 	}
@@ -210,13 +222,13 @@ void RobotController::hand_command(unsigned char data){
 	hjv[1] = vel_command(data & (1<<0), data & (1<<1));  // Pointer
 	hjv[2] = vel_command(data & (1<<4), data & (1<<5));  // Thumb
 	hjv[3] = vel_command(data & (1<<6), data & (1<<7));  // Rocker
-	hand->velocityMove(hjv);
+	senses->get_hand()->velocityMove(hjv);
 	std::cout << "Velocity: " << hjv << std::endl;
 }
 void RobotController::idle(){
     printf("WAM & Hand idled.\n");
     wam->idle();
-    hand->idle();
+    senses->get_hand()->idle();
     systems::disconnect(wam->tt2jt.output);
     systems::disconnect(wam->toController.referenceInput);
     systems::disconnect(wam->input);

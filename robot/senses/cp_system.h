@@ -32,10 +32,11 @@ public:
 protected:
     cp_type readings_cp;
     cp_type transform_cp;
+    int transform_cp_count;
     cp_type transformed_cp;
 	
     virtual void operate(){
-        init();
+        transform_cp = memory->get_transform_cp();
         readings_cp = input.getValue();
         transformed_cp = transform_cp + readings_cp;
         output_value->setData(&transformed_cp);

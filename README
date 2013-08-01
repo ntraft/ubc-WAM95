@@ -331,6 +331,9 @@ TODO
 "This section describes step-by-step, system-wide maintenance procedures, such as procedures for setting up and sequencing inputs for testing.  In addition, present standards for documenting modifications to the system.
 "
 
+6.7     Adding new parameters (TODO)
+lib/parameter_table.h & follow instructions in the file
+
 7   Safety Considerations
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 

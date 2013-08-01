@@ -199,6 +199,7 @@ protected:
     RTControl* rtc; //for realtime manipulation of robot 
     ExposedOutput<pv_type>* param_output_system; //to record environment parameters
     PartialLeastSquaresSystem* pls_system; //to record environment parameters
+    jp_type initial_jp;
     //bt_type pls_beta;
 
 //parameter estimation
@@ -256,6 +257,7 @@ public:
     void init();
     //teach
     void set_teach_name(string saveName);
+    void set_initial_jp();
     bool prepare_log_file();
     void record();
     void create_spline(string suffix = "");
@@ -278,6 +280,7 @@ public:
     bool playback_active();
     void disconnect_systems();
     void reconnect_systems();
+    string get_log_directory();
     double get_probability_non_normalized(enum parameters parameter);
     double get_probability(enum parameters parameter);
     void check_for_problems();
